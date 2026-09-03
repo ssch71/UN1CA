@@ -443,7 +443,7 @@ DECODE_APK "system" "system/priv-app/SemanticSearchCore/SemanticSearchCore.apk"
 SEMANTIC_SEARCH_CORE_DECODED="$APKTOOL_DIR/system/priv-app/SemanticSearchCore/SemanticSearchCore.apk"
 SEMANTIC_SEARCH_CORE_LIB="$SEMANTIC_SEARCH_CORE_DECODED/lib/arm64-v8a"
 SEMANTIC_SEARCH_CORE_SHARED="$SEMANTIC_SEARCH_CORE_DECODED/assets/shared"
-SEMANTIC_SEARCH_CORE_FW="$FW_DIR/SM-S918B_EUX"
+SEMANTIC_SEARCH_CORE_FW="$FW_DIR/SM-S911N_KOO"
 SEMANTIC_SEARCH_CORE_QNN_MISSING=0
 if [ ! -d "$SEMANTIC_SEARCH_CORE_LIB" ] || [ ! -d "$SEMANTIC_SEARCH_CORE_SHARED" ]; then
     LOGE "SemanticSearchCore.apk decoded QNN directories are missing"
