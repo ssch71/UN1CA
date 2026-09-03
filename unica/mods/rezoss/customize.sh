@@ -321,7 +321,7 @@ _REZOSS_SET_VENDOR_CONFIG_DIR_METADATA()
     fi
 
     while IFS= read -r FILE; do
-        REL="${FILE#$WORK_DIR/vendor/}"
+        REL="${FILE#"$WORK_DIR"/vendor/}"
         if [ -d "$FILE" ]; then
             SET_METADATA "vendor" "$REL" 0 2000 755 "u:object_r:vendor_configs_file:s0"
         else
