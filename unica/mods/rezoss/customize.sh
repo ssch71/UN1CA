@@ -780,6 +780,7 @@ done
 # Keep dm3q UniHAL support libraries from the S23U vendor stack. Importing the
 # S26U copies here changes shared dependencies used by object-tracking AF.
 LOG "- Adding S26U PhotoHDR vendor encoder plugin"
+# shellcheck disable=SC2043  # single-entry for
 for f in \
     "libSecPhotoHdrEncoder.uniplugin@1.0.so"; do
     ADD_TO_WORK_DIR "$MODPATH" "vendor" "lib64/$f" 0 0 644 "u:object_r:vendor_file:s0"
@@ -986,15 +987,15 @@ LOG "- Refusing AIOSKernelService LLM/LLMV before QNN execution on SM8550"
 APPLY_PATCH "system" "system/priv-app/AIOSKernelService/AIOSKernelService.apk" \
     "$MODPATH/aioskernel/AIOSKernelService.apk/0004-Refuse-LLM-LLMV-before-QNN-execution.patch"
 # Replace the S26U V81 HTP binaries inside AIOSKernelService.apk with the S23U Hexagon V73 pair.
-local AIOS_DECODED_APK="$APKTOOL_DIR/system/priv-app/AIOSKernelService/AIOSKernelService.apk"
-local AIOS_DECODED_LIB="$AIOS_DECODED_APK/lib/arm64-v8a"
-local AIOS_DECODED_SSGEN_LIB="$AIOS_DECODED_APK/assets/ssgen/libs"
-local AIOS_SSN_LIB="$AIOS_DECODED_LIB/libssneural_vndk.so"
-local AIOS_SSN_PATCHED_LIB="$TMP_DIR/aios_libssneural_vndk.so"
-local AIOS_SNAP_QNN_LIB="$AIOS_DECODED_LIB/libsnap_qnn.so"
-local AIOS_SNAP_QNN_PATCHED_LIB="$TMP_DIR/aios_libsnap_qnn.so"
-local S23U_FW_DIR="$FW_DIR/SM-S911N_KOO"
-local AIOS_QNN_MISSING=0
+AIOS_DECODED_APK="$APKTOOL_DIR/system/priv-app/AIOSKernelService/AIOSKernelService.apk"
+AIOS_DECODED_LIB="$AIOS_DECODED_APK/lib/arm64-v8a"
+AIOS_DECODED_SSGEN_LIB="$AIOS_DECODED_APK/assets/ssgen/libs"
+AIOS_SSN_LIB="$AIOS_DECODED_LIB/libssneural_vndk.so"
+AIOS_SSN_PATCHED_LIB="$TMP_DIR/aios_libssneural_vndk.so"
+AIOS_SNAP_QNN_LIB="$AIOS_DECODED_LIB/libsnap_qnn.so"
+AIOS_SNAP_QNN_PATCHED_LIB="$TMP_DIR/aios_libsnap_qnn.so"
+S23U_FW_DIR="$FW_DIR/SM-S911N_KOO"
+AIOS_QNN_MISSING=0
 if [ ! -d "$AIOS_DECODED_LIB" ] || [ ! -d "$AIOS_DECODED_SSGEN_LIB" ]; then
     LOGE "AIOSKernelService.apk decoded QNN directories are missing"
     return 1
