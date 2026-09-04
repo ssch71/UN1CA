@@ -2,7 +2,7 @@
 # Copyright (c) 2023 Salvo Giangreco
 # SPDX-License-Identifier: GPL-3.0-or-later
 
- set -e
+set -e
 
 #[
 source "$SRC_DIR/scripts/utils/module_utils.sh" || exit 1
@@ -130,6 +130,7 @@ if [ "$#" != "1" ]; then
     exit 1
 elif [ ! -d "$1" ]; then
     LOGE "Folder not found: ${1//$SRC_DIR\//}"
+    echo "Something bad happened"
     exit 1
 fi
 
