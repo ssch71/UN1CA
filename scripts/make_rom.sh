@@ -148,18 +148,30 @@ if $BUILD_ROM; then
         LOG "- Cleaning apktool patch leftovers"
         find "$APKTOOL_DIR" -type f \( -name "*.orig" -o -name "*.rej" \) -delete
 
-        while IFS= read -r f; do
-            f="${f/$APKTOOL_DIR\//}"
-            PARTITION="$(cut -d "/" -f 1 -s <<< "$f")"
-            if [[ "$PARTITION" == "system" ]]; then
-                "$SRC_DIR/scripts/apktool.sh" b "system" "$f" &
-            else
-                "$SRC_DIR/scripts/apktool.sh" b "$PARTITION" "$(cut -d "/" -f 2- -s <<< "$f")" &
-            fi
-        done < <(find "$APKTOOL_DIR" -type d \( -name "*.apk" -o -name "*.jar" \))
+        _REZOSS_BUILD_APK_JAR()
+        {
+            local F="$1"
+            local PARTITION
+            local REL
 
-        # shellcheck disable=SC2046
-        wait $(jobs -p) || exit 1
+            REL="${F/$APKTOOL_DIR\//}"
+            PARTITION="$(cut -d "/" -f 1 -s <<< "$REL")"
+            if [[ "$PARTITION" == "system" ]]; then
+                "$SRC_DIR/scripts/apktool.sh" b "system" "$REL"
+            else
+                "$SRC_DIR/scripts/apktool.sh" b "$PARTITION" "$(cut -d "/" -f 2- -s <<< "$REL")"
+            fi
+        }
+        export -f _REZOSS_BUILD_APK_JAR
+        export APKTOOL_DIR SRC_DIR
+
+        # Cap concurrent apktool builds (each is a heavy JVM process) to avoid
+        # tripping systemd-oomd on GitHub-hosted runners. Adjust -P to taste.
+        find "$APKTOOL_DIR" -type d \( -name "*.apk" -o -name "*.jar" \) -print0 | \
+            xargs -0 -P 4 -I{} bash -c '_REZOSS_BUILD_APK_JAR "$1"' _ {} \
+            || { unset -f _REZOSS_BUILD_APK_JAR; exit 1; }
+
+        unset -f _REZOSS_BUILD_APK_JAR
 
         LOG_STEP_OUT
     fi
