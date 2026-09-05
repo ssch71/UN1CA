@@ -216,13 +216,6 @@ system/app/ClockPackage
 # Samsung Free
 SYSTEM_DEBLOAT+="
 system/app/MinusOnePage
-"
-
-# Samsung Language Core
-SYSTEM_DEBLOAT+="
-system/etc/permissions/signature-permissions-com.samsung.android.offline.languagemodel.xml
-system/priv-app/OfflineLanguageModel_stub
-"
 
 # Samsung Messages
 SYSTEM_DEBLOAT+="
