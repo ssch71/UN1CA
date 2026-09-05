@@ -1,3 +1,6 @@
+# shellcheck disable=SC2034
+SKIPUNZIP=1
+
 # [
 BACKPORT_SF_PROPS()
 {

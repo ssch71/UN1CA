@@ -88,14 +88,14 @@ ADD_TO_WORK_DIR "m3qxxx" "system" \
     0 0 644 "u:object_r:system_file:s0"
 
 # Gemini shortcut
-# PRODUCT_DEBLOAT+="
-# app/BardShell
-# "
+PRODUCT_DEBLOAT+="
+app/BardShell
+"
 
 # Gmail
-# PRODUCT_DEBLOAT+="
-# app/Gmail2
-# "
+PRODUCT_DEBLOAT+="
+app/Gmail2
+"
 
 # Google Assistant shortcut
 PRODUCT_DEBLOAT+="
@@ -103,9 +103,9 @@ app/AssistantShell
 "
 
 # Google Chrome
-# PRODUCT_DEBLOAT+="
-# app/Chrome
-# "
+PRODUCT_DEBLOAT+="
+app/Chrome
+"
 
 # Google Duo
 PRODUCT_DEBLOAT+="
@@ -113,9 +113,9 @@ app/DuoStub
 "
 
 # Google Maps
-# PRODUCT_DEBLOAT+="
-# app/Maps
-# "
+PRODUCT_DEBLOAT+="
+app/Maps
+"
 
 # Google PAI (Play Autoinstall)
 SYSTEM_DEBLOAT+="
@@ -151,11 +151,11 @@ SYSTEM_DEBLOAT+="
 system/priv-app/YourPhone_P1_5
 "
 
-# # Live Transcribe
-# SYSTEM_DEBLOAT+="
-# system/app/LiveTranscribe
-# system/etc/sysconfig/feature-a11y-preload.xml
-# "
+# Live Transcribe
+SYSTEM_DEBLOAT+="
+system/app/LiveTranscribe
+system/etc/sysconfig/feature-a11y-preload.xml
+"
 
 # Meta
 SYSTEM_DEBLOAT+="
@@ -203,26 +203,26 @@ system/priv-app/AREmojiEditor
 system/priv-app/AvatarEmojiSticker
 "
 
-# # Samsung Calendar
-# SYSTEM_DEBLOAT+="
-# system/app/SamsungCalendar
-# "
+# Samsung Calendar
+SYSTEM_DEBLOAT+="
+system/app/SamsungCalendar
+"
 
-# # Samsung Clock
-# SYSTEM_DEBLOAT+="
-# system/app/ClockPackage
-# "
+# Samsung Clock
+SYSTEM_DEBLOAT+="
+system/app/ClockPackage
+"
 
 # Samsung Free
 SYSTEM_DEBLOAT+="
 system/app/MinusOnePage
 "
 
-# # Samsung Language Core
-# SYSTEM_DEBLOAT+="
-# system/etc/permissions/signature-permissions-com.samsung.android.offline.languagemodel.xml
-# system/priv-app/OfflineLanguageModel_stub
-# "
+# Samsung Language Core
+SYSTEM_DEBLOAT+="
+system/etc/permissions/signature-permissions-com.samsung.android.offline.languagemodel.xml
+system/priv-app/OfflineLanguageModel_stub
+"
 
 # Samsung Messages
 SYSTEM_DEBLOAT+="
@@ -246,10 +246,10 @@ system/priv-app/AuthFramework
 system/priv-app/SamsungPass
 "
 
-# # Samsung Reminder
-# SYSTEM_DEBLOAT+="
-# system/app/SmartReminder
-# "
+# Samsung Reminder
+SYSTEM_DEBLOAT+="
+system/app/SmartReminder
+"
 
 # Samsung Visit In
 SYSTEM_DEBLOAT+="
@@ -330,6 +330,6 @@ system/etc/sysconfig/feature-a11y-preload-voacc.xml
 "
 
 # YouTube
-# PRODUCT_DEBLOAT+="
-# app/YouTube
-# "
+PRODUCT_DEBLOAT+="
+app/YouTube
+"

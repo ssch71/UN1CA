@@ -1,6 +1,10 @@
 # shellcheck disable=SC2034
 SKIPUNZIP=1
 
+# Temporarily disabled.
+LOG "\033[0;33m! Skipping FM Radio module\033[0m"
+return 0
+
 if [[ "$(GET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_FMRADIO_CONFIG_CHIP_VENDOR")" == "0" ]]; then
     LOG "\033[0;33m! Nothing to do\033[0m"
     return 0

@@ -1,0 +1,22 @@
+From 91b618d1dc0b75afe6f1f10e3ce5d6f3973ac007 Mon Sep 17 00:00:00 2001
+From: ssch71 <ssch71@local>
+Date: Mon, 27 Jul 2026 00:00:00 +0200
+Subject: [PATCH] Add Privacy Display apps Korean
+
+--- a/res/values-ko/strings.xml
++++ b/res/values-ko/strings.xml
+@@ -3497,6 +3497,14 @@
+     <string name="password_must_not_contain_numbers_in_order">비밀번호에 %d개 이상의 연속된 숫자를 포함할 수 없습니다.</string>
+     <string name="password_toggle_content_description">비밀번호 표시</string>
+     <string name="passwords_and_autofill">비밀번호 및 자동 입력</string>
++    <string name="rezoss_pd_custom_apps_summary">Privacy display를 사용할 알림 앱을 선택하세요.</string>
++    <string name="rezoss_pd_custom_apps_title">앱</string>
++    <string name="rezoss_pd_extra_dim_summary">Privacy display가 켜져 있을 때 화면을 더 어둡게 만들어 보기 어렵게 합니다. 측면뿐 아니라 정면에서 보는 것에도 영향을 줄 수 있습니다.</string>
++    <string name="rezoss_pd_extra_dim_title">최대 프라이버시 보호</string>
++    <string name="rezoss_pd_fixed_description">측면 각도에서 화면이 잘 보이지 않도록 하여 프라이버시를 보호합니다.</string>
++    <string name="rezoss_pd_main_summary">측면 각도에서의 화면 가시성을 제한하여 프라이버시를 보호합니다.</string>
++    <string name="rezoss_pd_main_title">Privacy display</string>
++    <string name="rezoss_pd_turn_on_title">Privacy display 켜기</string>
+     <string name="pd_extra_dim_title">알 수 없는 동작</string>
+     <string name="pd_main_title">알 수 없는 동작</string>
+     <string name="pen_setting_option">펜 모드</string>

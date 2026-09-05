@@ -42,6 +42,7 @@
     "com.samsung.vvm",
     "com.sds.teams",
     "com.google.android.apps.dynamite"
+    "fork.risin42.nagramx"
   ],
   "except_scenarios": []
 }
