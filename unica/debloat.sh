@@ -216,6 +216,7 @@ system/app/ClockPackage
 # Samsung Free
 SYSTEM_DEBLOAT+="
 system/app/MinusOnePage
+"
 
 # Samsung Messages
 SYSTEM_DEBLOAT+="
