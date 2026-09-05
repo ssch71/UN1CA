@@ -1,4 +1,4 @@
-# shellcheck disable=SC2034
+# shellcheck disable=SC2034,SC2317
 SKIPUNZIP=1
 
 # Temporarily disabled.
