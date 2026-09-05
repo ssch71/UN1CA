@@ -178,6 +178,9 @@ if $BUILD_ROM; then
         LOG_STEP_OUT
     fi
 
+    echo -n "$(GET_WORK_DIR_HASH)" > "$WORK_DIR/.completed"
+fi
+
 if $BUILD_DIRECT_FLASHABLE_ZIP; then
     LOG_STEP_IN true "Creating flashable zip directly"
     "$SRC_DIR/scripts/internal/build_direct_flashable_zip.sh" || exit 1
