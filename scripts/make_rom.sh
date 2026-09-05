@@ -148,6 +148,7 @@ if $BUILD_ROM; then
         LOG "- Cleaning apktool patch leftovers"
         find "$APKTOOL_DIR" -type f \( -name "*.orig" -o -name "*.rej" \) -delete
 
+        # shellcheck disable=SC2317
         _REZOSS_BUILD_APK_JAR()
         {
             local F="$1"
@@ -167,6 +168,7 @@ if $BUILD_ROM; then
 
         # Cap concurrent apktool builds (each is a heavy JVM process) to avoid
         # tripping systemd-oomd on GitHub-hosted runners. Adjust -P to taste.
+        # shellcheck disable=SC2016
         find "$APKTOOL_DIR" -type d \( -name "*.apk" -o -name "*.jar" \) -print0 | \
             xargs -0 -P 4 -I{} bash -c '_REZOSS_BUILD_APK_JAR "$1"' _ {} \
             || { unset -f _REZOSS_BUILD_APK_JAR; exit 1; }
@@ -175,9 +177,6 @@ if $BUILD_ROM; then
 
         LOG_STEP_OUT
     fi
-
-    echo -n "$(GET_WORK_DIR_HASH)" > "$WORK_DIR/.completed"
-fi
 
 if $BUILD_DIRECT_FLASHABLE_ZIP; then
     LOG_STEP_IN true "Creating flashable zip directly"
