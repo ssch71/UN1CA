@@ -136,7 +136,7 @@ jobs:
 
       - name: Upload to GoFile
         run: |
-          ZIP_FILE=$(find out -type f -name "*sign_FZl1.zip" | head -n 1)
+          ZIP_FILE=$(find out -type f -name "*sign_FZI1.zip" | head -n 1)
 
           if [ -z "$ZIP_FILE" ]; then
             echo "Error: No ZIP file found in out/ directory!"
