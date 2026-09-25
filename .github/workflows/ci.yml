@@ -140,7 +140,7 @@ jobs:
         with:
           name: patch-rejects-${{ matrix.target }}-${{ github.run_id }}
           path: |
-            out/target/**/*.rej
+            out/target/${{ matrix.target }}/apktool/**/*.rej
           if-no-files-found: ignore
           retention-days: 7
 
