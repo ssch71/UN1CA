@@ -185,12 +185,12 @@ if $SOURCE_BLUETOOTH_SUPPORT_A2DPSINK_PROFILE; then
         LOG "- Applying \"Disable SUPPORT_A2DPSINK_PROFILE support\" to $BLUETOOTH_APK_LOG_PATH"
         APPLY_PATCH "system" "$BLUETOOTH_APK_SYSTEM_PATH" \
             "$MODPATH/a2dp_sink/Bluetooth.apk/0001-Disable-SUPPORT_A2DPSINK_PROFILE-support.patch" \
-            > /dev/null
+            > /dev/null || LOGW "Failed to apply SUPPORT_A2DPSINK_PROFILE patch to $BLUETOOTH_APK_LOG_PATH, skipping"
         DECODE_APK_IN_APEX "$TMP_DIR/unknown/apex_payload/javalib/framework-bluetooth.jar"
         LOG "- Applying \"Disable SUPPORT_A2DPSINK_PROFILE support\" to apex_payload/javalib/framework-bluetooth.jar"
         APPLY_PATCH "system" "system/framework/framework-bluetooth.jar" \
             "$MODPATH/a2dp_sink/framework-bluetooth.jar/0001-Disable-SUPPORT_A2DPSINK_PROFILE-support.patch" \
-            > /dev/null
+            > /dev/null || LOGW "Failed to apply SUPPORT_A2DPSINK_PROFILE patch to framework-bluetooth.jar, skipping"
     fi
 else
     if $TARGET_BLUETOOTH_SUPPORT_A2DPSINK_PROFILE; then
