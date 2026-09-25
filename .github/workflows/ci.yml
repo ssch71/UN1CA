@@ -120,13 +120,15 @@ jobs:
       - name: Build dependencies
         run: ./scripts/build_dependencies.sh
 
-      - name: Download stock firmwares
-        uses: nick-fields/retry@v4
-        with:
-          timeout_minutes: 60
-          max_attempts: 3
-          retry_on: error
-          command: ./scripts/download_fw.sh
+      - name: Upload patch reject files (on failure)
+         if: always()
+         uses: actions/upload-artifact@v4
+         with:
+           name: patch-rejects-${{ github.run_id }}
+           path: |
+            out/target/**/*.rej
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Extract stock firmwares
         run: ./scripts/extract_fw.sh
