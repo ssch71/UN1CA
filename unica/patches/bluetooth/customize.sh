@@ -178,43 +178,6 @@ BLUETOOTH_APK_PAYLOAD_PATH="${BLUETOOTH_APK_IN_APEX/$TMP_DIR\/unknown\/apex_payl
 BLUETOOTH_APK_SYSTEM_PATH="system/$BLUETOOTH_APK_PAYLOAD_PATH"
 BLUETOOTH_APK_LOG_PATH="apex_payload/$BLUETOOTH_APK_PAYLOAD_PATH"
 
-# SEC_PRODUCT_FEATURE_BLUETOOTH_SUPPORT_A2DPSINK_PROFILE
-if $SOURCE_BLUETOOTH_SUPPORT_A2DPSINK_PROFILE; then
-    if ! $TARGET_BLUETOOTH_SUPPORT_A2DPSINK_PROFILE; then
-        DECODE_APK_IN_APEX "$BLUETOOTH_APK_IN_APEX"
-        LOG "- Applying \"Disable SUPPORT_A2DPSINK_PROFILE support\" to $BLUETOOTH_APK_LOG_PATH"
-        APPLY_PATCH "system" "$BLUETOOTH_APK_SYSTEM_PATH" \
-            "$MODPATH/a2dp_sink/Bluetooth.apk/0001-Disable-SUPPORT_A2DPSINK_PROFILE-support.patch" \
-            > /dev/null || LOGW "Failed to apply SUPPORT_A2DPSINK_PROFILE patch to $BLUETOOTH_APK_LOG_PATH, skipping"
-        DECODE_APK_IN_APEX "$TMP_DIR/unknown/apex_payload/javalib/framework-bluetooth.jar"
-        LOG "- Applying \"Disable SUPPORT_A2DPSINK_PROFILE support\" to apex_payload/javalib/framework-bluetooth.jar"
-        APPLY_PATCH "system" "system/framework/framework-bluetooth.jar" \
-            "$MODPATH/a2dp_sink/framework-bluetooth.jar/0001-Disable-SUPPORT_A2DPSINK_PROFILE-support.patch" \
-            > /dev/null || LOGW "Failed to apply SUPPORT_A2DPSINK_PROFILE patch to framework-bluetooth.jar, skipping"
-    fi
-else
-    if $TARGET_BLUETOOTH_SUPPORT_A2DPSINK_PROFILE; then
-        # TODO handle this condition
-        LOG_MISSING_PATCHES "SOURCE_BLUETOOTH_SUPPORT_A2DPSINK_PROFILE" "TARGET_BLUETOOTH_SUPPORT_A2DPSINK_PROFILE"
-    fi
-fi
-
-# SEC_PRODUCT_FEATURE_BLUETOOTH_SUPPORT_A2DP_SBM
-if ! $SOURCE_BLUETOOTH_SUPPORT_A2DP_SBM; then
-    if $TARGET_BLUETOOTH_SUPPORT_A2DP_SBM; then
-        DECODE_APK_IN_APEX "$BLUETOOTH_APK_IN_APEX"
-        LOG "- Applying \"Enable SUPPORT_A2DP_SBM support\" to $BLUETOOTH_APK_LOG_PATH"
-        APPLY_PATCH "system" "$BLUETOOTH_APK_SYSTEM_PATH" \
-            "$MODPATH/sbm/Bluetooth.apk/0001-Enable-SUPPORT_A2DP_SBM-support.patch" \
-            > /dev/null
-    fi
-else
-    if ! $TARGET_BLUETOOTH_SUPPORT_A2DP_SBM; then
-        # TODO handle this condition
-        LOG_MISSING_PATCHES "SOURCE_BLUETOOTH_SUPPORT_A2DP_SBM" "TARGET_BLUETOOTH_SUPPORT_A2DP_SBM"
-    fi
-fi
-
 # SEC_PRODUCT_FEATURE_BLUETOOTH_SUPPORT_HEAD_SAR_BACKOFF
 if ! $SOURCE_BLUETOOTH_SUPPORT_HEAD_SAR_BACKOFF; then
     if $TARGET_BLUETOOTH_SUPPORT_HEAD_SAR_BACKOFF; then
