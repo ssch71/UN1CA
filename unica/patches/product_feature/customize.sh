@@ -364,7 +364,7 @@ if [[ "$SOURCE_FINGERPRINT_CONFIG_SENSOR" != "$TARGET_FINGERPRINT_CONFIG_SENSOR"
                     "smali_classes6/com/samsung/android/rune/InputRune.smali" "replace" \
                     "PWM_SIDE_KEY_CONSTRAINS_WAKEUP:Z" \
                     "sput-boolean v0, Lcom/samsung/android/rune/InputRune;->PWM_SIDE_KEY_CONSTRAINS_WAKEUP:Z" \
-                    "sput-boolean v1, Lcom/samsung/android/rune/InputRune;->PWM_SIDE_KEY_CONSTRAINS_WAKEUP:Z"
+                    "sput-boolean v1, Lcom/samsung/android/rune/InputRune;->PWM_SIDE_KEY_CONSTRAINS_WAKEUP:Z"\
                     || LOGW "PWM_SIDE_KEY_CONSTRAINS_WAKEUP field not found in this firmware, skipping"
 
                 APPLY_PATCH "system" "system/framework/services.jar" \
