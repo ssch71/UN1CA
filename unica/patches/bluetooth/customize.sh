@@ -178,6 +178,27 @@ BLUETOOTH_APK_PAYLOAD_PATH="${BLUETOOTH_APK_IN_APEX/$TMP_DIR\/unknown\/apex_payl
 BLUETOOTH_APK_SYSTEM_PATH="system/$BLUETOOTH_APK_PAYLOAD_PATH"
 BLUETOOTH_APK_LOG_PATH="apex_payload/$BLUETOOTH_APK_PAYLOAD_PATH"
 
+# SEC_PRODUCT_FEATURE_BLUETOOTH_SUPPORT_A2DPSINK_PROFILE
+if $SOURCE_BLUETOOTH_SUPPORT_A2DPSINK_PROFILE; then
+    if ! $TARGET_BLUETOOTH_SUPPORT_A2DPSINK_PROFILE; then
+        DECODE_APK_IN_APEX "$BLUETOOTH_APK_IN_APEX"
+        LOG "- Applying \"Disable SUPPORT_A2DPSINK_PROFILE support\" to $BLUETOOTH_APK_LOG_PATH"
+        APPLY_PATCH "system" "$BLUETOOTH_APK_SYSTEM_PATH" \
+            "$MODPATH/a2dp_sink/Bluetooth.apk/0001-Disable-SUPPORT_A2DPSINK_PROFILE-support.patch" \
+            > /dev/null || LOGW "Failed to apply Disable SUPPORT_A2DPSINK_PROFILE patch to $BLUETOOTH_APK_LOG_PATH, skipping"
+        DECODE_APK_IN_APEX "$TMP_DIR/unknown/apex_payload/javalib/framework-bluetooth.jar"
+        LOG "- Applying \"Disable SUPPORT_A2DPSINK_PROFILE support\" to apex_payload/javalib/framework-bluetooth.jar"
+        APPLY_PATCH "system" "system/framework/framework-bluetooth.jar" \
+            "$MODPATH/a2dp_sink/framework-bluetooth.jar/0001-Disable-SUPPORT_A2DPSINK_PROFILE-support.patch" \
+            > /dev/null || LOGW "Failed to apply Disable SUPPORT_A2DPSINK_PROFILE patch to framework-bluetooth.jar, skipping"
+    fi
+else
+    if $TARGET_BLUETOOTH_SUPPORT_A2DPSINK_PROFILE; then
+        # TODO handle this condition
+        LOG_MISSING_PATCHES "SOURCE_BLUETOOTH_SUPPORT_A2DPSINK_PROFILE" "TARGET_BLUETOOTH_SUPPORT_A2DPSINK_PROFILE"
+    fi
+fi
+
 # SEC_PRODUCT_FEATURE_BLUETOOTH_SUPPORT_HEAD_SAR_BACKOFF
 if ! $SOURCE_BLUETOOTH_SUPPORT_HEAD_SAR_BACKOFF; then
     if $TARGET_BLUETOOTH_SUPPORT_HEAD_SAR_BACKOFF; then
@@ -185,7 +206,7 @@ if ! $SOURCE_BLUETOOTH_SUPPORT_HEAD_SAR_BACKOFF; then
         LOG "- Applying \"Enable SUPPORT_HEAD_SAR_BACKOFF support\" to $BLUETOOTH_APK_LOG_PATH"
         APPLY_PATCH "system" "$BLUETOOTH_APK_SYSTEM_PATH" \
             "$MODPATH/head_sar/Bluetooth.apk/0001-Enable-SUPPORT_HEAD_SAR_BACKOFF-support.patch" \
-            > /dev/null
+            > /dev/null || LOGW "Failed to apply Enable SUPPORT_HEAD_SAR_BACKOFF patch to $BLUETOOTH_APK_LOG_PATH, skipping"
     fi
 else
     if ! $TARGET_BLUETOOTH_SUPPORT_HEAD_SAR_BACKOFF; then
@@ -201,7 +222,7 @@ if $SOURCE_BLUETOOTH_SUPPORT_XLNA_CONTROL; then
         LOG "- Applying \"Disable SUPPORT_XLNA_CONTROL support\" to $BLUETOOTH_APK_LOG_PATH"
         APPLY_PATCH "system" "$BLUETOOTH_APK_SYSTEM_PATH" \
             "$MODPATH/xlna/Bluetooth.apk/0001-Disable-SUPPORT_XLNA_CONTROL-support.patch" \
-            > /dev/null
+            > /dev/null || LOGW "Failed to apply Disable SUPPORT_XLNA_CONTROL patch to $BLUETOOTH_APK_LOG_PATH, skipping"
     fi
 else
     if $TARGET_BLUETOOTH_SUPPORT_XLNA_CONTROL; then
@@ -209,7 +230,7 @@ else
         LOG "- Applying \"Enable SUPPORT_XLNA_CONTROL support\" to $BLUETOOTH_APK_LOG_PATH"
         APPLY_PATCH "system" "$BLUETOOTH_APK_SYSTEM_PATH" \
             "$MODPATH/xlna/Bluetooth.apk/0001-Enable-SUPPORT_XLNA_CONTROL-support.patch" \
-            > /dev/null
+            > /dev/null || LOGW "Failed to apply Enable SUPPORT_XLNA_CONTROL patch to $BLUETOOTH_APK_LOG_PATH, skipping"
     fi
 fi
 
