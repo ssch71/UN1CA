@@ -479,7 +479,7 @@ if [[ "$SOURCE_LCD_CONFIG_SEAMLESS_BRT" != "$TARGET_LCD_CONFIG_SEAMLESS_BRT" ]] 
             "SEAMLESS_BRT: $TARGET_LCD_CONFIG_SEAMLESS_BRT"
         SMALI_PATCH "system" "system/framework/framework.jar" \
             "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
-            "dump(Ljava/io/PrintWriter;Ljava/lang/String;Z)V" \
+            "dumpProductFeature(Ljava/io/PrintWriter;Ljava/lang/String;Z)V" \
             "SEAMLESS_LUX: $SOURCE_LCD_CONFIG_SEAMLESS_LUX" \
             "SEAMLESS_LUX: $TARGET_LCD_CONFIG_SEAMLESS_LUX"
         SMALI_PATCH "system" "system/framework/framework.jar" \
