@@ -36,11 +36,11 @@ if [[ "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" != "$TARGET_PRODUCT_SHIPPING_API_LEVE
         "isSupported(Landroid/content/Context;)Z" \
         "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
         "$TARGET_PRODUCT_SHIPPING_API_LEVEL"
-    SMALI_PATCH "system" "system/framework/services.jar" \
-        "smali/com/android/server/enterprise/hdm/HdmVendorController.smali" "replace" \
-        "<init>()V" \
-        "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
-        "$TARGET_PRODUCT_SHIPPING_API_LEVEL"
+#    SMALI_PATCH "system" "system/framework/services.jar" \
+#        "smali_classes2/com/android/server/enterprise/hdm/HdmVendorController.smali" "replace" \
+#        "<init>()V" \
+#        "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
+#        "$TARGET_PRODUCT_SHIPPING_API_LEVEL"
     SMALI_PATCH "system" "system/framework/services.jar" \
         "smali/com/android/server/knox/dar/ddar/ta/TAProxy.smali" "replace" \
         "updateServiceHolder(Z)V" \
@@ -365,6 +365,7 @@ if [[ "$SOURCE_FINGERPRINT_CONFIG_SENSOR" != "$TARGET_FINGERPRINT_CONFIG_SENSOR"
                     "PWM_SIDE_KEY_CONSTRAINS_WAKEUP:Z" \
                     "sput-boolean v0, Lcom/samsung/android/rune/InputRune;->PWM_SIDE_KEY_CONSTRAINS_WAKEUP:Z" \
                     "sput-boolean v1, Lcom/samsung/android/rune/InputRune;->PWM_SIDE_KEY_CONSTRAINS_WAKEUP:Z"
+                    || LOGW "PWM_SIDE_KEY_CONSTRAINS_WAKEUP field not found in this firmware, skipping"
 
                 APPLY_PATCH "system" "system/framework/services.jar" \
                     "$MODPATH/fingerprint/side_fp/services.jar/0001-Add-side-fingerprint-sensor-support.patch"
