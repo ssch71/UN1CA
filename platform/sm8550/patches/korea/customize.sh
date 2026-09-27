@@ -1,3 +1,4 @@
+# shellcheck disable=SC2034
 SKIPUNZIP=1
 
 mkdir -p "$WORK_DIR/odm/firmware"
