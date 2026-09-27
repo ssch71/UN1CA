@@ -1,0 +1,1 @@
+is_substring("S911BXX", getprop("ro.boot.bootloader")) && verify_no_downgrade(getprop("ro.boot.bootloader"), "S911BXXU8DYD9") && abort("E3003: This package requires Android 15 firmware.");
