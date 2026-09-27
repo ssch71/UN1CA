@@ -2,7 +2,6 @@ name: CI
 
 on:
   workflow_dispatch:
-  pull_request:
   push:
     branches:
       - 'sixteen-sm8550'
@@ -73,7 +72,7 @@ jobs:
       - name: Free disk space (2/3)
         uses: jlumbroso/free-disk-space@main
         with:
-          tool-cache: true
+          preinstalled-runtimes: true
 
       - name: Free disk space (3/3)
         uses: rokibhasansagar/slimhub_actions@main
@@ -85,13 +84,17 @@ jobs:
           sudo apt update
           DEBIAN_FRONTEND=noninteractive sudo apt install -yq \
             attr ccache clang ffmpeg libbrotli-dev libbz2-dev \
-            libgtest-dev libprotobuf-dev libunwind-dev libpcre2-dev \
-            libzstd-dev linux-modules-extra-$(uname -r) lld protobuf-compiler webp
+            libgtest-dev libprotobuf-dev libunwind-dev libpcre2-dev wget \
+            libzstd-dev linux-modules-extra-$(uname -r) lld protobuf-compiler webp python3-pip
           sudo modprobe erofs f2fs
+          pip install gdown
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           echo -n "${{ secrets.PLATFORM_KEY_PK8 }}" | base64 --decode > security/unica_platform.pk8
           echo -n "${{ secrets.PLATFORM_KEY_PEM }}" | base64 --decode > security/unica_platform.x509.pem
+          echo -n "${{ secrets.OTA_KEY_PK8 }}" | base64 --decode > security/unica_ota.pk8
+          echo -n "${{ secrets.OTA_KEY_PEM }}" | base64 --decode > security/unica_ota.x509.pem
+          echo -n "${{ secrets.COOKIES }}" | base64 --decode >> cookies.txt
 
       - name: Set up JDK 17
         uses: actions/setup-java@v6
@@ -114,22 +117,73 @@ jobs:
             echo "WORK_DIR=$WORK_DIR"
             echo "TMP_DIR=$TMP_DIR"
           } >> "$GITHUB_ENV"
+          if [[ "${{ matrix.target }}" == "dm1q" ]]; then
+            {
+            echo "MODEL=SM-S911B"
+            echo "TRIPLET=S911BXXS9EZCI/S911BOXM9EZCI/S911BXXS9EZCI"
+            echo "TARGET_URL=${{ secrets.DL_LINK_DM1Q }}"
+            } >> "$GITHUB_ENV"
+          elif [[ "${{ matrix.target }}" == "dm2q" ]]; then
+            {
+            echo "MODEL=SM-S916B"
+            echo "TRIPLET=S916BXXS9EZCI/S916BOXM9EZCI/S916BXXS9EZCI"
+            echo "TARGET_URL=${{ secrets.DL_LINK_DM2Q }}"
+            } >> "$GITHUB_ENV"
+          elif [[ "${{ matrix.target }}" == "dm3q" ]]; then
+            {
+            echo "MODEL=SM-S918B"
+            echo "TRIPLET=S918BXXS9EZCI/S918BOXM9EZCI/S918BXXS9EZCI"
+            echo "TARGET_URL=${{ secrets.DL_LINK_DM3Q }}"
+            } >> "$GITHUB_ENV"
+            elif [[ "${{ matrix.target }}" == "dm3q" ]]; then
+            {
+            echo "MODEL=SM-F731B"
+            echo "TRIPLET=F731BXXS6FZC5/F731BOXM6FZB6/F731BXXS6FZC5"
+            echo "TARGET_URL=${{ secrets.DL_LINK_B5Q }}"
+            } >> "$GITHUB_ENV"
+            elif [[ "${{ matrix.target }}" == "dm3q" ]]; then
+            {
+            echo "MODEL=SM-F946B"
+            echo "TRIPLET=F946BXXS6FZC5/F946BOXM6FZB6/F946BXXS6FZC5"
+            echo "TARGET_URL=${{ secrets.DL_LINK_Q5Q }}"
+            } >> "$GITHUB_ENV"
+          fi
           sed -e "/Automatically/d" -e "s/\"//g" "$OUT_DIR/config.sh" >> "$GITHUB_ENV"
           echo "$TOOLS_DIR/bin" >> "$GITHUB_PATH"
 
       - name: Build dependencies
         run: ./scripts/build_dependencies.sh
+        
+      - name: Download target firmware
+        run: |
+          echo "- Processing ${MODEL} firmware with EUX CSC"
+          echo "    - Downloading firmware..."
+          mkdir -p "./out/odin/${MODEL}_EUX"
+          ZIP_FILE="./out/odin/${MODEL}_EUX/$(echo $TRIPLET | cut -c 1-13).zip"
+          gdown "${TARGET_URL}" -O "$ZIP_FILE" --cookies "cookies.txt" >/dev/null 2>&1
+          touch "./out/odin/${MODEL}_EUX/.downloaded"
+          echo "${TRIPLET}" >> "./out/odin/${MODEL}_EUX/.downloaded"
+          echo "- Extracting $(basename $ZIP_FILE)..."
+          unzip -o "$ZIP_FILE" -d "out/odin/${MODEL}_EUX" >/dev/null 2>&1 && rm -rf "$ZIP_FILE"
 
-      - name: Download stock firmwares
+      - name: Download source firmware
         uses: nick-fields/retry@v4
         with:
           timeout_minutes: 60
           max_attempts: 3
           retry_on: error
-          command: ./scripts/download_fw.sh
+          command: ./scripts/download_fw.sh --ignore-target
 
       - name: Extract stock firmwares
         run: ./scripts/extract_fw.sh
 
       - name: Build ROM
-        run: ./scripts/make_rom.sh
+        run: |
+          ./scripts/make_rom.sh -z
+
+      - name: Upload to GoFile
+        run: |
+          ZIP_FILE=$(find out -maxdepth 1 -type f -name "*sign.zip" | head -n 1)
+          RESPONSE=$(curl -s -F "file=@$ZIP_FILE" -F "token=${{ secrets.GOFILE_TOKEN }}" -F "folderId=${{ secrets.GOFILE_FOLDER }}" "https://upload-eu-par.gofile.io/uploadFile")
+          echo "Download link:"
+          echo "$RESPONSE" | jq -r '.data.downloadPage'
