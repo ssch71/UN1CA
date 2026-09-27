@@ -135,13 +135,13 @@ jobs:
             echo "TRIPLET=S918BXXS9EZCI/S918BOXM9EZCI/S918BXXS9EZCI"
             echo "TARGET_URL=${{ secrets.DL_LINK_DM3Q }}"
             } >> "$GITHUB_ENV"
-            elif [[ "${{ matrix.target }}" == "dm3q" ]]; then
+            elif [[ "${{ matrix.target }}" == "b5q" ]]; then
             {
             echo "MODEL=SM-F731B"
             echo "TRIPLET=F731BXXS6FZC5/F731BOXM6FZB6/F731BXXS6FZC5"
             echo "TARGET_URL=${{ secrets.DL_LINK_B5Q }}"
             } >> "$GITHUB_ENV"
-            elif [[ "${{ matrix.target }}" == "dm3q" ]]; then
+            elif [[ "${{ matrix.target }}" == "q5q" ]]; then
             {
             echo "MODEL=SM-F946B"
             echo "TRIPLET=F946BXXS6FZC5/F946BOXM6FZB6/F946BXXS6FZC5"
