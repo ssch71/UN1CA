@@ -2,6 +2,7 @@
 # Copyright (c) 2026 Rezoss
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+# shellcheck disable=SC2034
 SKIPUNZIP=1
 
 if [[ "$TARGET_CODENAME" != "dm3q" || "$SOURCE_PLATFORM_SDK_VERSION" != "37" ]]; then

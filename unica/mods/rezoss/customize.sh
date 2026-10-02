@@ -1,3 +1,4 @@
+# shellcheck disable=SC2034
 SKIPUNZIP=1
 
 LOG_STEP_IN "- Rezoss experimental mods"
@@ -873,7 +874,7 @@ local AICORE_DECODED_LIB="$AICORE_DECODED_APK/lib/arm64-v8a"
 local AICORE_DECODED_SSGEN_LIB="$AICORE_DECODED_APK/assets/ssgen/libs"
 local AICORE_SNAP_QNN_LIB="$AICORE_DECODED_LIB/libsnap_qnn.so"
 local AICORE_SNAP_QNN_PATCHED_LIB="$TMP_DIR/aicore_libsnap_qnn.so"
-local AICORE_S23U_FW_DIR="$FW_DIR/SM-S918B_EUX"
+local AICORE_S23U_FW_DIR="$FW_DIR/SM-S911N_KOO"
 local AICORE_QNN_MISSING=0
 if [ ! -d "$AICORE_DECODED_LIB" ] || [ ! -d "$AICORE_DECODED_SSGEN_LIB" ]; then
     LOGE "SamsungAiCore.apk decoded QNN directories are missing"
@@ -931,7 +932,7 @@ local AIOS_SSN_LIB="$AIOS_DECODED_LIB/libssneural_vndk.so"
 local AIOS_SSN_PATCHED_LIB="$TMP_DIR/aios_libssneural_vndk.so"
 local AIOS_SNAP_QNN_LIB="$AIOS_DECODED_LIB/libsnap_qnn.so"
 local AIOS_SNAP_QNN_PATCHED_LIB="$TMP_DIR/aios_libsnap_qnn.so"
-local S23U_FW_DIR="$FW_DIR/SM-S918B_EUX"
+local S23U_FW_DIR="$FW_DIR/SM-S911N_KOO"
 local AIOS_QNN_MISSING=0
 if [ ! -d "$AIOS_DECODED_LIB" ] || [ ! -d "$AIOS_DECODED_SSGEN_LIB" ]; then
     LOGE "AIOSKernelService.apk decoded QNN directories are missing"
