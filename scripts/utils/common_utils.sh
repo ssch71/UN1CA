@@ -190,7 +190,7 @@ _REBUILD_SPLIT_FILES_IN_WORK_DIR()
         [ "$SPLIT_FILE" ] || continue
         [ -e "${SPLIT_FILE%.*}.01" ] || continue
 
-        SPLIT_REL="${SPLIT_FILE#$SOURCE_DIR/}"
+        SPLIT_REL="${SPLIT_FILE#"$SOURCE_DIR"/}"
         TARGET_SPLIT="$TARGET_DIR/$SPLIT_REL"
         TARGET_FILE="${TARGET_SPLIT%.*}"
 

@@ -307,7 +307,7 @@ _REZOSS_SET_VENDOR_CONFIG_DIR_METADATA()
     fi
 
     while IFS= read -r FILE; do
-        REL="${FILE#$WORK_DIR/vendor/}"
+        REL="${FILE"#$WORK_DIR"/vendor/}"
         if [ -d "$FILE" ]; then
             SET_METADATA "vendor" "$REL" 0 2000 755 "u:object_r:vendor_configs_file:s0"
         else
@@ -321,33 +321,6 @@ _REZOSS_SET_SYSTEM_LIB64_METADATA()
     local FILE="$1"
 
     SET_METADATA "system" "system/lib64/$FILE" 0 0 644 "u:object_r:system_lib_file:s0"
-}
-
-_REZOSS_GET_SEPOLICY_API_SUFFIX()
-{
-    local CIL_FILE="$1"
-
-    if grep -q "(type init_34_0)" "$CIL_FILE"; then
-        echo "34_0"
-    else
-        echo "33_0"
-    fi
-}
-
-_REZOSS_CIL_HAS_SYMBOL()
-{
-    local SYMBOL="$1"
-    shift
-
-    local FILE
-    for FILE in "$@"; do
-        [ -f "$FILE" ] || continue
-        if grep -q " ${SYMBOL}[ )]" "$FILE" || grep -q "(${SYMBOL}[ )]" "$FILE"; then
-            return 0
-        fi
-    done
-
-    return 1
 }
 
 _REZOSS_ENSURE_LOG_VIDEO_FILTER_SELINUX()
@@ -869,13 +842,13 @@ APPLY_PATCH "system" "system/priv-app/SamsungAiCore/SamsungAiCore.apk" \
     "$MODPATH/aicore/SamsungAiCore.apk/0002-Experiment-enable-SM8550-V73-QNN-profile.patch"
 # Experimental: replace the S26U V81 HTP binaries inside SamsungAiCore.apk with
 # S23U Hexagon V73 binaries and patch AiCore's own QNN wrapper crash paths.
-local AICORE_DECODED_APK="$APKTOOL_DIR/system/priv-app/SamsungAiCore/SamsungAiCore.apk"
-local AICORE_DECODED_LIB="$AICORE_DECODED_APK/lib/arm64-v8a"
-local AICORE_DECODED_SSGEN_LIB="$AICORE_DECODED_APK/assets/ssgen/libs"
-local AICORE_SNAP_QNN_LIB="$AICORE_DECODED_LIB/libsnap_qnn.so"
-local AICORE_SNAP_QNN_PATCHED_LIB="$TMP_DIR/aicore_libsnap_qnn.so"
-local AICORE_S23U_FW_DIR="$FW_DIR/SM-S911N_KOO"
-local AICORE_QNN_MISSING=0
+AICORE_DECODED_APK="$APKTOOL_DIR/system/priv-app/SamsungAiCore/SamsungAiCore.apk"
+AICORE_DECODED_LIB="$AICORE_DECODED_APK/lib/arm64-v8a"
+AICORE_DECODED_SSGEN_LIB="$AICORE_DECODED_APK/assets/ssgen/libs"
+AICORE_SNAP_QNN_LIB="$AICORE_DECODED_LIB/libsnap_qnn.so"
+AICORE_SNAP_QNN_PATCHED_LIB="$TMP_DIR/aicore_libsnap_qnn.so"
+AICORE_S23U_FW_DIR="$FW_DIR/SM-S911N_KOO"
+AICORE_QNN_MISSING=0
 if [ ! -d "$AICORE_DECODED_LIB" ] || [ ! -d "$AICORE_DECODED_SSGEN_LIB" ]; then
     LOGE "SamsungAiCore.apk decoded QNN directories are missing"
     return 1
@@ -925,15 +898,15 @@ LOG "- Refusing AIOSKernelService LLM/LLMV before QNN execution on SM8550"
 APPLY_PATCH "system" "system/priv-app/AIOSKernelService/AIOSKernelService.apk" \
     "$MODPATH/aioskernel/AIOSKernelService.apk/0004-Refuse-LLM-LLMV-before-QNN-execution.patch"
 # Replace the S26U V81 HTP binaries inside AIOSKernelService.apk with the S23U Hexagon V73 pair.
-local AIOS_DECODED_APK="$APKTOOL_DIR/system/priv-app/AIOSKernelService/AIOSKernelService.apk"
-local AIOS_DECODED_LIB="$AIOS_DECODED_APK/lib/arm64-v8a"
-local AIOS_DECODED_SSGEN_LIB="$AIOS_DECODED_APK/assets/ssgen/libs"
-local AIOS_SSN_LIB="$AIOS_DECODED_LIB/libssneural_vndk.so"
-local AIOS_SSN_PATCHED_LIB="$TMP_DIR/aios_libssneural_vndk.so"
-local AIOS_SNAP_QNN_LIB="$AIOS_DECODED_LIB/libsnap_qnn.so"
-local AIOS_SNAP_QNN_PATCHED_LIB="$TMP_DIR/aios_libsnap_qnn.so"
-local S23U_FW_DIR="$FW_DIR/SM-S911N_KOO"
-local AIOS_QNN_MISSING=0
+AIOS_DECODED_APK="$APKTOOL_DIR/system/priv-app/AIOSKernelService/AIOSKernelService.apk"
+AIOS_DECODED_LIB="$AIOS_DECODED_APK/lib/arm64-v8a"
+AIOS_DECODED_SSGEN_LIB="$AIOS_DECODED_APK/assets/ssgen/libs"
+AIOS_SSN_LIB="$AIOS_DECODED_LIB/libssneural_vndk.so"
+AIOS_SSN_PATCHED_LIB="$TMP_DIR/aios_libssneural_vndk.so"
+AIOS_SNAP_QNN_LIB="$AIOS_DECODED_LIB/libsnap_qnn.so"
+AIOS_SNAP_QNN_PATCHED_LIB="$TMP_DIR/aios_libsnap_qnn.so"
+S23U_FW_DIR="$FW_DIR/SM-S911N_KOO"
+AIOS_QNN_MISSING=0
 if [ ! -d "$AIOS_DECODED_LIB" ] || [ ! -d "$AIOS_DECODED_SSGEN_LIB" ]; then
     LOGE "AIOSKernelService.apk decoded QNN directories are missing"
     return 1

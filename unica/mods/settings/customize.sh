@@ -174,7 +174,7 @@ if [ ! "$SEARCH_INDEX_RESOURCES" ]; then
     LOGE "Settings search provider registry not found in /system/system/priv-app/SecSettings.apk"
     return 1
 fi
-SEARCH_INDEX_RESOURCES_SMALI="${SEARCH_INDEX_RESOURCES#$APKTOOL_DIR/system/priv-app/SecSettings/SecSettings.apk/}"
+SEARCH_INDEX_RESOURCES_SMALI="${SEARCH_INDEX_RESOURCES#"$APKTOOL_DIR"/system/priv-app/SecSettings/SecSettings.apk/}"
 
 ADD_UNICA_SETTINGS_SEARCH_INDEX_DATA_PROVIDER()
 {
