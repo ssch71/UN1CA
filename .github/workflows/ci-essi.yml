@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   shellcheck:
-    name: Shellcheck-essi
+    name: Shellcheck
     runs-on: ubuntu-24.04
 
     steps:
@@ -29,8 +29,8 @@ jobs:
           exit $CODE
 
   generate-matrix:
-    name: Generate matrix-essi
-    needs: shellcheck-essi
+    name: Generate matrix
+    needs: shellcheck
     runs-on: ubuntu-24.04
 
     outputs:
@@ -49,8 +49,8 @@ jobs:
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   build:
-    name: Build-essi
-    needs: [shellcheck-essi, generate-matrix-qssi]
+    name: Build
+    needs: [shellcheck, generate-matrix]
     runs-on: ubuntu-24.04
 
     strategy:
