@@ -238,6 +238,7 @@ if [[ "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" != "$TARGET_PRODUCT_SHIPPING_API_LEVE
 fi
 
 # SEC_PRODUCT_FEATURE_KNOX_SUPPORT_SDP
+# shellcheck disable=SC2016
 if grep -R -F -q 'lambda$isSdpSupportedSecureFolder$0' \
         "$APKTOOL_DIR/system/framework/framework.jar"/smali_classes*/com/android/internal/widget/LockPatternUtils.smali 2> /dev/null; then
     APPLY_PATCH "system" "system/framework/framework.jar" \

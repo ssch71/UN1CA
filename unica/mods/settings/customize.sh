@@ -163,9 +163,9 @@ SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
     'const/16 v2, 0xc4' \
     > /dev/null
 
-# Add UN1CA Settings SearchIndexDataProvider(s)
 LOG "- Patching Settings search index providers in /system/system/priv-app/SecSettings.apk"
 SEARCH_INDEX_RESOURCES="$(
+    # shellcheck disable=SC2016
     find "$APKTOOL_DIR/system/priv-app/SecSettings/SecSettings.apk" \
         -path '*/com/android/settings/search/SearchFeatureProviderImpl$$ExternalSyntheticLambda0.smali' \
         -print -quit
@@ -215,7 +215,7 @@ if [ ! "$TOP_LEVEL_KEYS_COLLECTOR" ]; then
     LOGE "TopLevelKeysCollector smali not found in /system/system/priv-app/SecSettingsIntelligence.apk"
     return 1
 fi
-TOP_LEVEL_KEYS_COLLECTOR_SMALI="${TOP_LEVEL_KEYS_COLLECTOR#$APKTOOL_DIR/system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk/}"
+TOP_LEVEL_KEYS_COLLECTOR_SMALI="${TOP_LEVEL_KEYS_COLLECTOR#"$APKTOOL_DIR"/system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk/}"
 
 if ! grep -q '"top_level_unica"' "$TOP_LEVEL_KEYS_COLLECTOR"; then
     SMALI_PATCH "system" "system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk" \

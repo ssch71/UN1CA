@@ -625,6 +625,7 @@ done
 # Keep dm3q UniHAL support libraries from the S23U vendor stack. Importing the
 # S26U copies here changes shared dependencies used by object-tracking AF.
 LOG "- Adding S26U PhotoHDR vendor encoder plugin"
+# shellcheck disable=SC2043
 for f in \
     "libSecPhotoHdrEncoder.uniplugin@1.0.so"; do
     ADD_TO_WORK_DIR "m3qxxx" "vendor" "lib64/$f" 0 0 644 "u:object_r:vendor_file:s0"
