@@ -5,8 +5,8 @@
 # shellcheck disable=SC2034
 SKIPUNZIP=1
 
-if [[ "$TARGET_CODENAME" != "dm3q" || "$SOURCE_PLATFORM_SDK_VERSION" != "37" ]]; then
-    LOG "- Skipping FZH3 Hermes compatibility: requires dm3q SDK 37"
+if [[ ! "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ || "$SOURCE_PLATFORM_SDK_VERSION" != "37" ]]; then
+    LOG "- Skipping FZH3 Hermes compatibility: requires sm8550 devices with SDK 37"
     return 0
 fi
 
