@@ -133,6 +133,22 @@ jobs:
 
       - name: Build ROM
         run: ./scripts/make_rom.sh
+
+      - name: Collect AOD debug files
+        if: failure()
+        run: |
+          mkdir -p /tmp/aoddbg
+          find out -name "ql2.smali*" -path "*AODService*" -exec cp --parents {} /tmp/aoddbg \;
+          find out -type f -name "AODService_v80.apk" -exec cp --parents {} /tmp/aoddbg \;
+          ls -R /tmp/aoddbg | head -50
+
+      - name: Upload AOD debug files
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aod-debug
+          path: /tmp/aoddbg
+          if-no-files-found: warn
         
       - name: Upload to GoFile
         run: |
