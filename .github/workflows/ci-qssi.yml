@@ -134,20 +134,30 @@ jobs:
       - name: Build ROM
         run: ./scripts/make_rom.sh
 
-      - name: Collect AOD debug files
+      - name: Collect patch debug files
         if: failure()
         run: |
-          mkdir -p /tmp/aoddbg
-          find out -name "ql2.smali*" -path "*AODService*" -exec cp --parents {} /tmp/aoddbg \;
-          find out -type f -name "AODService_v80.apk" -exec cp --parents {} /tmp/aoddbg \;
-          ls -R /tmp/aoddbg | head -50
+          mkdir -p /tmp/patchdbg
+          # Rejected hunks from every failed smali patch
+          find out -type f -name "*.rej" -exec cp --parents {} /tmp/patchdbg \;
+          # HoneyBoard: smali files touched by 0001-Force-Now-Nudge-receiver.patch
+          find out/target -type f -path "*HoneyBoard*" \
+            \( -path "*/smali_classes*/df/b.smali" \
+            -o -name "SuggestedRepliesReceiver.smali*" \
+            -o -name "SuggestedRepliesViewModel.smali*" \) \
+            -exec cp --parents {} /tmp/patchdbg \;
+          # AODService font classes (ql2/rl2 are renamed between firmwares)
+          find out/target -type f -path "*AODService*" \
+            \( -name "ql2.smali" -o -name "rl2.smali" \) \
+            -exec cp --parents {} /tmp/patchdbg \;
+          find /tmp/patchdbg -type f | head -50
 
-      - name: Upload AOD debug files
+      - name: Upload patch debug files
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: aod-debug
-          path: /tmp/aoddbg
+          name: patch-debug-${{ matrix.target }}
+          path: /tmp/patchdbg
           if-no-files-found: warn
         
       - name: Upload to GoFile
