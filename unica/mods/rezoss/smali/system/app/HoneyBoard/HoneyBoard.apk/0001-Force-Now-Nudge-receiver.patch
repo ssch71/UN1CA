@@ -3,11 +3,23 @@ From: @rezoss_reza <rezoss79@users.noreply.github.com>
 Date: Tue, 30 Jun 2026 00:00:00 +0200
 Subject: [PATCH] Force Now Nudge receiver
 
-Preserve Now Nudge receiver settings bypass on S23U One UI 9.
-Keep the service-alive guard, receiver payload validation and ViewModel
-capability guards intact.
+Force SuggestedRepliesReceiver registration and bypass the now_nudge_enabled
+settings check on S23U One UI 9. Keep the service-alive guard, receiver
+payload validation and ViewModel capability guards intact.
 
 ---
+diff --git a/smali_classes2/I6/b.smali b/smali_classes2/I6/b.smali
+--- a/smali_classes2/I6/b.smali
++++ b/smali_classes2/I6/b.smali
+@@ -278,7 +278,7 @@
+     :cond_1
+     sget-boolean p0, LN8/a;->K:Z
+ 
+-    if-nez p0, :cond_2
++    goto :cond_2
+ 
+     sget-boolean p0, LN8/a;->I:Z
+ 
 diff --git a/smali_classes2/com/samsung/android/honeyboard/base/suggestedreplies/receiver/SuggestedRepliesReceiver.smali b/smali_classes2/com/samsung/android/honeyboard/base/suggestedreplies/receiver/SuggestedRepliesReceiver.smali
 --- a/smali_classes2/com/samsung/android/honeyboard/base/suggestedreplies/receiver/SuggestedRepliesReceiver.smali
 +++ b/smali_classes2/com/samsung/android/honeyboard/base/suggestedreplies/receiver/SuggestedRepliesReceiver.smali
