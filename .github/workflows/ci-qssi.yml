@@ -140,12 +140,14 @@ jobs:
           mkdir -p /tmp/patchdbg
           # Rejected hunks from every failed smali patch
           find out -type f -name "*.rej" -exec cp --parents {} /tmp/patchdbg \;
-          # HoneyBoard: smali files touched by 0001-Force-Now-Nudge-receiver.patch
-          find out/target -type f -path "*HoneyBoard*" \
-            \( -path "*/smali_classes*/df/b.smali" \
-            -o -name "SuggestedRepliesReceiver.smali*" \
-            -o -name "SuggestedRepliesViewModel.smali*" \) \
-            -exec cp --parents {} /tmp/patchdbg \;
+          # HoneyBoard: classes targeted by rezoss patches (obfuscated names change between firmwares)
+          HB=$(find out/target -type d -path "*apktool*" -name "HoneyBoard.apk" | head -1)
+          if [ -n "$HB" ]; then
+            grep -rlE 'updateSuggestResponse|inaccessible mode|ro\.product\.first_api_level|new-instance .*SuggestedRepliesReceiver;' "$HB"/smali* \
+              | xargs -r cp --parents -t /tmp/patchdbg || true
+            find "$HB" -type f \( -name "SuggestedRepliesReceiver.smali*" -o -name "SuggestedRepliesViewModel.smali*" -o -name "*.orig" \) \
+              -exec cp --parents {} /tmp/patchdbg \;
+          fi
           # AODService font classes (ql2/rl2 are renamed between firmwares)
           find out/target -type f -path "*AODService*" \
             \( -name "ql2.smali" -o -name "rl2.smali" \) \
