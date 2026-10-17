@@ -1,4 +1,3 @@
-# shellcheck disable=SC2016
 SET_PROP_IF_DIFF "vendor" "ro.security.fips.ux" "Disabled"
 
 DEKNOX_HEX_PATCH()
@@ -239,6 +238,7 @@ if [[ "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" != "$TARGET_PRODUCT_SHIPPING_API_LEVE
 fi
 
 # SEC_PRODUCT_FEATURE_KNOX_SUPPORT_SDP
+# shellcheck disable=SC2016
 if grep -R -F -q 'lambda$isSdpSupportedSecureFolder$0' \
         "$APKTOOL_DIR/system/framework/framework.jar"/smali_classes*/com/android/internal/widget/LockPatternUtils.smali 2> /dev/null; then
     APPLY_PATCH "system" "system/framework/framework.jar" \
@@ -292,8 +292,26 @@ if [[ "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" != "$TARGET_PRODUCT_SHIPPING_API_LEVE
         > /dev/null
 fi
 # Nuke HDM service and vendor controller
-APPLY_PATCH "system" "system/framework/services.jar" \
-    "$MODPATH/hdm/services.jar/0001-Nuke-Knox-HDM.patch"
+#
+# One UI 9.0: some HDM classes are gone or moved to another dex, so the
+# file-deletion hunks no longer apply. Apply only the modification hunks,
+# then delete the HDM classes from whichever smali dir they ended up in.
+HDM_PATCH="$MODPATH/hdm/services.jar/0001-Nuke-Knox-HDM.patch"
+HDM_TMP_PATCH="$(mktemp --suffix=.patch)"
+awk '
+    /^diff --git /{ if (!del) printf "%s", blk; blk=""; del=0 }
+    /^deleted file mode/{ del=1 }
+    { blk = blk $0 "\n" }
+    END{ if (!del) printf "%s", blk }
+' "$HDM_PATCH" > "$HDM_TMP_PATCH"
+APPLY_PATCH "system" "system/framework/services.jar" "$HDM_TMP_PATCH"
+rm -f "$HDM_TMP_PATCH"
+while read -r HDM_CLASS; do
+    HDM_CLASS="${HDM_CLASS#*/}"
+    find "$APKTOOL_DIR/system/framework/services.jar" -path "*/smali*/$HDM_CLASS" -type f -print -delete | \
+        sed "s|^$APKTOOL_DIR/system/framework/services.jar/|    - Deleted |"
+done < <(awk '/^diff --git /{ f=$3; sub(/^a\//, "", f) } /^deleted file mode/{ print f }' "$HDM_PATCH")
+unset HDM_PATCH HDM_TMP_PATCH HDM_CLASS
 APPLY_PATCH "system" "system/priv-app/DeviceDiagnostics/DeviceDiagnostics.apk" \
     "$MODPATH/hdm/DeviceDiagnostics.apk/0001-Nuke-Knox-HDM.patch"
 APPLY_PATCH "system" "system/priv-app/ManagedProvisioning/ManagedProvisioning.apk" \
