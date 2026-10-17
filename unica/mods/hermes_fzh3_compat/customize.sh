@@ -21,10 +21,6 @@ if [[ "$SOURCE_PLATFORM_SDK_VERSION" != "37" ]]; then
     return 0
 fi
 
-if [[ "$TARGET_CODENAME" != "dm3q" ]]; then
-    LOGW "FZH3 Hermes backend was validated on dm3q only; $TARGET_CODENAME is UNTESTED"
-fi
-
 LOG "- Applying experimental FZH3 Hermes backend on $TARGET_CODENAME; credential verification remains enabled"
 ADD_TO_WORK_DIR "$MODPATH" "vendor" "bin/hermesd" 0 2000 755 "u:object_r:hermesd_exec:s0"
 ADD_TO_WORK_DIR "$MODPATH" "vendor" "lib64/libhermes_bdbridge.so" 0 0 644 "u:object_r:vendor_file:s0"
