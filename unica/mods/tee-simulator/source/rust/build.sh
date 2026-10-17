@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2012
 # Build libteesim_km.a for one Android ABI.
 #
 # The crate is a static library that resolves BoringSSL at runtime inside

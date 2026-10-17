@@ -1,3 +1,4 @@
+# shellcheck disable=SC2016
 SET_PROP_IF_DIFF "vendor" "ro.security.fips.ux" "Disabled"
 
 DEKNOX_HEX_PATCH()

@@ -1,4 +1,5 @@
 #!/sbin/sh
+# shellcheck disable=SC2181,SC2034,SC2001
 
 IMAGE_DIR="${1:-/data/local/tmp/lpunpack}"
 SUPER_DEV="${2:-/dev/block/by-name/super}"

@@ -1,11 +1,25 @@
+# shellcheck disable=SC2034,SC2317,SC2329,SC2043,SC2181
+# shellcheck disable=SC2034
 SKIPUNZIP=1
 
 LOG_STEP_IN "- Rezoss experimental mods"
 
-# This POC is restricted to the tested S23U target and retains Qwen fallback.
+# SM8550 (Hexagon V73) targets supported by the Rezoss experimental mods.
+# dm1q = S23, dm2q = S23+, dm3q = S23U, b5q = Z Flip5, q5q = Z Fold5
+case "$TARGET_CODENAME" in
+    dm1q|dm2q|dm3q|b5q|q5q)
+        REZOSS_SM8550_TARGET=true
+        ;;
+    *)
+        REZOSS_SM8550_TARGET=false
+        ;;
+esac
+LOG "- Rezoss target: $TARGET_CODENAME (SM8550/V73: $REZOSS_SM8550_TARGET)"
+
+# This POC is restricted to SM8550/V73 targets and retains Qwen fallback.
 source "$MODPATH/aioskernel/native-now-nudge/config.sh" || return 1
 if [[ "$UNICA_ENABLE_NATIVE_NOW_NUDGE" == "true" ]]; then
-    [[ "$TARGET_CODENAME" == "dm3q" ]] || ABORT "Native Now Nudge is tested only on dm3q"
+    $REZOSS_SM8550_TARGET || ABORT "Native Now Nudge is supported only on SM8550 targets (dm1q/dm2q/dm3q/b5q/q5q)"
     [[ "${UNICA_ENABLE_SAMSUNG_AICORE:-true}" == "true" ]] || ABORT "Native Now Nudge requires SamsungAiCore"
     [[ "${UNICA_ENABLE_UNSAFE_S26U_QNN_EXPERIMENT:-false}" != "true" ]] || ABORT "Do not combine native Now Nudge with the donor QNN experiment"
 fi
@@ -206,8 +220,6 @@ SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_GALLERY_CONFIG_LIVEFOCUS_EFFEC
 #SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_GALLERY_CONFIG_AI_EXPANSION" "AI_Timelapse,singletake.hidt.support.on,singletake.capture.support.off,singletake.video_res.config.fhd,singletake.video.previous_record"
 SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_GRAPHICS_SUPPORT_REDUCE_FLASH_LIGHT" "TRUE"
 SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_GRAPHICS_SUPPORT_TOUCH_FAST_RESPONSE" "TRUE"
-SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_LCD_CONFIG_AOD_BRIGHTNESS_ANIMATION" "1"
-SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_LCD_CONFIG_AOD_FULLSCREEN" "1"
 SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_MMFW_SUPPORT_HDR2SDR_MAX_8K" "TRUE"
 SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_MMFW_SUPPORT_HIERARCHICAL_B_ENCODING" "TRUE"
 SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_MMFW_SUPPORT_LONGEXPOSURE_EFFECT_10BIT" "TRUE"
@@ -338,7 +350,7 @@ _REZOSS_SET_VENDOR_CONFIG_DIR_METADATA()
     fi
 
     while IFS= read -r FILE; do
-        REL="${FILE#$WORK_DIR/vendor/}"
+        REL="${FILE#"$WORK_DIR"/vendor/}"
         if [ -d "$FILE" ]; then
             SET_METADATA "vendor" "$REL" 0 2000 755 "u:object_r:vendor_configs_file:s0"
         else
@@ -639,7 +651,7 @@ for f in \
     "Pose.dlc"; do
     ADD_TO_WORK_DIR "m3qxxx" "system" "system/etc/mediacontextanalyzer/$f" 0 0 644 "u:object_r:system_file:s0"
 done
-if [[ "$TARGET_CODENAME" == "dm3q" ]]; then
+if $REZOSS_SM8550_TARGET; then
     # EXPERIMENTAL Human/Pet Detection: rebuilt from saved YOLOv7-tiny ONNX
     # with SNPE 2.10 and a fresh SM8550/V73 cache; not Samsung donor weights.
     # Ten direct stock-SNPE samples and Samsung native decoder checks passed.
@@ -749,7 +761,12 @@ done
 # =============================================================================
 # Experimental dm3q-only horizon correction, linked into the stock S23U EIS node.
 # Exact-firmware checks and stock backup are handled by the installer.
-. "$MODPATH/horizontal-lock/install.sh"
+# The adapter is built against the S23U EIS node; other SM8550 targets skip it.
+if [[ "$TARGET_CODENAME" == "dm3q" ]]; then
+    . "$MODPATH/horizontal-lock/install.sh"
+else
+    LOG "- Skipping S23U Horizontal Lock EIS adapter on $TARGET_CODENAME"
+fi
 
 # =============================================================================
 # Disabled Experiments - Camera Vendor Stack
@@ -948,12 +965,29 @@ APPLY_PATCH "system" "system/app/VisualCloudCore/VisualCloudCore.apk" \
     "$MODPATH/visualcloudcore/VisualCloudCore.apk/0001-Use-S25-Ultra-model-for-stub-update-check.patch"
 
 LOG "- Patch product framework overlay doze auto-brightness"
-APPLY_PATCH "product" "overlay/framework-res__dm3qxxx__auto_generated_rro_product.apk" \
-    "$MODPATH/rro/framework-res__dm3qxxx__auto_generated_rro_product.apk/0001-Add-doze-auto-brightness-arrays.patch"
 
 LOG "- Patch product framework overlay Now Nudge notification allowlist"
-APPLY_PATCH "product" "overlay/framework-res__dm3qxxx__auto_generated_rro_product.apk" \
-    "$MODPATH/rro/framework-res__dm3qxxx__auto_generated_rro_product.apk/0002-Add-Now-Nudge-notification-allow-packages.patch"
+# The product RRO is named after the device (dm1qxxx, dm3qxxx, b5qxxx, ...).
+# Prefer the target's own overlay, then fall back to any auto-generated one.
+REZOSS_PRODUCT_RRO=""
+if [ -f "$WORK_DIR/product/overlay/framework-res__${TARGET_CODENAME}xxx__auto_generated_rro_product.apk" ]; then
+    REZOSS_PRODUCT_RRO="overlay/framework-res__${TARGET_CODENAME}xxx__auto_generated_rro_product.apk"
+else
+    for f in "$WORK_DIR/product/overlay/"framework-res__*__auto_generated_rro_product.apk; do
+        if [ -f "$f" ]; then
+            REZOSS_PRODUCT_RRO="overlay/$(basename "$f")"
+            break
+        fi
+    done
+fi
+if [ -n "$REZOSS_PRODUCT_RRO" ]; then
+    LOG "- Using product overlay $REZOSS_PRODUCT_RRO"
+    APPLY_PATCH "product" "$REZOSS_PRODUCT_RRO" \
+        "$MODPATH/rro/framework-res__dm1qksx__auto_generated_rro_product.apk/0002-Add-Now-Nudge-notification-allow-packages.patch"
+else
+    LOGW "No auto-generated framework-res product overlay found; skipping Now Nudge allowlist patch"
+fi
+unset REZOSS_PRODUCT_RRO
 
 # =============================================================================
 # Notification Highlights / Galaxy AI Stack
@@ -1115,13 +1149,13 @@ APPLY_PATCH "system" "system/priv-app/SamsungAiCore/SamsungAiCore.apk" \
     "$MODPATH/aicore/SamsungAiCore.apk/0002-Experiment-enable-SM8550-V73-QNN-profile.patch"
 # Experimental: replace the S26U V81 HTP binaries inside SamsungAiCore.apk with
 # S23U Hexagon V73 binaries and patch AiCore's own QNN wrapper crash paths.
-local AICORE_DECODED_APK="$APKTOOL_DIR/system/priv-app/SamsungAiCore/SamsungAiCore.apk"
-local AICORE_DECODED_LIB="$AICORE_DECODED_APK/lib/arm64-v8a"
-local AICORE_DECODED_SSGEN_LIB="$AICORE_DECODED_APK/assets/ssgen/libs"
-local AICORE_SNAP_QNN_LIB="$AICORE_DECODED_LIB/libsnap_qnn.so"
-local AICORE_SNAP_QNN_PATCHED_LIB="$TMP_DIR/aicore_libsnap_qnn.so"
-local AICORE_S23U_FW_DIR="$FW_DIR/SM-S918B_EUX"
-local AICORE_QNN_MISSING=0
+AICORE_DECODED_APK="$APKTOOL_DIR/system/priv-app/SamsungAiCore/SamsungAiCore.apk"
+AICORE_DECODED_LIB="$AICORE_DECODED_APK/lib/arm64-v8a"
+AICORE_DECODED_SSGEN_LIB="$AICORE_DECODED_APK/assets/ssgen/libs"
+AICORE_SNAP_QNN_LIB="$AICORE_DECODED_LIB/libsnap_qnn.so"
+AICORE_SNAP_QNN_PATCHED_LIB="$TMP_DIR/aicore_libsnap_qnn.so"
+AICORE_S23U_FW_DIR="$FW_DIR/SM-S911N_KOO"
+AICORE_QNN_MISSING=0
 if [ ! -d "$AICORE_DECODED_LIB" ] || [ ! -d "$AICORE_DECODED_SSGEN_LIB" ]; then
     LOGE "SamsungAiCore.apk decoded QNN directories are missing"
     return 1
@@ -1171,15 +1205,15 @@ LOG "- Refusing AIOSKernelService LLM/LLMV before QNN execution on SM8550"
 APPLY_PATCH "system" "system/priv-app/AIOSKernelService/AIOSKernelService.apk" \
     "$MODPATH/aioskernel/AIOSKernelService.apk/0004-Refuse-LLM-LLMV-before-QNN-execution.patch"
 # Replace the S26U V81 HTP binaries inside AIOSKernelService.apk with the S23U Hexagon V73 pair.
-local AIOS_DECODED_APK="$APKTOOL_DIR/system/priv-app/AIOSKernelService/AIOSKernelService.apk"
-local AIOS_DECODED_LIB="$AIOS_DECODED_APK/lib/arm64-v8a"
-local AIOS_DECODED_SSGEN_LIB="$AIOS_DECODED_APK/assets/ssgen/libs"
-local AIOS_SSN_LIB="$AIOS_DECODED_LIB/libssneural_vndk.so"
-local AIOS_SSN_PATCHED_LIB="$TMP_DIR/aios_libssneural_vndk.so"
-local AIOS_SNAP_QNN_LIB="$AIOS_DECODED_LIB/libsnap_qnn.so"
-local AIOS_SNAP_QNN_PATCHED_LIB="$TMP_DIR/aios_libsnap_qnn.so"
-local S23U_FW_DIR="$FW_DIR/SM-S918B_EUX"
-local AIOS_QNN_MISSING=0
+AIOS_DECODED_APK="$APKTOOL_DIR/system/priv-app/AIOSKernelService/AIOSKernelService.apk"
+AIOS_DECODED_LIB="$AIOS_DECODED_APK/lib/arm64-v8a"
+AIOS_DECODED_SSGEN_LIB="$AIOS_DECODED_APK/assets/ssgen/libs"
+AIOS_SSN_LIB="$AIOS_DECODED_LIB/libssneural_vndk.so"
+AIOS_SSN_PATCHED_LIB="$TMP_DIR/aios_libssneural_vndk.so"
+AIOS_SNAP_QNN_LIB="$AIOS_DECODED_LIB/libsnap_qnn.so"
+AIOS_SNAP_QNN_PATCHED_LIB="$TMP_DIR/aios_libsnap_qnn.so"
+S23U_FW_DIR="$FW_DIR/SM-S911N_KOO"
+AIOS_QNN_MISSING=0
 if [ ! -d "$AIOS_DECODED_LIB" ] || [ ! -d "$AIOS_DECODED_SSGEN_LIB" ]; then
     LOGE "AIOSKernelService.apk decoded QNN directories are missing"
     return 1
@@ -1300,155 +1334,6 @@ python3 "$MODPATH/firewall/patch_region_strings.py" \
     "$MODPATH/firewall/region_names.tsv" \
     || ABORT "Failed to sanitize Firewall province/country strings"
 
+unset REZOSS_SM8550_TARGET
+
 LOG_STEP_OUT
-
-# =============================================================================
-# Kernel fallback helpers
-# =============================================================================
-REZOSS_ARCHIVED_KERNEL_DIR="$SRC_DIR/out/archived/kernel"
-
-_REZOSS_ARCHIVE_KERNEL_IMAGE()
-{
-  local IMAGE_NAME="$1"
-  local SOURCE_IMAGE="$WORK_DIR/kernel/$IMAGE_NAME"
-  local ARCHIVED_IMAGE="$REZOSS_ARCHIVED_KERNEL_DIR/$IMAGE_NAME"
-
-  if [ ! -f "$SOURCE_IMAGE" ]; then
-    LOGE "Kernel image not found: ${SOURCE_IMAGE//$SRC_DIR\//}"
-    return 1
-  fi
-
-  mkdir -p "$REZOSS_ARCHIVED_KERNEL_DIR" || return 1
-  LOG "- Archiving $IMAGE_NAME to ${ARCHIVED_IMAGE//$SRC_DIR\//}"
-  cp -f "$SOURCE_IMAGE" "$ARCHIVED_IMAGE" || return 1
-}
-
-_REZOSS_ARCHIVE_KERNEL()
-{
-  _REZOSS_ARCHIVE_KERNEL_IMAGE "boot.img" || return 1
-  _REZOSS_ARCHIVE_KERNEL_IMAGE "init_boot.img" || return 1
-}
-
-_REZOSS_RESTORE_ARCHIVED_KERNEL_IMAGE()
-{
-  local IMAGE_NAME="$1"
-  local ARCHIVED_IMAGE="$REZOSS_ARCHIVED_KERNEL_DIR/$IMAGE_NAME"
-  local TARGET_IMAGE="$WORK_DIR/kernel/$IMAGE_NAME"
-
-  if [ ! -f "$ARCHIVED_IMAGE" ]; then
-    ABORT "Archived kernel image not found: ${ARCHIVED_IMAGE//$SRC_DIR\//}"
-    return 1
-  fi
-
-  LOG "- Restoring $IMAGE_NAME from ${ARCHIVED_IMAGE//$SRC_DIR\//}"
-  cp -f "$ARCHIVED_IMAGE" "$TARGET_IMAGE" \
-    || {
-      ABORT "Failed to restore $IMAGE_NAME from archived kernel"
-      return 1
-    }
-}
-
-_REZOSS_RESTORE_ARCHIVED_KERNEL()
-{
-  local RESTORE_BOOT="$1"
-  local RESTORE_INIT_BOOT="$2"
-
-  if [ "$RESTORE_BOOT" = "true" ]; then
-    _REZOSS_RESTORE_ARCHIVED_KERNEL_IMAGE "boot.img" || return 1
-  fi
-  if [ "$RESTORE_INIT_BOOT" = "true" ]; then
-    _REZOSS_RESTORE_ARCHIVED_KERNEL_IMAGE "init_boot.img" || return 1
-  fi
-}
-
-# Local bundles are durable inputs; all image work stays in a unique /tmp directory.
-_REZOSS_KERNEL_FROM_CACHE()
-(
-  local CACHE_DIR="$MODPATH/ksu-next"
-  local TMP_DIR KERNEL_VERSION KERNEL_ZIP
-  local -a KERNEL_ZIPS
-  local KSU_KSUD KSU_MODULE
-  python3 "$CACHE_DIR/update.py" "$CACHE_DIR" || {
-    LOGE "Invalid KernelSU-Next cache/version configuration"
-    return 1
-  }
-  KERNEL_VERSION="$(sed -n 's/^kernel=//p' "$CACHE_DIR/version" | tr -d '\r')"
-  KERNEL_VERSION="${KERNEL_VERSION#5.15.}"
-  if [[ ! "$KERNEL_VERSION" =~ ^[0-9]+$ ]]; then
-    LOGE "Invalid cached kernel version: $KERNEL_VERSION"
-    return 1
-  fi
-  mapfile -t KERNEL_ZIPS < <(find "$CACHE_DIR" -maxdepth 1 -type f -name "common-5.15.${KERNEL_VERSION}-*.zip" | sort)
-  if [ "${#KERNEL_ZIPS[@]}" -ne 1 ]; then
-    LOGE "Expected exactly one cached kernel ZIP for 5.15.$KERNEL_VERSION"
-    return 1
-  fi
-  KERNEL_ZIP="${KERNEL_ZIPS[0]}"
-  if [ "$(uname -m)" != "x86_64" ]; then
-    LOGE "The cached ksud and magiskboot require an x86_64 build host"
-    return 1
-  fi
-
-  TMP_DIR="$(mktemp -d /tmp/rezoss-kernel.XXXXXX)" || return 1
-  trap 'rm -rf -- "$TMP_DIR"' EXIT
-  # Validate cached ZIPs too, including when every update check failed offline.
-  python3 - "$CACHE_DIR" "$KERNEL_ZIP" <<'PY_CACHE'
-import importlib.util
-from pathlib import Path
-import sys
-sys.dont_write_bytecode = True
-cache = Path(sys.argv[1])
-spec = importlib.util.spec_from_file_location('ksu_update', cache / 'update.py')
-module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(module)
-module.validate(Path(sys.argv[2]), 'Image.gz')
-for name, member in module.ARTIFACTS.items():
-    module.validate(cache / (name + '.zip'), member)
-PY_CACHE
-  [ "$?" -eq 0 ] || return 1
-  cp -p "$CACHE_DIR/magiskboot" "$TMP_DIR/magiskboot" || return 1
-  chmod +x "$TMP_DIR/magiskboot" || return 1
-  unzip -p "$KERNEL_ZIP" Image.gz > "$TMP_DIR/replacement-kernel" || return 1
-  KSU_KSUD="$TMP_DIR/ksud"
-  KSU_MODULE="$TMP_DIR/android13-5.15_kernelsu.ko"
-  unzip -p "$CACHE_DIR/ksud-x86_64-unknown-linux-musl.zip" x86_64-unknown-linux-musl/release/ksud > "$KSU_KSUD" || return 1
-  unzip -p "$CACHE_DIR/aarch64-android13-5.15-lkm.zip" android13-5.15_kernelsu.ko > "$KSU_MODULE" || return 1
-  chmod +x "$KSU_KSUD" || return 1
-  "$KSU_KSUD" --help >/dev/null || return 1
-
-  LOG "- Replacing boot kernel with cached $(basename "$KERNEL_ZIP")"
-  cp -p "$WORK_DIR/kernel/boot.img" "$TMP_DIR/boot.img" || return 1
-  cd "$TMP_DIR" || return 1
-  ./magiskboot unpack boot.img || return 1
-  cp replacement-kernel kernel || return 1
-  ./magiskboot repack boot.img || return 1
-  [ -s new-boot.img ] || return 1
-  cp new-boot.img "$WORK_DIR/kernel/boot.img" || return 1
-
-  # Separate KSU outputs from magiskboot's new-boot.img to prevent stale selection.
-  mkdir "$TMP_DIR/ksu" || return 1
-  cp "$WORK_DIR/kernel/init_boot.img" "$TMP_DIR/ksu/init_boot.img" || return 1
-  cd "$TMP_DIR/ksu" || return 1
-  LOG "- Patching init_boot.img with cached $(sed -n 's/^ksu-next-CI=//p' "$CACHE_DIR/version" | tr -d '\r')"
-  "$KSU_KSUD" boot-patch -b init_boot.img --module "$KSU_MODULE" --kmi android13-5.15 || return 1
-  local -a PATCHED_IMAGES
-  mapfile -t PATCHED_IMAGES < <(find . -maxdepth 1 -type f -name '*.img' ! -name init_boot.img)
-  if [ "${#PATCHED_IMAGES[@]}" -ne 1 ] || [ ! -s "${PATCHED_IMAGES[0]}" ]; then
-    LOGE "Expected exactly one newly patched init_boot image"
-    return 1
-  fi
-  cp "${PATCHED_IMAGES[0]}" "$WORK_DIR/kernel/init_boot.img" || return 1
-  cmp -s "${PATCHED_IMAGES[0]}" "$WORK_DIR/kernel/init_boot.img" || return 1
-  LOG "- Verified cached KernelSU-Next patched init_boot.img"
-  LOG "  SHA-256: $(sha256sum "$WORK_DIR/kernel/init_boot.img" | cut -d ' ' -f 1)"
-)
-
-# =============================================================================
-# Kernel - local Edgar kernel and KernelSU-Next CI cache, with online updates
-# =============================================================================
-if ! _REZOSS_ARCHIVE_KERNEL; then
-  ABORT "Failed to archive original boot.img and init_boot.img"
-elif ! _REZOSS_KERNEL_FROM_CACHE; then
-  LOGW "Cached kernel/KSU patch failed; restoring archived boot.img and init_boot.img"
-  _REZOSS_RESTORE_ARCHIVED_KERNEL "true" "true"
-fi

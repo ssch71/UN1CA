@@ -1,4 +1,5 @@
 #!/sbin/sh
+# shellcheck disable=SC2086
 #
 # Auto DFE maintainer for dm3q recovery installs.
 # It never formats /data. Encrypted or ambiguous existing data is left intact.

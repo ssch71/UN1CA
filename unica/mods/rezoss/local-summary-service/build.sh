@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2066
 # SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
 

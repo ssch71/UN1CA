@@ -1,4 +1,5 @@
 #!/sbin/sh
+# shellcheck disable=SC2034,SC2317,SC2329
 # SPDX-License-Identifier: Apache-2.0
 # Standalone dm3q DFE entrypoint: no ROM updater and no super repack.
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2155
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Exercise real packaging helpers in /tmp; never touch out/target or a phone.
 set -e
