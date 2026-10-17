@@ -816,14 +816,6 @@ unset -f _REZOSS_ENSURE_MOSEY_VENDOR_SELINUX _REZOSS_GET_MOSEY_APP_DOMAIN
 unset -f _REZOSS_DROP_MOSEY_APP_VENDOR_RULES _REZOSS_CIL_HAS_SYMBOL _REZOSS_GET_SEPOLICY_API_SUFFIX
 unset -f _REZOSS_ENSURE_LOG_VIDEO_FILTER_SELINUX _REZOSS_ENSURE_BOOTANIMATION_SELINUX
 
-
-# =============================================================================
-# Build Display Branding
-# =============================================================================
-NOW_BUILD="UN1CA-ROM built by Rezoss on $(GET_PROP "system" "ro.build.PDA")"
-SET_PROP "system" "ro.build.display.id" "${NOW_BUILD}"
-SET_PROP "product" "ro.build.display.id" "${NOW_BUILD}"
-
 # =============================================================================
 # Local System App Overlays
 # =============================================================================
