@@ -44,26 +44,10 @@ APPLY_PATCH()
     DECODE_APK "$PARTITION" "$FILE" || return 1
 
     LOG "- Applying \"$(grep "^Subject:" "$PATCH" | sed "s/.*PATCH] //")\" to /$PARTITION/$FILE"
-
-    # Smali files may move between smali_classesN dirs across firmware
-    # versions (e.g. One UI 9.0). Relocate missing paths when the same
-    # class exists in exactly one other smali dir.
-    local PATCH_DIR="$APKTOOL_DIR/$PARTITION/${FILE//system\//}"
-    local TMP_PATCH SRC_PATH DST_PATH
-    TMP_PATCH="$(mktemp --suffix=.patch)"
-    cp -a "$PATCH" "$TMP_PATCH"
-    while read -r SRC_PATH; do
-        [[ "$SRC_PATH" == smali*/* ]] || continue
-        [ -e "$PATCH_DIR/$SRC_PATH" ] && continue
-        DST_PATH="$(find "$PATCH_DIR" -path "$PATCH_DIR/smali*/${SRC_PATH#*/}" -type f -printf "%P\n")"
-        if [ "$DST_PATH" ] && [ "$(wc -l <<< "$DST_PATH")" -eq 1 ]; then
-            LOG "  Relocating $SRC_PATH -> ${DST_PATH%%/*}"
-            SRC="$SRC_PATH" DST="$DST_PATH" perl -pi -e 's/(?<=[ab]\/)\Q$ENV{SRC}\E(?=$|\s)/$ENV{DST}/g' "$TMP_PATCH"
-        fi
-    done < <(sed -n "s|^--- a/||p" "$PATCH" | sort -u)
-
-    EVAL "LC_ALL=C patch -p1 -d \"$PATCH_DIR\" -N --forward -l < \"$TMP_PATCH\"" || { rm -f "$TMP_PATCH"; return 1; }
-    rm -f "$TMP_PATCH"
+	EVAL "LC_ALL=C patch -p1 \
+	-d \"$APKTOOL_DIR/$PARTITION/${FILE//system\//}\" \
+	-N --forward -l \
+	< \"$PATCH\"" || return 1
     # EVAL "LC_ALL=C git apply --directory=\"$APKTOOL_DIR/$PARTITION/${FILE//system\//}\" --verbose --unsafe-paths \"$PATCH\"" || return 1
 }
 
@@ -242,7 +226,7 @@ SET_FLOATING_FEATURE_CONFIG()
         return 1
     fi
 
-    if grep -q "$CONFIG" "$FILE"; then
+    if grep -q "<$CONFIG>" "$FILE"; then
         if [[ "$VALUE" == "-d" ]] || [[ "$VALUE" == "--delete" ]]; then
             LOG "- Deleting \"$CONFIG\" config in /system/system/etc/floating_feature.xml"
             sed -i "/<$CONFIG>/d" "$FILE"

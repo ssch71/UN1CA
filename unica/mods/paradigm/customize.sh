@@ -187,40 +187,35 @@ APPLY_PATCH "system" "system/priv-app/SecSoundPicker/SecSoundPicker.apk" \
 LOG_STEP_OUT
 
 # Adaptive colour tone
-# TODO: rebase ead/SecSettings.apk etc. on One UI 9.0 smali
-if [ "$SOURCE_PLATFORM_SDK_VERSION" -lt "37" ]; then
-    LOG_STEP_IN "- Adding Adaptive colour tone feature"
-    ADD_TO_WORK_DIR "m3qxxx" "system" \
-        "system/etc/permissions/privapp-permissions-com.samsung.android.sead.xml" 0 0 644 "u:object_r:system_file:s0"
-    ADD_TO_WORK_DIR "m3qxxx" "system" \
-        "system/priv-app/EnvironmentAdaptiveDisplay/EnvironmentAdaptiveDisplay.apk" 0 0 644 "u:object_r:system_file:s0"
-    if $TARGET_LCD_SUPPORT_MDNIE_HW; then
-        APPLY_PATCH "system" "system/framework/services.jar" \
-            "$MODPATH/ead/services.jar/0001-Add-Adaptive-color-tone-feature.patch"
-    else
-        APPLY_PATCH "system" "system/framework/services.jar" \
-            "$MODPATH/ead_mdnie/services.jar/0001-Add-Adaptive-color-tone-feature.patch"
-    fi
-    if $TARGET_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL; then
-        if [ "$TARGET_PLATFORM_SDK_VERSION" -ge "36" ]; then
-            APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-                "$MODPATH/ead_resolution/SecSettings.apk/0001-Add-Adaptive-color-tone-feature.patch"
-        else
-            APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-                "$MODPATH/ead_resolution_legacy/SecSettings.apk/0001-Add-Adaptive-color-tone-feature.patch"
-        fi
+LOG_STEP_IN "- Adding Adaptive colour tone feature"
+ADD_TO_WORK_DIR "m3qxxx" "system" \
+    "system/etc/permissions/privapp-permissions-com.samsung.android.sead.xml" 0 0 644 "u:object_r:system_file:s0"
+ADD_TO_WORK_DIR "m3qxxx" "system" \
+    "system/priv-app/EnvironmentAdaptiveDisplay/EnvironmentAdaptiveDisplay.apk" 0 0 644 "u:object_r:system_file:s0"
+if $TARGET_LCD_SUPPORT_MDNIE_HW; then
+    APPLY_PATCH "system" "system/framework/services.jar" \
+        "$MODPATH/ead/services.jar/0001-Add-Adaptive-color-tone-feature.patch"
+else
+    APPLY_PATCH "system" "system/framework/services.jar" \
+        "$MODPATH/ead_mdnie/services.jar/0001-Add-Adaptive-color-tone-feature.patch"
+fi
+if $TARGET_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL; then
+    if [ "$TARGET_PLATFORM_SDK_VERSION" -ge "36" ]; then
+        APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+            "$MODPATH/ead_resolution/SecSettings.apk/0001-Add-Adaptive-color-tone-feature.patch"
     else
         APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-            "$MODPATH/ead/SecSettings.apk/0001-Add-Adaptive-color-tone-feature.patch"
+            "$MODPATH/ead_resolution_legacy/SecSettings.apk/0001-Add-Adaptive-color-tone-feature.patch"
     fi
-    APPLY_PATCH "system" "system/priv-app/SettingsProvider/SettingsProvider.apk" \
-        "$MODPATH/ead/SettingsProvider.apk/0001-Add-Adaptive-color-tone-feature.patch"
-    APPLY_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
-        "$MODPATH/ead/SystemUI.apk/0001-Add-Adaptive-color-tone-toggle.patch"
-    LOG_STEP_OUT
 else
-    LOG "- Skipping Adaptive colour tone feature (patches not rebased for One UI 9.0)"
+    APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+        "$MODPATH/ead/SecSettings.apk/0001-Add-Adaptive-color-tone-feature.patch"
 fi
+APPLY_PATCH "system" "system/priv-app/SettingsProvider/SettingsProvider.apk" \
+    "$MODPATH/ead/SettingsProvider.apk/0001-Add-Adaptive-color-tone-feature.patch"
+APPLY_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
+    "$MODPATH/ead/SystemUI.apk/0001-Add-Adaptive-color-tone-toggle.patch"
+LOG_STEP_OUT
 
 # Media Context Analyzer
 LOG_STEP_IN "- Adding Media Context Analyzer feature"
@@ -410,7 +405,7 @@ DECODE_APK "system" "system/priv-app/SemanticSearchCore/SemanticSearchCore.apk"
 SEMANTIC_SEARCH_CORE_DECODED="$APKTOOL_DIR/system/priv-app/SemanticSearchCore/SemanticSearchCore.apk"
 SEMANTIC_SEARCH_CORE_LIB="$SEMANTIC_SEARCH_CORE_DECODED/lib/arm64-v8a"
 SEMANTIC_SEARCH_CORE_SHARED="$SEMANTIC_SEARCH_CORE_DECODED/assets/shared"
-SEMANTIC_SEARCH_CORE_FW="$FW_DIR/SM-S911N_KOO"
+SEMANTIC_SEARCH_CORE_FW="$FW_DIR/SM-S918B_EUX"
 SEMANTIC_SEARCH_CORE_QNN_MISSING=0
 if [ ! -d "$SEMANTIC_SEARCH_CORE_LIB" ] || [ ! -d "$SEMANTIC_SEARCH_CORE_SHARED" ]; then
     LOGE "SemanticSearchCore.apk decoded QNN directories are missing"

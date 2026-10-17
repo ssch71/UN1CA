@@ -19,6 +19,23 @@ out/
 /.vscode/
 /tools/apktool/framework/
 
+# Local Horizontal Lock library creation/analysis tools. Keep ROM installation
+# inputs and prebuilt libraries available in a fresh checkout.
+/unica/mods/rezoss/horizontal-lock/*
+!/unica/mods/rezoss/horizontal-lock/install.sh
+!/unica/mods/rezoss/horizontal-lock/rom/
+/unica/mods/rezoss/horizontal-lock/rom/*
+!/unica/mods/rezoss/horizontal-lock/rom/payload/
+
+# Local FanCam model-development workspaces. Only ROM payloads and the
+# redistribution licenses belong in Git; keep training/probe tools locally.
+/unica/mods/rezoss/fancam/*
+!/unica/mods/rezoss/fancam/experimental/
+/unica/mods/rezoss/fancam/experimental/*
+!/unica/mods/rezoss/fancam/experimental/system/
+!/unica/mods/rezoss/fancam/experimental/LICENSE-OSNet.txt
+!/unica/mods/rezoss/fancam/experimental/LICENSE-YOLOv7.txt
+
 *.bak*
 *.log
 *.pyc
@@ -59,3 +76,14 @@ security/unica_platform.pk8
 !.gitignore
 !.gitmodules
 /prebuilts/samsung/m3qxxx/system/priv-app/SamsungIntelliVoiceServices/SamsungIntelliVoiceServices.apk
+
+# Local research, validation records and retired hotfix reference files
+/unica/mods/rezoss/aioskernel/REA-v73-findings.txt
+/unica/mods/rezoss/aioskernel/REA-vit-loader-findings.txt
+/unica/mods/rezoss/aioskernel/build_v73_candidate.py
+/unica/mods/rezoss/aioskernel/gauss-feasibility/
+/unica/mods/rezoss/aioskernel/native-now-nudge/REA-native-now-nudge-findings.txt
+/unica/mods/rezoss/aioskernel/native-now-nudge/UI-VALIDATION-20261015.txt
+/unica/mods/rezoss/tmp/
+/unica/mods/tee-simulator/package_hotfix.py
+/unica/mods/tee-simulator/runtime-hotfix/

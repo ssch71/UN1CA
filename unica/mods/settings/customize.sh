@@ -163,9 +163,9 @@ SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
     'const/16 v2, 0xc4' \
     > /dev/null
 
+# Add UN1CA Settings SearchIndexDataProvider(s)
 LOG "- Patching Settings search index providers in /system/system/priv-app/SecSettings.apk"
 SEARCH_INDEX_RESOURCES="$(
-    # shellcheck disable=SC2016
     find "$APKTOOL_DIR/system/priv-app/SecSettings/SecSettings.apk" \
         -path '*/com/android/settings/search/SearchFeatureProviderImpl$$ExternalSyntheticLambda0.smali' \
         -print -quit
@@ -174,7 +174,7 @@ if [ ! "$SEARCH_INDEX_RESOURCES" ]; then
     LOGE "Settings search provider registry not found in /system/system/priv-app/SecSettings.apk"
     return 1
 fi
-SEARCH_INDEX_RESOURCES_SMALI="${SEARCH_INDEX_RESOURCES#"$APKTOOL_DIR"/system/priv-app/SecSettings/SecSettings.apk/}"
+SEARCH_INDEX_RESOURCES_SMALI="${SEARCH_INDEX_RESOURCES#$APKTOOL_DIR/system/priv-app/SecSettings/SecSettings.apk/}"
 
 ADD_UNICA_SETTINGS_SEARCH_INDEX_DATA_PROVIDER()
 {
@@ -215,7 +215,7 @@ if [ ! "$TOP_LEVEL_KEYS_COLLECTOR" ]; then
     LOGE "TopLevelKeysCollector smali not found in /system/system/priv-app/SecSettingsIntelligence.apk"
     return 1
 fi
-TOP_LEVEL_KEYS_COLLECTOR_SMALI="${TOP_LEVEL_KEYS_COLLECTOR#"$APKTOOL_DIR"/system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk/}"
+TOP_LEVEL_KEYS_COLLECTOR_SMALI="${TOP_LEVEL_KEYS_COLLECTOR#$APKTOOL_DIR/system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk/}"
 
 if ! grep -q '"top_level_unica"' "$TOP_LEVEL_KEYS_COLLECTOR"; then
     SMALI_PATCH "system" "system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk" \
@@ -241,3 +241,8 @@ unset -f ADD_UNICA_SETTINGS_SEARCH_INDEX_DATA_PROVIDER
 unset PATCH_INST CONTENT SEARCH_INDEX_RESOURCES SEARCH_INDEX_RESOURCES_SMALI TOP_LEVEL_KEYS_COLLECTOR TOP_LEVEL_KEYS_COLLECTOR_SMALI
 
 LOG_STEP_OUT
+
+# ROM-native Battery Saving: the native worker only accepts fixed kernel controls.
+LOG "- Installing Battery Saving service policy"
+python3 "$MODPATH/battery/install-policy.py" "$WORK_DIR" || ABORT "Failed to install Battery Saving service policy"
+python3 "$MODPATH/ota/install-policy.py" "$WORK_DIR" || ABORT "Failed to install OTA staging service policy"
