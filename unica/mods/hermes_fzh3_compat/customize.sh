@@ -3,10 +3,9 @@
 # Copyright (c) 2026 Rezoss
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# shellcheck disable=SC2034
 SKIPUNZIP=1
 
-# SM8550 targets: dm1q = S23, dm2q = S23+, dm3q = S23U, b5q = Z Flip5, q5q = Z Fold5
+# Validated Hermes targets: dm1q = S23, dm2q = S23+, dm3q = S23U
 case "$TARGET_CODENAME" in
     dm1q|dm2q|dm3q)
         ;;
