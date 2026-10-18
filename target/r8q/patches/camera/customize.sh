@@ -2,8 +2,9 @@
 _CAM_ADD()
 {
     local SRC="$1" PART="$2" FILE="${3#/}"
+    local DIR
     if [[ "$PART" != "system_ext" ]] && [ "$(cut -d "/" -f 2 -s <<< "$SRC")" ]; then
-        local DIR="$FW_DIR/$(cut -d "/" -f 1 <<< "$SRC")_$(cut -d "/" -f 2 <<< "$SRC")"
+        DIR="$FW_DIR/$(cut -d "/" -f 1 <<< "$SRC")_$(cut -d "/" -f 2 <<< "$SRC")"
         if [ ! -e "$DIR/$PART/$FILE" ] && [ ! -L "$DIR/$PART/$FILE" ]; then
             LOGW "Skipping /$PART/$FILE: not in ${DIR//$SRC_DIR\//}"
             return 0
