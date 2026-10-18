@@ -44,8 +44,9 @@ do
         continue
     fi
     if [[ "$blob" == *.txt ]]; then
-        ADD_TO_WORK_DIR "$TARGET_FIRMWARE" "system" "$blob" 0 0 644 "u:object_r:system_file:s0"
+        _CAM_ADD "$TARGET_FIRMWARE" "system" "$blob" 0 0 644 "u:object_r:system_file:s0"
     else
-        ADD_TO_WORK_DIR "$TARGET_FIRMWARE" "system" "$blob" 0 0 644 "u:object_r:system_lib_file:s0"
+        _CAM_ADD "$TARGET_FIRMWARE" "system" "$blob" 0 0 644 "u:object_r:system_lib_file:s0"
     fi
 done
+unset -f _CAM_ADD
