@@ -131,6 +131,16 @@ jobs:
       - name: Extract stock firmwares
         run: ./scripts/extract_fw.sh
 
+      - name: Set up Android SDK (local-summary build)
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platforms;android-37.0 build-tools;37.0.0"
+
+      - name: Install smali tools
+        run: |
+          sudo apt install -yq smali
+          echo "$ANDROID_HOME/build-tools/37.0.0" >> "$GITHUB_PATH"
+
       - name: Check local-summary toolchain
         continue-on-error: true
         run: |
