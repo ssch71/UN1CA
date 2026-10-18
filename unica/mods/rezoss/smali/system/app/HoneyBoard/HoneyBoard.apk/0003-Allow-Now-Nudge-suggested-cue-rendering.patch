@@ -3,21 +3,21 @@ From: @rezoss_reza <rezoss79@users.noreply.github.com>
 Date: Thu, 9 Jul 2026 00:00:00 +0200
 Subject: [PATCH] Allow Now Nudge suggested cue rendering
 
-Preserve the local suggested-cue accessibility bypass on S23U One UI 9.
-Leave the input-view, connection and data checks intact.
+Bypass the local "inaccessible mode" suggested-cue gate so Now Nudge can
+reach the strip on S23U One UI 9.
 
 ---
-diff --git a/smali_classes2/lk/a.smali b/smali_classes2/lk/a.smali
---- a/smali_classes2/lk/a.smali
-+++ b/smali_classes2/lk/a.smali
-@@ -364,7 +364,7 @@
-
-     move-result v0
-
--    if-eqz v0, :cond_3
-+    goto :cond_3
-
-     const-string p1, "inaccessible mode"
-
+diff --git a/smali_classes2/l9/a.smali b/smali_classes2/l9/a.smali
+--- a/smali_classes2/l9/a.smali
++++ b/smali_classes2/l9/a.smali
+@@ -653,7 +653,7 @@
+     move v0, v6
+ 
+     :goto_10
+-    if-eqz v0, :cond_16
++    goto :cond_16
+ 
+     const-string p0, "inaccessible mode"
+ 
 -- 
-2.43.0
+2.51.0

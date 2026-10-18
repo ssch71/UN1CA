@@ -50,3 +50,4 @@ target/t2s/patches/variants/vendor/** binary
 
 # Preserve upstream bytes recorded in the TEE Simulator source manifest.
 unica/mods/tee-simulator/source/gradlew.bat binary
+unica/mods/rezoss/smali/system/app/HoneyBoard/HoneyBoard.apk/*.patch merge=ours

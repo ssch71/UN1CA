@@ -186,6 +186,24 @@ jobs:
           name: patch-debug-${{ matrix.target }}
           path: /tmp/patchdbg
           if-no-files-found: warn
+
+      # Full decoded HoneyBoard for rebasing rezoss keyboard patches
+      - name: Collect HoneyBoard smali
+        if: always() && matrix.target == 'dm1q'
+        run: |
+          HB=$(find out -type d -path "*apktool*" -name "HoneyBoard.apk" | head -1)
+          if [ -n "$HB" ]; then
+            tar -C "$(dirname "$HB")" -czf /tmp/honeyboard-smali.tgz \
+              --exclude='*.orig' --exclude='*.rej' "$(basename "$HB")"
+          fi
+
+      - name: Upload HoneyBoard smali
+        if: always() && matrix.target == 'dm1q'
+        uses: actions/upload-artifact@v4
+        with:
+          name: honeyboard-smali-dm1q
+          path: /tmp/honeyboard-smali.tgz
+          if-no-files-found: ignore
         
       - name: Upload to GoFile
         run: |
