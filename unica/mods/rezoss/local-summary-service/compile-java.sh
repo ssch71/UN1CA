@@ -11,5 +11,5 @@ mkdir -p "$WORK/classes" "$WORK/dex"
 mapfile -t SOURCES < <(find "$1" -name '*.java' -type f | sort)
 javac -source 8 -target 8 -Xlint:-options -classpath "$ANDROID_JAR" -d "$WORK/classes" "${SOURCES[@]}"
 jar cf "$WORK/classes.jar" -C "$WORK/classes" .
-"$D8" --min-api 35 --lib "$ANDROID_JAR" --output "$WORK/dex" "$WORK/classes.jar"
+"$D8" --min-api 28 --lib "$ANDROID_JAR" --output "$WORK/dex" "$WORK/classes.jar"
 baksmali disassemble --api 35 "$WORK/dex/classes.dex" -o "$2"
