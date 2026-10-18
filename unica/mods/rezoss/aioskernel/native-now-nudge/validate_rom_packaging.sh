@@ -12,7 +12,7 @@ export TMP_DIR=$WORK_DIR/tmp
 MODPATH=$SRC_DIR/unica/mods/rezoss
 mkdir -p "$WORK_DIR/system/system" "$WORK_DIR/configs" "$TMP_DIR"
 mkdir -p "$WORK_DIR/system/system/etc/selinux"
-cp "$FW_DIR/SM-S918B_EUX/system/system/etc/selinux/plat_file_contexts" "$WORK_DIR/system/system/etc/selinux/plat_file_contexts"
+cp "$FW_DIR/$(cut -d / -f 1 <<< "$SOURCE_FIRMWARE")_$(cut -d / -f 2 <<< "$SOURCE_FIRMWARE")/system/system/etc/selinux/plat_file_contexts" "$WORK_DIR/system/system/etc/selinux/plat_file_contexts"
 touch "$WORK_DIR/system/system/build.prop" "$WORK_DIR/configs/fs_config-system" "$WORK_DIR/configs/file_context-system"
 # Simulate stale weights from a previous incremental build.
 mkdir -p "$WORK_DIR/system/system/etc/unica/now-nudge-v73"

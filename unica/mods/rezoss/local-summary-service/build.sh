@@ -16,7 +16,7 @@ OUTPUT=$(realpath -m "$1")
 WORK=$(mktemp -d /tmp/unica-local-summary-apk.XXXXXX)
 trap 'rm -rf "$WORK"' EXIT
 
-FRAMEWORK_RES="$FW_DIR/SM-S918B_EUX/system/system/framework/framework-res.apk"
+FRAMEWORK_RES="$FW_DIR/$(cut -d / -f 1 <<< "$SOURCE_FIRMWARE")_$(cut -d / -f 2 <<< "$SOURCE_FIRMWARE")/system/system/framework/framework-res.apk"
 
 for file in "$FRAMEWORK_RES"; do
     [[ -f "$file" ]] || { echo "Missing required local-summary artifact: $file" >&2; exit 1; }
