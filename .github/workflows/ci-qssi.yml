@@ -131,6 +131,11 @@ jobs:
       - name: Extract stock firmwares
         run: ./scripts/extract_fw.sh
 
+      - name: Prepare Android SDK directory
+        run: |
+          sudo mkdir -p /usr/local/lib/android
+          sudo chown -R "$USER":"$USER" /usr/local/lib/android
+
       - name: Set up Android SDK (local-summary build)
         uses: android-actions/setup-android@v3
         with:
