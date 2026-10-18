@@ -1,90 +1,5 @@
 Subject: [PATCH] Keep Qwen replies until manual input or editor exit
 
---- a/smali_classes3/com/samsung/android/honeyboard/service/HoneyBoardService.smali
-+++ b/smali_classes3/com/samsung/android/honeyboard/service/HoneyBoardService.smali
-@@ -6184,6 +6184,8 @@
- .method public onFinishInput()V
-     .locals 5
-
-+    invoke-static {}, Lio/mesalabs/rezoss/ai/KeyboardReplyRetention;->finish()V
-+
-     iget-object v0, p0, Lcom/samsung/android/honeyboard/service/HoneyBoardService;->log:Llo/b;
-
-     const/4 v1, 0x0
-@@ -6255,6 +6257,8 @@
-
- .method public onFinishInputView(Z)V
-     .locals 6
-+
-+    invoke-static {}, Lio/mesalabs/rezoss/ai/KeyboardReplyRetention;->finish()V
-
-     iget-object v0, p0, Lcom/samsung/android/honeyboard/service/HoneyBoardService;->log:Llo/b;
-
-@@ -6840,6 +6844,8 @@
- .method public onStartInput(Landroid/view/inputmethod/EditorInfo;Z)V
-     .locals 4
-
-+    invoke-static {p0, p1, p2}, Lio/mesalabs/rezoss/ai/KeyboardReplyRetention;->start(Landroid/inputmethodservice/InputMethodService;Landroid/view/inputmethod/EditorInfo;Z)V
-+
-     const-string v0, "attribute"
-
-     invoke-static {p1, v0}, Lkotlin/jvm/internal/Intrinsics;->checkNotNullParameter(Ljava/lang/Object;Ljava/lang/String;)V
-@@ -7532,6 +7538,8 @@
- .method public onUpdateSelection(IIIIII)V
-     .locals 9
-
-+    invoke-static {p0}, Lio/mesalabs/rezoss/ai/KeyboardReplyRetention;->selection(Landroid/inputmethodservice/InputMethodService;)V
-+
-     const-string v0, "onUpdateSelection"
-
-     invoke-static {v0}, Lfp/a;->a(Ljava/lang/String;)V
---- a/smali_classes2/com/samsung/android/honeyboard/base/suggestedreplies/receiver/SuggestedRepliesReceiver.smali
-+++ b/smali_classes2/com/samsung/android/honeyboard/base/suggestedreplies/receiver/SuggestedRepliesReceiver.smali
-@@ -1228,6 +1228,15 @@
- .method public onReceive(Landroid/content/Context;Landroid/content/Intent;)V
-     .locals 5
-
-+    invoke-static {p0, p2}, Lio/mesalabs/rezoss/ai/KeyboardReplyRetention;->consume(Ljava/lang/Object;Landroid/content/Intent;)Z
-+
-+    move-result v0
-+
-+    if-eqz v0, :rezoss_original_receive
-+
-+    return-void
-+
-+    :rezoss_original_receive
-     const-string p1, "intent"
-
-     invoke-static {p2, p1}, Lkotlin/jvm/internal/Intrinsics;->checkNotNullParameter(Ljava/lang/Object;Ljava/lang/String;)V
---- a/smali_classes2/jk/t.smali
-+++ b/smali_classes2/jk/t.smali
-@@ -705,6 +705,15 @@
- .method public final k()V
-     .locals 1
-
-+    invoke-static {}, Lio/mesalabs/rezoss/ai/KeyboardReplyRetention;->keep()Z
-+
-+    move-result v0
-+
-+    if-eqz v0, :rezoss_original_hide
-+
-+    return-void
-+
-+    :rezoss_original_hide
-     invoke-direct {p0}, Ljk/t;->i()Ljk/o;
-
-     move-result-object v0
---- a/smali_classes2/com/samsung/android/honeyboard/icecone/rts/manager/RtsManager.smali
-+++ b/smali_classes2/com/samsung/android/honeyboard/icecone/rts/manager/RtsManager.smali
-@@ -573,6 +573,8 @@
-
-     iput-object v1, p0, Lcom/samsung/android/honeyboard/icecone/rts/manager/RtsManager;->rtsAppsPolicyManager:Lmo/e;
-
-+    invoke-static {v1}, Lio/mesalabs/rezoss/ai/KeyboardRtsPolicy;->enable(Ljava/lang/Object;)V
-+
-     new-instance p1, Ls0/i;
-
-     invoke-direct {p1, v2}, Ls0/i;-><init>(Landroid/content/Context;)V
 --- a/res/raw/sticker_rts_allow_list.json
 +++ b/res/raw/sticker_rts_allow_list.json
 @@ -63,7 +63,11 @@
@@ -100,8 +15,99 @@ Subject: [PATCH] Keep Qwen replies until manual input or editor exit
      },
      {
        "item": "com.skype.raider",
---- /dev/null
-+++ b/smali_classes5/io/mesalabs/rezoss/ai/KeyboardReplyRetention.smali
+--- a/smali_classes2/com/samsung/android/honeyboard/base/suggestedreplies/receiver/SuggestedRepliesReceiver.smali
++++ b/smali_classes2/com/samsung/android/honeyboard/base/suggestedreplies/receiver/SuggestedRepliesReceiver.smali
+@@ -515,6 +515,20 @@
+ .method public final onReceive(Landroid/content/Context;Landroid/content/Intent;)V
+     .locals 29
+ 
++    move-object/from16 v0, p0
++
++    move-object/from16 v1, p2
++
++    invoke-static {v0, v1}, Lio/mesalabs/rezoss/ai/KeyboardReplyRetention;->consume(Ljava/lang/Object;Landroid/content/Intent;)Z
++
++    move-result v0
++
++    if-eqz v0, :rezoss_original_receive
++
++    return-void
++
++    :rezoss_original_receive
++
+     move-object/from16 v1, p0
+ 
+     move-object/from16 v0, p2
+--- a/smali_classes2/com/samsung/android/honeyboard/icecone/rts/manager/RtsManager.smali
++++ b/smali_classes2/com/samsung/android/honeyboard/icecone/rts/manager/RtsManager.smali
+@@ -549,6 +549,8 @@
+ 
+     iput-object v1, p0, Lcom/samsung/android/honeyboard/icecone/rts/manager/RtsManager;->rtsAppsPolicyManager:Lhb/c;
+ 
++    invoke-static {v1}, Lio/mesalabs/rezoss/ai/KeyboardRtsPolicy;->enable(Ljava/lang/Object;)V
++
+     new-instance v1, LC/c;
+ 
+     invoke-direct {v1, p1}, LC/c;-><init>(Landroid/content/Context;)V
+--- a/smali_classes2/com/samsung/android/honeyboard/service/HoneyBoardService.smali
++++ b/smali_classes2/com/samsung/android/honeyboard/service/HoneyBoardService.smali
+@@ -11918,6 +11918,8 @@
+ .method public onFinishInput()V
+     .locals 16
+ 
++    invoke-static {}, Lio/mesalabs/rezoss/ai/KeyboardReplyRetention;->finish()V
++
+     move-object/from16 v0, p0
+ 
+     iget-object v1, v0, Lcom/samsung/android/honeyboard/service/HoneyBoardService;->log:Lgb/c;
+@@ -12188,6 +12190,8 @@
+ .method public onFinishInputView(Z)V
+     .locals 8
+ 
++    invoke-static {}, Lio/mesalabs/rezoss/ai/KeyboardReplyRetention;->finish()V
++
+     iget-object v0, p0, Lcom/samsung/android/honeyboard/service/HoneyBoardService;->log:Lgb/c;
+ 
+     invoke-static {p1}, Ljava/lang/Boolean;->valueOf(Z)Ljava/lang/Boolean;
+@@ -14965,6 +14969,8 @@
+ .method public onStartInput(Landroid/view/inputmethod/EditorInfo;Z)V
+     .locals 12
+ 
++    invoke-static {p0, p1, p2}, Lio/mesalabs/rezoss/ai/KeyboardReplyRetention;->start(Landroid/inputmethodservice/InputMethodService;Landroid/view/inputmethod/EditorInfo;Z)V
++
+     const-string v0, "attribute"
+ 
+     invoke-static {p1, v0}, Lkotlin/jvm/internal/Intrinsics;->checkNotNullParameter(Ljava/lang/Object;Ljava/lang/String;)V
+@@ -16684,6 +16690,8 @@
+ .method public onUpdateSelection(IIIIII)V
+     .locals 9
+ 
++    invoke-static {p0}, Lio/mesalabs/rezoss/ai/KeyboardReplyRetention;->selection(Landroid/inputmethodservice/InputMethodService;)V
++
+     const-string/jumbo v0, "onUpdateSelection"
+ 
+     invoke-static {v0}, Lyb/a;->a(Ljava/lang/String;)V
+--- a/smali_classes2/vq/c.smali
++++ b/smali_classes2/vq/c.smali
+@@ -654,6 +654,16 @@
+ .method public final d()V
+     .locals 7
+ 
++    invoke-static {}, Lio/mesalabs/rezoss/ai/KeyboardReplyRetention;->keep()Z
++
++    move-result v0
++
++    if-eqz v0, :rezoss_original_hide
++
++    return-void
++
++    :rezoss_original_hide
++
+     iget-object v0, p0, Lvq/c;->C:Luq/l;
+ 
+     const/4 v1, 0x0
+--- a/smali_classes4/io/mesalabs/rezoss/ai/KeyboardReplyRetention.smali
++++ b/smali_classes4/io/mesalabs/rezoss/ai/KeyboardReplyRetention.smali
 @@ -0,0 +1,778 @@
 +.class public final Lio/mesalabs/rezoss/ai/KeyboardReplyRetention;
 +.super Ljava/lang/Object;
@@ -209,7 +215,7 @@ Subject: [PATCH] Keep Qwen replies until manual input or editor exit
 +
 +    move-result-object v0
 +
-+    const-string v3, "q"
++    const-string v3, "d"
 +
 +    const/4 v4, 0x1
 +
@@ -881,8 +887,8 @@ Subject: [PATCH] Keep Qwen replies until manual input or editor exit
 +    .line 34
 +    return-void
 +.end method
---- /dev/null
-+++ b/smali_classes5/io/mesalabs/rezoss/ai/KeyboardRtsPolicy.smali
+--- a/smali_classes4/io/mesalabs/rezoss/ai/KeyboardRtsPolicy.smali
++++ b/smali_classes4/io/mesalabs/rezoss/ai/KeyboardRtsPolicy.smali
 @@ -0,0 +1,237 @@
 +.class public final Lio/mesalabs/rezoss/ai/KeyboardRtsPolicy;
 +.super Ljava/lang/Object;
