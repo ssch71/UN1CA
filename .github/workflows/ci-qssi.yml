@@ -131,6 +131,16 @@ jobs:
       - name: Extract stock firmwares
         run: ./scripts/extract_fw.sh
 
+      - name: Check local-summary toolchain
+        continue-on-error: true
+        run: |
+          SDK="${ANDROID_HOME:-$HOME/Android/Sdk}"
+          echo "ANDROID_HOME=${ANDROID_HOME:-<unset>} SDK=$SDK"
+          ls -d "$SDK"/platforms/* "$SDK"/build-tools/* 2>&1 | head
+          for t in javac jar smali baksmali aapt2 zipalign apksigner keytool; do
+            printf "%s: " "$t"; command -v "$t" || echo MISSING
+          done
+
       - name: Build ROM
         run: ./scripts/make_rom.sh
 
