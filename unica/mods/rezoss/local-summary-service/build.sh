@@ -50,7 +50,7 @@ zipalign -c -p 4 "$WORK/signed.apk"
 apksigner verify --verbose "$WORK/signed.apk" >/dev/null
 
 EXPECTED_CERT_SHA256="$({ keytool -printcert -file "$CERT_X509" 2>/dev/null || true; } | sed -n 's/.*SHA256: //p' | tr -d ':' | tr '[:upper:]' '[:lower:]' | head -n1)"
-SIGNED_CERT_SHA256="$(apksigner verify --print-certs "$WORK/signed.apk" | sed -n 's/Signer #1 certificate SHA-256 digest: //p' | tr -d ':' | tr '[:upper:]' '[:lower:]' | head -n1)"
+SIGNED_CERT_SHA256="$(apksigner verify --print-certs "$WORK/signed.apk" 2>/dev/null | grep -m1 -i 'certificate SHA-256 digest' | sed 's/.*digest: //' | tr -d ':' | tr '[:upper:]' '[:lower:]' | head -n1)"
 if [[ -z "$EXPECTED_CERT_SHA256" || "$SIGNED_CERT_SHA256" != "$EXPECTED_CERT_SHA256" ]]; then
     echo "RezossAI signing certificate mismatch" >&2
     echo "Expected: $EXPECTED_CERT_SHA256" >&2

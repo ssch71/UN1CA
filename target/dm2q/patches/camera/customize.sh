@@ -1,3 +1,17 @@
+# Skip stock blobs the current target firmware no longer ships.
+_CAM_ADD()
+{
+    local SRC="$1" PART="$2" FILE="${3#/}"
+    if [[ "$PART" != "system_ext" ]] && [ "$(cut -d "/" -f 2 -s <<< "$SRC")" ]; then
+        local DIR="$FW_DIR/$(cut -d "/" -f 1 <<< "$SRC")_$(cut -d "/" -f 2 <<< "$SRC")"
+        if [ ! -e "$DIR/$PART/$FILE" ] && [ ! -L "$DIR/$PART/$FILE" ]; then
+            LOGW "Skipping /$PART/$FILE: not in ${DIR//$SRC_DIR\//}"
+            return 0
+        fi
+    fi
+    ADD_TO_WORK_DIR "$@"
+}
+
 echo "Add stock camera libs"
 BLOBS_LIST="
 system/lib64/libDLInterface_aidl.camera.samsung.so
