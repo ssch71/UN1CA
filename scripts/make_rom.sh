@@ -22,7 +22,7 @@ if [[ " $* " == *" -ota "* ]] || [[ " $* " == *" --ota "* ]]; then
 fi
 
 FORCE=false
-BUILD_ROM=false
+BUILD_ROM=true
 BUILD_TARGET_FILES=true
 BUILD_FLASHABLE_ZIP=false
 BUILD_DIRECT_FLASHABLE_ZIP=false
