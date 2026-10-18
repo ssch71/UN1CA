@@ -1060,6 +1060,9 @@ if [[ "${UNICA_ENABLE_SAMSUNG_AICORE:-true}" == "true" ]]; then
     LOG "- Disabling SamsungAiCore neural-wallpaper pipeline"
     APPLY_PATCH "system" "system/priv-app/SamsungAiCore/SamsungAiCore.apk" \
         "$MODPATH/aicore/SamsungAiCore.apk/0003-Disable-crashing-wallpaper-pipeline.patch"
+    LOG "- Patch SamsungAiCore Vision Model device mapping (dm1q/dm2q/dm3q/b5q/q5q -> m3q)"
+    APPLY_PATCH "system" "system/priv-app/SamsungAiCore/SamsungAiCore.apk" \
+        "$MODPATH/aicore/SamsungAiCore.apk/0001-Map-dm-series-to-m3q-for-vision-model.patch"
 else
     LOG "- Removing SamsungAiCore; UN1CA Qwen provider handles notification AI paths"
 fi
@@ -1143,9 +1146,6 @@ if [ ! -f "$REZOSS_SIVS_MODEL_PATCH_MARKER" ]; then
 fi
 unset REZOSS_SIVS_MODEL_PATCHED_FILE REZOSS_SIVS_MODEL_PATCH_MARKER
 
-LOG "- Patch SamsungAiCore Vision Model device mapping"
-APPLY_PATCH "system" "system/priv-app/SamsungAiCore/SamsungAiCore.apk" \
-    "$MODPATH/aicore/SamsungAiCore.apk/0001-Map-dm-series-to-m3q-for-vision-model.patch"
 
 LOG "- Experimentally patch SamsungAiCore SM8550/V73 QNN profile"
 APPLY_PATCH "system" "system/priv-app/SamsungAiCore/SamsungAiCore.apk" \

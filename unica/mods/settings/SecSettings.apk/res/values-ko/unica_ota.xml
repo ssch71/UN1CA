@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="unica_ota_title">OTA 업데이트</string>
+    <string name="unica_ota_summary">업데이트를 확인하거나 로컬 OTA 패키지를 설치합니다</string>
+</resources>

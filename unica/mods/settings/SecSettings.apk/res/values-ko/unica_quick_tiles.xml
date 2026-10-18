@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="unica_quick_tiles_title">빠른 설정 타일</string>
+    <string name="unica_quick_tiles_summary">독립적인 빠른 설정 바로가기 8개를 구성합니다</string>
+</resources>

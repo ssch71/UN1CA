@@ -156,7 +156,10 @@ fi
 
 # SEC_PRODUCT_FEATURE_COMMON_CONFIG_DYN_RESOLUTION_CONTROL
 if ! $SOURCE_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL; then
-    if $TARGET_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL; then
+    if $TARGET_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL && [ "$SOURCE_PLATFORM_SDK_VERSION" -ge "37" ]; then
+        # TODO: rebase resolution/ patches on One UI 9.0 smali
+        LOGW "Skipping dynamic resolution control (patches not rebased for One UI 9.0)"
+    elif $TARGET_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL; then
         if [[ "$(GET_FINGERPRINT_SENSOR_TYPE "$TARGET_FINGERPRINT_CONFIG_SENSOR")" == "optical" ]]; then
             ABORT "TARGET_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL is not supported on targets with an optical fingerprint sensor"
         fi

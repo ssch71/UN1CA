@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="unica_battery_title">배터리 절약</string>
+    <string name="unica_battery_summary">전원 제어, 프리셋 및 프로필 백업</string>
+</resources>
