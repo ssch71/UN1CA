@@ -1,0 +1,4 @@
+id=cover_home
+name=Cover display home fix
+author=ssch71
+description=Stop launching SECONDARY_HOME on the built-in cover display.
