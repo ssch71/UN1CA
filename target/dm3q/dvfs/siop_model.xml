@@ -64,7 +64,6 @@
             <GDM    formula="SKIN*BAT" temp="445.455" />
             <SS     formula="SKIN*BAT" temp="520.500" />
             <SS     formula="SKIN*BAT" temp="520.490" region="JP" />
-            <DEX    formula="LRP2"     temp="470"     />
         </complex>
     </overheatcontrol>
 

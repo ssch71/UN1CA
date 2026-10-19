@@ -58,7 +58,6 @@
     <overheatcontrol>
         <complex>
             <EMR    formula="SKIN"            temp="470" max_cpu="1132800" max_gpu="220" />
-            <DEX    formula="LRP"             temp="470" />
             <LTB    formula="SKIN*BAT*VWIFI"   temp="440.455.470" />
             <LCD    formula="SKIN*BAT*VWIFI"   temp="420.435.450" />
             <GDMLTB formula="SKIN*BAT*VWIFI"   temp="450.465.490" />
