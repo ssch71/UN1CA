@@ -6,6 +6,40 @@ fi
 
 _LOG() { if $DEBUG; then LOGW "$1"; else ABORT "$1"; fi }
 
+# Decrypt the target firmware's own SDHMS siop_model (AES-256-CBC, key =
+# SHA-256 of the SSRM policy name, IV = first 16 bytes) so the policy always
+# matches the target firmware version instead of a stale copy in the repo.
+_DECRYPT_TARGET_SIOP()
+{
+    local OUT="$1"
+    local APK
+    local TMP
+    local KEY
+    local IV
+
+    APK="$FW_DIR/$(cut -d "/" -f 1 <<< "$TARGET_FIRMWARE")_$(cut -d "/" -f 2 <<< "$TARGET_FIRMWARE")"
+    APK+="/system/system/priv-app/SamsungDeviceHealthManagerService/SamsungDeviceHealthManagerService.apk"
+    [ -f "$APK" ] || return 1
+
+    TMP="$(mktemp -d)" || return 1
+    if ! unzip -p "$APK" "assets/siop_model" > "$TMP/enc" 2> /dev/null || [ ! -s "$TMP/enc" ]; then
+        rm -rf "$TMP"
+        return 1
+    fi
+
+    KEY="$(printf "%s" "$TARGET_DVFSAPP_CONFIG_SSRM_POLICY_FILENAME" | sha256sum | cut -d " " -f 1)"
+    IV="$(head -c 16 "$TMP/enc" | od -An -tx1 | tr -d " \n")"
+    if tail -c +17 "$TMP/enc" | openssl enc -d -aes-256-cbc -K "$KEY" -iv "$IV" > "$TMP/dec" 2> /dev/null && \
+            grep -q "<siop_document" "$TMP/dec"; then
+        cp -f "$TMP/dec" "$OUT"
+        rm -rf "$TMP"
+        return 0
+    fi
+
+    rm -rf "$TMP"
+    return 1
+}
+
 # SEC_PRODUCT_FEATURE_DVFSAPP_CONFIG_DVFS_POLICY_FILENAME
 if [[ "$SOURCE_DVFSAPP_CONFIG_DVFS_POLICY_FILENAME" != "$TARGET_DVFSAPP_CONFIG_DVFS_POLICY_FILENAME" ]]; then
     SMALI_PATCH "system" "system/framework/ssrm.jar" \
@@ -84,7 +118,12 @@ if [ -f "$SRC_DIR/target/$TARGET_CODENAME/dvfs/siop_model.xml" ]; then
     LOG "- Adding /system/system/priv-app/SamsungDeviceHealthManagerService/SamsungDeviceHealthManagerService.apk/assets/siop_default.xml"
     EVAL "cp -a \"$MODPATH/assets/siop_default.xml\" \"$APKTOOL_DIR/system/priv-app/SamsungDeviceHealthManagerService/SamsungDeviceHealthManagerService.apk/assets/siop_default.xml\""
     LOG "- Adding /system/system/priv-app/SamsungDeviceHealthManagerService/SamsungDeviceHealthManagerService.apk/assets/$TARGET_DVFSAPP_CONFIG_SSRM_POLICY_FILENAME.xml"
-    EVAL "cp -a \"$SRC_DIR/target/$TARGET_CODENAME/dvfs/siop_model.xml\" \"$APKTOOL_DIR/system/priv-app/SamsungDeviceHealthManagerService/SamsungDeviceHealthManagerService.apk/assets/$TARGET_DVFSAPP_CONFIG_SSRM_POLICY_FILENAME.xml\""
+    if _DECRYPT_TARGET_SIOP "$APKTOOL_DIR/system/priv-app/SamsungDeviceHealthManagerService/SamsungDeviceHealthManagerService.apk/assets/$TARGET_DVFSAPP_CONFIG_SSRM_POLICY_FILENAME.xml"; then
+        LOG "  (decrypted from target firmware SDHMS assets/siop_model)"
+    else
+        LOGW "Could not decrypt target SDHMS siop_model, falling back to target/$TARGET_CODENAME/dvfs/siop_model.xml"
+        EVAL "cp -a \"$SRC_DIR/target/$TARGET_CODENAME/dvfs/siop_model.xml\" \"$APKTOOL_DIR/system/priv-app/SamsungDeviceHealthManagerService/SamsungDeviceHealthManagerService.apk/assets/$TARGET_DVFSAPP_CONFIG_SSRM_POLICY_FILENAME.xml\""
+    fi
     LOG "- Adding /system/system/priv-app/SamsungDeviceHealthManagerService/SamsungDeviceHealthManagerService.apk/assets/ssrm_default.xml"
     EVAL "cp -a \"$MODPATH/assets/siop_default.xml\" \"$APKTOOL_DIR/system/priv-app/SamsungDeviceHealthManagerService/SamsungDeviceHealthManagerService.apk/assets/ssrm_default.xml\""
 else
@@ -94,4 +133,4 @@ else
     fi
 fi
 
-unset -f _LOG
+unset -f _LOG _DECRYPT_TARGET_SIOP
