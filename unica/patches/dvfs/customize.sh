@@ -31,7 +31,8 @@ _DECRYPT_TARGET_SIOP()
     IV="$(head -c 16 "$TMP/enc" | od -An -tx1 | tr -d " \n")"
     if tail -c +17 "$TMP/enc" | openssl enc -d -aes-256-cbc -K "$KEY" -iv "$IV" > "$TMP/dec" 2> /dev/null && \
             grep -q "<siop_document" "$TMP/dec"; then
-        cp -f "$TMP/dec" "$OUT"
+        # One UI 9 SDHMS has no OverheatComplexType.DEX, drop it from older policies
+        sed "/<DEX[[:space:]]/d" "$TMP/dec" > "$OUT"
         rm -rf "$TMP"
         return 0
     fi
