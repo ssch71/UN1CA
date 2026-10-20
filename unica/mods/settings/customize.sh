@@ -23,6 +23,18 @@ DECODE_APK "system" "system/priv-app/SecSettings/SecSettings.apk"
 
 # SoftwareUpdateUtils no longer exposes isOTAUpgradeAllowed(Context) on One UI 9.
 
+# The camera feature override hooks an obfuscated SamsungCamera class that only
+# matches the S23 (S911N) build, so apply it only where it still fits.
+UNICA_CAM_PATCH="$MODPATH/camera/SamsungCamera.apk/0001-Allow-runtime-camera-feature-override.patch"
+UNICA_CAM_APK="$APKTOOL_DIR/system/priv-app/SamsungCamera/SamsungCamera.apk"
+DECODE_APK "system" "system/priv-app/SamsungCamera/SamsungCamera.apk"
+if LC_ALL=C patch -p1 -d "$UNICA_CAM_APK" -N --forward -l --dry-run -s < "$UNICA_CAM_PATCH" &> /dev/null; then
+    APPLY_PATCH "system" "system/priv-app/SamsungCamera/SamsungCamera.apk" "$UNICA_CAM_PATCH"
+else
+    LOGW "Skipping \"$(basename "$UNICA_CAM_PATCH")\": SamsungCamera smali does not match"
+fi
+unset UNICA_CAM_PATCH UNICA_CAM_APK
+
 # Always show One UI minor version
 SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
     "smali_classes3/com/samsung/android/settings/deviceinfo/softwareinfo/OneUIVersionPreferenceController.smali" "return" \
