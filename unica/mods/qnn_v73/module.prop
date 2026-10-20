@@ -1,0 +1,4 @@
+id=qnn_v73
+name=Hexagon V73 QNN public libraries
+author=ssch71
+description=Expose the stock SM8550 QNN HTP V73 stub/skel to store-updated Galaxy AI packages.
