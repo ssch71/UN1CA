@@ -25,10 +25,8 @@ DECODE_APK "system" "system/priv-app/SecSettings/SecSettings.apk"
 
 # Always show One UI minor version
 SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "smali_classes3/com/samsung/android/settings/deviceinfo/softwareinfo/OneUIVersionPreferenceController.smali" "replace" \
-    'isDeviceWithMicroVersion()Z' \
-    'move-result p0' \
-    'const/4 p0, 0x1'
+    "smali_classes3/com/samsung/android/settings/deviceinfo/softwareinfo/OneUIVersionPreferenceController.smali" "return" \
+    'isDeviceWithMicroVersion()Z' 'true'
 
 # Show real device model number
 SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
