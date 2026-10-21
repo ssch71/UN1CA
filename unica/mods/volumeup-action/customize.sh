@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
+# shellcheck disable=SC2034
 SKIPUNZIP=1
 if [[ "$TARGET_CODENAME" == "dm3q" ]]; then
     (cd "$MODPATH" && sha256sum -c build.sha256) || { ABORT "Volume Up detector sources changed; run its build.sh"; return 1; }
