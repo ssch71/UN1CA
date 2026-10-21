@@ -16,6 +16,8 @@ case "$TARGET_CODENAME" in
 esac
 LOG "- Rezoss target: $TARGET_CODENAME (SM8550/V73: $REZOSS_SM8550_TARGET)"
 
+source "$MODPATH/scheduled-power-on/integrate.sh" || return 1
+
 # This POC is restricted to SM8550/V73 targets and retains Qwen fallback.
 source "$MODPATH/aioskernel/native-now-nudge/config.sh" || return 1
 if [[ "$UNICA_ENABLE_NATIVE_NOW_NUDGE" == "true" ]]; then
@@ -111,9 +113,11 @@ APPLY_PATCH "system" "system/priv-app/SamsungSmartSuggestions/SamsungSmartSugges
     "$MODPATH/smartsuggestions/SamsungSmartSuggestions.apk/0020-Route-Now-Nudge-replies-through-UN1CA-Qwen-provider.patch"
 APPLY_PATCH "system" "system/priv-app/SamsungSmartSuggestions/SamsungSmartSuggestions.apk" \
     "$MODPATH/smartsuggestions/SamsungSmartSuggestions.apk/0026-Connect-in-app-and-notification-replies-to-RezossAI.patch"
+APPLY_PATCH "system" "system/priv-app/SamsungSmartSuggestions/SamsungSmartSuggestions.apk" \
+    "$MODPATH/smartsuggestions/SamsungSmartSuggestions.apk/0027-Preserve-WhatsApp-conversation-nudge-on-unknown-autofill.patch"
 if [[ "$UNICA_ENABLE_NATIVE_NOW_NUDGE" == "true" ]]; then
     LOG "- Integrating native V73 Now Nudge after Rezoss patch 0026"
-    for REZOSS_NUDGE_PATCH in "$MODPATH/aioskernel/native-now-nudge/"000[123456]-*.patch; do
+    for REZOSS_NUDGE_PATCH in "$MODPATH/aioskernel/native-now-nudge/"000[1234567]-*.patch; do
         APPLY_PATCH "system" "system/priv-app/SamsungSmartSuggestions/SamsungSmartSuggestions.apk" "$REZOSS_NUDGE_PATCH"
     done
     EVAL "bash \"$MODPATH/aioskernel/native-now-nudge/build_client_helper.sh\" \"$APKTOOL_DIR/system/priv-app/SamsungSmartSuggestions/SamsungSmartSuggestions.apk\"" || return 1

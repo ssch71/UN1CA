@@ -92,6 +92,11 @@ done < <(find "$MODPATH/SecSettings.apk" -type f \
     ! -name "*.orig" \
     ! -name "*.rej")
 
+# Keep the device-specific Power schedule menu aligned with its Rezoss backend.
+python3 "$SRC_DIR/unica/mods/rezoss/scheduled-power-on/install-settings-menu.py" \
+    "$APKTOOL_DIR/system/priv-app/SecSettings/SecSettings.apk/res/xml/unica_top_settings.xml" \
+    "$TARGET_CODENAME" || ABORT "Failed to configure Power schedule menu"
+
 # Expose UN1CA-selected SamsungSans source-bank fonts through Samsung's normal
 # Display > Font list and apply path.
 LOG "- Patching Samsung font list integration in /system/system/priv-app/SecSettings.apk"
@@ -269,3 +274,15 @@ LOG_STEP_OUT
 LOG "- Installing Battery Saving service policy"
 python3 "$MODPATH/battery/install-policy.py" "$WORK_DIR" || ABORT "Failed to install Battery Saving service policy"
 python3 "$MODPATH/ota/install-policy.py" "$WORK_DIR" || ABORT "Failed to install OTA staging service policy"
+
+# dm3q-only GPU image editor and recovery backup policy. Other targets keep no
+# partition access or service; the shared Settings page reports unsupported.
+if [[ "$TARGET_CODENAME" == "dm3q" ]]; then
+    "$MODPATH/gpu/verify-firmware.sh" "$WORK_DIR/kernel/vendor_boot.img" \
+        "$WORK_DIR/vendor_dlkm/lib/modules/msm_kgsl.ko" || ABORT "GPU capability check failed; review the changed table/driver contract before shipping"
+    python3 "$MODPATH/gpu/install-policy.py" "$WORK_DIR" || ABORT "Failed to install GPU tuning service policy"
+else
+    DELETE_FROM_WORK_DIR "system" "system/bin/unica-gpu"
+    DELETE_FROM_WORK_DIR "system" "system/etc/init/unica_gpu.rc"
+    DELETE_FROM_WORK_DIR "system" "system/etc/unica/gpu"
+fi
