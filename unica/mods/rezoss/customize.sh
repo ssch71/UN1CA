@@ -762,11 +762,14 @@ done
 # Experimental dm3q-only horizon correction, linked into the stock S23U EIS node.
 # Exact-firmware checks and stock backup are handled by the installer.
 # The adapter is built against the S23U EIS node; other SM8550 targets skip it.
-if [[ "$TARGET_CODENAME" == "dm3q" ]]; then
-    . "$MODPATH/horizontal-lock/install.sh"
-else
-    LOG "- Skipping S23U Horizontal Lock EIS adapter on $TARGET_CODENAME"
-fi
+case "$TARGET_CODENAME" in
+    dm1q|dm2q|dm3q|b5q|q5q)
+        . "$MODPATH/horizontal-lock/install.sh"
+        ;;
+    *)
+        LOG "- Skipping S23U Horizontal Lock EIS adapter on $TARGET_CODENAME"
+        ;;
+esac
 
 # =============================================================================
 # Disabled Experiments - Camera Vendor Stack
@@ -959,11 +962,11 @@ APPLY_PATCH "system" "system/app/VisualCloudCore/VisualCloudCore.apk" \
 LOG "- Patch product framework overlay doze auto-brightness"
 
 LOG "- Patch product framework overlay Now Nudge notification allowlist"
-# The product RRO is named after the device (dm1qxxx, dm3qxxx, b5qxxx, ...).
+# The product RRO is named after the device (dm1qksx, dm3qxxx, b5qksx, ...).
 # Prefer the target's own overlay, then fall back to any auto-generated one.
 REZOSS_PRODUCT_RRO=""
-if [ -f "$WORK_DIR/product/overlay/framework-res__${TARGET_CODENAME}xxx__auto_generated_rro_product.apk" ]; then
-    REZOSS_PRODUCT_RRO="overlay/framework-res__${TARGET_CODENAME}xxx__auto_generated_rro_product.apk"
+if [ -f "$WORK_DIR/product/overlay/framework-res__${TARGET_CODENAME}ksx__auto_generated_rro_product.apk" ]; then
+    REZOSS_PRODUCT_RRO="overlay/framework-res__${TARGET_CODENAME}ksx__auto_generated_rro_product.apk"
 else
     for f in "$WORK_DIR/product/overlay/"framework-res__*__auto_generated_rro_product.apk; do
         if [ -f "$f" ]; then
