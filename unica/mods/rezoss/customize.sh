@@ -6,14 +6,11 @@ LOG_STEP_IN "- Rezoss experimental mods"
 
 # SM8550 (Hexagon V73) targets supported by the Rezoss experimental mods.
 # dm1q = S23, dm2q = S23+, dm3q = S23U, b5q = Z Flip5, q5q = Z Fold5
-case "$TARGET_CODENAME" in
-    dm1q|dm2q|dm3q|b5q|q5q)
-        REZOSS_SM8550_TARGET=true
-        ;;
-    *)
-        REZOSS_SM8550_TARGET=false
-        ;;
-esac
+if [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ ]]; then
+    REZOSS_SM8550_TARGET=true
+else
+    REZOSS_SM8550_TARGET=false
+fi
 LOG "- Rezoss target: $TARGET_CODENAME (SM8550/V73: $REZOSS_SM8550_TARGET)"
 
 source "$MODPATH/scheduled-power-on/integrate.sh" || return 1
@@ -766,14 +763,12 @@ done
 # Experimental dm3q-only horizon correction, linked into the stock S23U EIS node.
 # Exact-firmware checks and stock backup are handled by the installer.
 # The adapter is built against the S23U EIS node; other SM8550 targets skip it.
-case "$TARGET_CODENAME" in
-    dm1q|dm2q|dm3q|b5q|q5q)
-        . "$MODPATH/horizontal-lock/install.sh"
-        ;;
-    *)
-        LOG "- Skipping S23U Horizontal Lock EIS adapter on $TARGET_CODENAME"
-        ;;
-esac
+
+if [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ ]]; then
+    . "$MODPATH/horizontal-lock/install.sh"
+else
+    LOG "- Skipping S23U Horizontal Lock EIS adapter on $TARGET_CODENAME"
+fi
 
 # =============================================================================
 # Disabled Experiments - Camera Vendor Stack
