@@ -31,7 +31,7 @@ APPLY_PATCH "system" "system/framework/services.jar" \
 if [ ! -f "$APKTOOL_DIR/system/framework/framework.jar/smali_classes6/io/mesalabs/unica/KeyboxImitationHooks.smali" ] && \
     { [ ! -f "$SRC_DIR/unica/mods/tee-simulator/module.prop" ] || \
       [ -f "$SRC_DIR/unica/mods/tee-simulator/disable" ] || \
-      [[ "$TARGET_CODENAME" != "dm3q" || "$SOURCE_PLATFORM_SDK_VERSION" != "37" ]]; }; then
+      [[ ! "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ || "$SOURCE_PLATFORM_SDK_VERSION" != "37" ]]; }; then
     SMALI_PATCH "system" "system/framework/framework.jar" \
         "smali_classes6/io/mesalabs/unica/PlayIntegrityHooks.smali" "return" \
         'shouldBlockKeyAttestation()Z' 'true'

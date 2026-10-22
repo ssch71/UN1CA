@@ -5,10 +5,9 @@
 
 SKIPUNZIP=1
 
-if [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ ]]; then
-    . "$MODPATH/horizontal-lock/install.sh"
-else
-    LOG "- Skipping TEE Simulator: requires sm8550 with SDK 37"
+if [[ ! "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ || "$SOURCE_PLATFORM_SDK_VERSION" != "37" ]]; then
+    LOG "- Skipping TEE Simulator: requires an SM8550 target with SDK 37"
+    return 0
 fi
 if [ ! -f "$SRC_DIR/unica/mods/keybox/disable" ]; then
     ABORT "Disable the old keybox mod before enabling TEE Simulator" || return 1
