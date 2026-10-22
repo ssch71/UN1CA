@@ -73,7 +73,7 @@ COUNT=0
 mkdir -p "$WORK_DIR/system/system/lib"
 ADD_ENTRY "system/lib" 755 "u:object_r:system_lib_file:s0"
 while IFS= read -r -d '' SRC; do
-    REL="${SRC#$DONOR_DIR/}"
+    REL="${SRC#"$DONOR_DIR"/}"
     case "$REL" in *.0[1-9]|*.[1-9][0-9]) continue ;; esac
     case "$REL" in lib/libc.so|lib/libdl.so|lib/libdl_android.so|lib/libm.so) continue ;; esac
     REL="${REL%.00}"
