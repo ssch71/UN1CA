@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="unica_gpu_title">고급 GPU 튜닝 (Konabess)</string>
+    <string name="unica_gpu_summary">복구 롤백 기능을 포함한 GPU 클럭 및 전압 테이블 테스트</string>
+</resources>

@@ -1,0 +1,154 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: ssch71 <ssch71@users.noreply.github.com>
+Date: Thu, 22 Oct 2026 17:30:00 +0900
+Subject: [PATCH] Add Adaptive color tone feature (One UI 9.0, SM-S911N)
+
+One UI 9.0 SM-S911N rebase of the core paradigm/ead SecSettings changes:
+expose SecEADPreferenceController, keep SecAdaptiveDisplaySettings in sync
+with ead_enabled and hide vividness from search while EAD is on.
+Bixby routine actions, Smart Switch backup (DisplayItem), reset defaults
+and NewModePreview hunks are not ported.
+---
+diff --git a/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisplaySettings$19.smali b/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisplaySettings$19.smali
+--- a/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisplaySettings$19.smali
++++ b/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisplaySettings$19.smali
+@@ -5,7 +5,7 @@
+ 
+ # virtual methods
+ .method public final getNonIndexableKeys(Landroid/content/Context;)Ljava/util/List;
+-    .locals 4
++    .locals 6
+ 
+     invoke-super {p0, p1}, Lcom/android/settings/search/BaseSearchIndexProvider;->getNonIndexableKeys(Landroid/content/Context;)Ljava/util/List;
+ 
+@@ -15,7 +15,7 @@
+ 
+     move-result v0
+ 
+-    if-eqz v0, :cond_2
++    if-eqz v0, :cond_3
+ 
+     invoke-static {p1}, Lcom/samsung/android/settings/display/SecDisplayUtils;->isDesktopWindowingAndNonDefaultDisplay(Landroid/content/Context;)Z
+ 
+@@ -33,24 +33,46 @@
+ 
+     move-result v1
+ 
++    const/4 v2, 0x1
++
+     if-eqz v1, :cond_0
+ 
+-    const/4 v3, 0x1
++    move v1, v2
++
++    goto :goto_0
+ 
+     :cond_0
++    move v1, v3
++
++    :goto_0
+     invoke-static {p1}, Lcom/samsung/android/settings/display/SecDisplayUtils;->isAccessibilityVisionEnabled(Landroid/content/Context;)Z
+ 
+-    move-result p1
++    move-result v4
+ 
+-    if-nez v0, :cond_1
++    invoke-virtual {p1}, Landroid/content/Context;->getContentResolver()Landroid/content/ContentResolver;
+ 
+-    if-nez v3, :cond_1
++    move-result-object p1
+ 
+-    if-nez p1, :cond_1
++    const-string v5, "ead_enabled"
+ 
+-    goto :goto_0
++    invoke-static {p1, v5, v3}, Landroid/provider/Settings$System;->getInt(Landroid/content/ContentResolver;Ljava/lang/String;I)I
++
++    move-result p1
++
++    if-eqz p1, :cond_1
++
++    move v3, v2
+ 
+     :cond_1
++    if-nez v0, :cond_2
++
++    if-nez v1, :cond_2
++
++    if-nez v4, :cond_2
++
++    if-eqz v3, :cond_3
++
++    :cond_2
+     const-string p1, "vividness_intensity"
+ 
+     move-object v0, p0
+@@ -59,8 +81,7 @@
+ 
+     invoke-virtual {v0, p1}, Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z
+ 
+-    :cond_2
+-    :goto_0
++    :cond_3
+     return-object p0
+ .end method
+ 
+diff --git a/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisplaySettings.smali b/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisplaySettings.smali
+--- a/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisplaySettings.smali
++++ b/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisplaySettings.smali
+@@ -1728,6 +1728,16 @@
+ 
+     sget-object v0, Lcom/samsung/android/settings/Rune;->COMMON_CONFIG_PACKAGE_NAME_SMART_MANAGER:Ljava/lang/String;
+ 
++    iget-object v0, p0, Lcom/samsung/android/settings/display/SecAdaptiveDisplaySettings;->mContext:Landroid/content/Context;
++
++    invoke-virtual {v0}, Landroid/content/Context;->getContentResolver()Landroid/content/ContentResolver;
++
++    move-result-object v0
++
++    iget-object v1, p0, Lcom/samsung/android/settings/display/SecAdaptiveDisplaySettings;->mEadObserver:Lcom/samsung/android/settings/display/SecAdaptiveDisplaySettings$3;
++
++    invoke-virtual {v0, v1}, Landroid/content/ContentResolver;->unregisterContentObserver(Landroid/database/ContentObserver;)V
++
+     iget-boolean v0, p0, Lcom/samsung/android/settings/display/SecAdaptiveDisplaySettings;->mIsSupportAdvancedWhiteBalance:Z
+ 
+     if-eqz v0, :cond_1
+@@ -1827,6 +1837,24 @@
+ 
+     sget-object v0, Lcom/samsung/android/settings/Rune;->COMMON_CONFIG_PACKAGE_NAME_SMART_MANAGER:Ljava/lang/String;
+ 
++    iget-object v0, p0, Lcom/samsung/android/settings/display/SecAdaptiveDisplaySettings;->mContext:Landroid/content/Context;
++
++    invoke-virtual {v0}, Landroid/content/Context;->getContentResolver()Landroid/content/ContentResolver;
++
++    move-result-object v0
++
++    const-string v1, "ead_enabled"
++
++    invoke-static {v1}, Landroid/provider/Settings$System;->getUriFor(Ljava/lang/String;)Landroid/net/Uri;
++
++    move-result-object v1
++
++    const/4 v2, 0x0
++
++    iget-object v3, p0, Lcom/samsung/android/settings/display/SecAdaptiveDisplaySettings;->mEadObserver:Lcom/samsung/android/settings/display/SecAdaptiveDisplaySettings$3;
++
++    invoke-virtual {v0, v1, v2, v3}, Landroid/content/ContentResolver;->registerContentObserver(Landroid/net/Uri;ZLandroid/database/ContentObserver;)V
++
+     iget-boolean v0, p0, Lcom/samsung/android/settings/display/SecAdaptiveDisplaySettings;->mIsSupportAdvancedWhiteBalance:Z
+ 
+     if-eqz v0, :cond_2
+diff --git a/smali_classes3/com/samsung/android/settings/display/controller/SecEADPreferenceController.smali b/smali_classes3/com/samsung/android/settings/display/controller/SecEADPreferenceController.smali
+--- a/smali_classes3/com/samsung/android/settings/display/controller/SecEADPreferenceController.smali
++++ b/smali_classes3/com/samsung/android/settings/display/controller/SecEADPreferenceController.smali
+@@ -194,7 +194,7 @@
+ 
+     sget-object p0, Lcom/samsung/android/settings/Rune;->COMMON_CONFIG_PACKAGE_NAME_SMART_MANAGER:Ljava/lang/String;
+ 
+-    const/4 p0, 0x3
++    const/4 p0, 0x0
+ 
+     return p0
+ .end method
+-- 
+2.47.0
