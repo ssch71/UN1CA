@@ -1,0 +1,4 @@
+id=kernel
+name=Kernel
+author=ssch71
+description=Add prebuilt not_kernel boot/dtbo images
