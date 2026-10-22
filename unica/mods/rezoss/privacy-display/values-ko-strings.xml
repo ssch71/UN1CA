@@ -1,0 +1,8 @@
+    <string name="rezoss_pd_custom_apps_summary">Privacy display를 사용할 알림 앱을 선택하세요.</string>
+    <string name="rezoss_pd_custom_apps_title">앱</string>
+    <string name="rezoss_pd_extra_dim_summary">Privacy display가 켜져 있을 때 화면을 더 어둡게 만들어 보기 어렵게 합니다. 측면뿐 아니라 정면에서 보는 것에도 영향을 줄 수 있습니다.</string>
+    <string name="rezoss_pd_extra_dim_title">최대 프라이버시 보호</string>
+    <string name="rezoss_pd_fixed_description">측면 각도에서 화면이 잘 보이지 않도록 하여 프라이버시를 보호합니다.</string>
+    <string name="rezoss_pd_main_summary">측면 각도에서의 화면 가시성을 제한하여 프라이버시를 보호합니다.</string>
+    <string name="rezoss_pd_main_title">Privacy display</string>
+    <string name="rezoss_pd_turn_on_title">Privacy display 켜기</string>

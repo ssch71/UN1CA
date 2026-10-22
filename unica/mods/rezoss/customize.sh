@@ -15,6 +15,20 @@ LOG "- Rezoss target: $TARGET_CODENAME (SM8550/V73: $REZOSS_SM8550_TARGET)"
 
 source "$MODPATH/scheduled-power-on/integrate.sh" || return 1
 
+# Korean strings for the Rezoss Privacy Display settings. Inserted before
+# </resources> instead of a context patch so SecSettings updates can't break it.
+REZOSS_PD_KO="$APKTOOL_DIR/system/priv-app/SecSettings/SecSettings.apk/res/values-ko/strings.xml"
+DECODE_APK "system" "system/priv-app/SecSettings/SecSettings.apk" || return 1
+if [ ! -f "$REZOSS_PD_KO" ]; then
+    LOGW "File not found: ${REZOSS_PD_KO//$APKTOOL_DIR\//}, skipping Privacy Display Korean strings"
+elif ! grep -q 'name="rezoss_pd_main_title"' "$REZOSS_PD_KO"; then
+    LOG "- Adding Privacy Display Korean strings"
+    awk -v add="$MODPATH/privacy-display/values-ko-strings.xml" \
+        '/<\/resources>/{while((getline l < add)>0) print l} {print}' \
+        "$REZOSS_PD_KO" > "$REZOSS_PD_KO.tmp" && mv -f "$REZOSS_PD_KO.tmp" "$REZOSS_PD_KO" || return 1
+fi
+unset REZOSS_PD_KO
+
 # This POC is restricted to SM8550/V73 targets and retains Qwen fallback.
 source "$MODPATH/aioskernel/native-now-nudge/config.sh" || return 1
 if [[ "$UNICA_ENABLE_NATIVE_NOW_NUDGE" == "true" ]]; then
