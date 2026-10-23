@@ -1,5 +1,16 @@
-LOG_STEP_IN "- Add a73xqxx vintf manifest"
-ADD_TO_WORK_DIR "a73xqxx" "system" "system/etc/vintf/manifest.xml" 0 0 644 "u:object_r:system_file:s0"
+LOG_STEP_IN "- Merging stock framework vintf HALs from $TARGET_CODENAME"
+SB_TARGET_MANIFEST="$FW_DIR/$(cut -d "/" -f 1 <<< "$TARGET_FIRMWARE")_$(cut -d "/" -f 2 <<< "$TARGET_FIRMWARE")/system/system/etc/vintf/manifest.xml"
+SB_SOURCE_MANIFEST="$WORK_DIR/system/system/etc/vintf/manifest.xml"
+if [ -f "$SB_TARGET_MANIFEST" ] && [ -f "$SB_SOURCE_MANIFEST" ]; then
+    SB_ADDED="$(python3 "$MODPATH/vintf_merge.py" "$SB_SOURCE_MANIFEST" "$SB_TARGET_MANIFEST")" || \
+        ABORT "Failed to merge the stock framework vintf manifest"
+    while IFS= read -r SB_HAL; do
+        [ -n "$SB_HAL" ] && LOG "- Added $SB_HAL"
+    done <<< "$SB_ADDED"
+else
+    LOGW "Stock or source framework vintf manifest not found, skipping merge"
+fi
+unset SB_TARGET_MANIFEST SB_SOURCE_MANIFEST SB_ADDED SB_HAL
 LOG_STEP_OUT
 
 LOG_STEP_IN "- Fixing vintf manifest"
