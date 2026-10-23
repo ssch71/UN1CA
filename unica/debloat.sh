@@ -149,6 +149,7 @@ system/priv-app/LedCoverService
 # Replace full apk with stub apk to save space
 SYSTEM_DEBLOAT+="
 system/priv-app/YourPhone_P1_5
+system/priv-app/LinkToWindowsService
 "
 
 # Live Transcribe
