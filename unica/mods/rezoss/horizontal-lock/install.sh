@@ -3,7 +3,7 @@
 # Sourced by rezoss/customize.sh; use the project's copy/metadata helpers.
 REZOSS_INSTALL_HORIZON_LOCK()
 {
-    [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ ]] || return 0
+    [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q)$ ]] || return 0
     local hl_root="$MODPATH/horizontal-lock"
     if [[ -f "$hl_root/disable" ]]; then
         LOG "- Horizontal Lock ROM experiment disabled"
@@ -17,13 +17,13 @@ REZOSS_INSTALL_HORIZON_LOCK()
     local hl_previous="67cf4235ab0da4b4972435b07bdd6aaec943107bc76d88693b0bf3ddca13c04a"
     local hl_algo="26dce4357773abe512592f4400e45e35d863ac53c1d78708c873ade1d4792abc"
     local hl_actual
-    [[ -f "$WORK_DIR/vendor/$hl_node" ]] || { ABORT "Horizontal Lock: S23U EIS node missing"; return 1; }
+    [[ -f "$WORK_DIR/vendor/$hl_node" ]] || { LOGW "Horizontal Lock: S23U EIS node missing, skipping"; return 0; }
     hl_actual="$(sha256sum "$WORK_DIR/vendor/$hl_node" | cut -d ' ' -f 1)"
     [[ "$hl_actual" == "$hl_original" || "$hl_actual" == "$hl_patched" || "$hl_actual" == "$hl_previous" ]] || {
-        ABORT "Horizontal Lock: unsupported EIS node; requires S918BXXUAZZI8"; return 1;
+        LOGW "Horizontal Lock: unsupported EIS node (requires S918BXXUAZZI8), skipping"; return 0;
     }
     hl_actual="$(sha256sum "$WORK_DIR/vendor/lib64/camera/components/com.qti.eisv3.so" | cut -d ' ' -f 1)"
-    [[ "$hl_actual" == "$hl_algo" ]] || { ABORT "Horizontal Lock: unsupported EIS algorithm"; return 1; }
+    [[ "$hl_actual" == "$hl_algo" ]] || { LOGW "Horizontal Lock: unsupported EIS algorithm, skipping"; return 0; }
     (cd "$hl_payload" && sha256sum --check --status SHA256SUMS) || {
         ABORT "Horizontal Lock: payload checksum failure"; return 1;
     }
