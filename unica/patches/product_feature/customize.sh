@@ -62,46 +62,122 @@ PATCH_RRC_DUMP()
         LOGW "Skipping RefreshRateConfig dump patch for $1 ($2 -> $3)"
     fi
 }
+
+# One UI 9 moved many classes to different smali_classes* dirs (e.g. SecSettings
+# classes4 -> classes3, framework classes4 -> classes6). Resolve those paths on
+# the fly, and skip (with a warning) patches whose code no longer matches
+# instead of aborting the whole build.
+PF_FIND_SMALI()
+{
+    local DIR="$1"
+    local SMALI="$2"
+    local MATCHES
+
+    if [ -f "$DIR/$SMALI" ] || [[ "$SMALI" != smali* ]]; then
+        echo "$SMALI"
+        return 0
+    fi
+
+    MATCHES="$(find "$DIR/" -mindepth 1 -maxdepth 1 -type d -name "smali*" -exec test -f "{}/${SMALI#*/}" \; -print)"
+    if [ "$(wc -l <<< "$MATCHES")" == "1" ] && [ "$MATCHES" ]; then
+        MATCHES="${MATCHES%/}"; echo "${MATCHES##*/}/${SMALI#*/}"
+    else
+        echo "$SMALI"
+    fi
+}
+
+PF_SMALI_PATCH()
+{
+    local PARTITION="$1"
+    local FILE="$2"
+    local DIR="$APKTOOL_DIR/$PARTITION/${FILE//system\//}"
+    local SMALI
+
+    shift 2
+    DECODE_APK "$PARTITION" "$FILE" || return 1
+    SMALI="$(PF_FIND_SMALI "$DIR" "$1")"
+    shift
+
+    if [ ! -f "$DIR/$SMALI" ]; then
+        LOGW "Skipping SPF patch: /$PARTITION/$FILE/$SMALI not found"
+        return 0
+    fi
+
+    SMALI_PATCH "$PARTITION" "$FILE" "$SMALI" "$@" || \
+        LOGW "Skipping SPF patch: \"$1\" failed in /$PARTITION/$FILE/$SMALI"
+}
+
+PF_APPLY_PATCH()
+{
+    local PARTITION="$1"
+    local FILE="$2"
+    local PATCH="$3"
+    local DIR="$APKTOOL_DIR/$PARTITION/${FILE//system\//}"
+    local TMP_PATCH
+    local OLD
+    local NEW
+
+    DECODE_APK "$PARTITION" "$FILE" || return 1
+
+    TMP_PATCH="$(mktemp)"
+    cp -a "$PATCH" "$TMP_PATCH"
+    while read -r OLD; do
+        NEW="$(PF_FIND_SMALI "$DIR" "$OLD")"
+        if [[ "$NEW" != "$OLD" ]]; then
+            awk -v OLD="$OLD" -v NEW="$NEW" '{
+                while ((i = index($0, OLD)) > 0) $0 = substr($0, 1, i - 1) NEW substr($0, i + length(OLD))
+                print
+            }' "$TMP_PATCH" > "$TMP_PATCH.new" && mv -f "$TMP_PATCH.new" "$TMP_PATCH"
+        fi
+    done < <(grep "^+++ b/" "$PATCH" | sed "s|^+++ b/||" | sort -u)
+
+    if LC_ALL=C patch -p1 -d "$DIR" -N --forward -l --dry-run -s < "$TMP_PATCH" &> /dev/null; then
+        APPLY_PATCH "$PARTITION" "$FILE" "$TMP_PATCH"
+    else
+        LOGW "Skipping SPF patch \"${PATCH//$SRC_DIR\//}\": /$PARTITION/$FILE smali does not match"
+    fi
+    rm -f "$TMP_PATCH"
+}
 # ]
 
 # SEC_PRODUCT_FEATURE_BUILD_MAINLINE_API_LEVEL
 if [[ "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" != "$TARGET_PRODUCT_SHIPPING_API_LEVEL" ]]; then
-    SMALI_PATCH "system" "system/framework/esecomm.jar" \
+    PF_SMALI_PATCH "system" "system/framework/esecomm.jar" \
         "smali/com/sec/esecomm/EsecommAdapter.smali" "replace" \
         "<clinit>()V" \
         "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
         "$TARGET_PRODUCT_SHIPPING_API_LEVEL"
-    SMALI_PATCH "system" "system/framework/services.jar" \
+    PF_SMALI_PATCH "system" "system/framework/services.jar" \
         "smali/com/android/server/enterprise/hdm/HdmSakManager.smali" "replace" \
         "isSupported(Landroid/content/Context;)Z" \
         "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
         "$TARGET_PRODUCT_SHIPPING_API_LEVEL"
-    SMALI_PATCH "system" "system/framework/services.jar" \
+    PF_SMALI_PATCH "system" "system/framework/services.jar" \
         "smali/com/android/server/enterprise/hdm/HdmVendorController.smali" "replace" \
         "<init>()V" \
         "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
         "$TARGET_PRODUCT_SHIPPING_API_LEVEL"
-    SMALI_PATCH "system" "system/framework/services.jar" \
+    PF_SMALI_PATCH "system" "system/framework/services.jar" \
         "smali/com/android/server/knox/dar/ddar/ta/TAProxy.smali" "replace" \
         "updateServiceHolder(Z)V" \
         "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
         "$TARGET_PRODUCT_SHIPPING_API_LEVEL"
-    SMALI_PATCH "system" "system/framework/services.jar" \
+    PF_SMALI_PATCH "system" "system/framework/services.jar" \
         "smali/com/android/server/SystemServer.smali" "replace" \
         "startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V" \
         "MAINLINE_API_LEVEL: $SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
         "MAINLINE_API_LEVEL: $TARGET_PRODUCT_SHIPPING_API_LEVEL"
-    SMALI_PATCH "system" "system/framework/services.jar" \
+    PF_SMALI_PATCH "system" "system/framework/services.jar" \
         "smali/com/android/server/SystemServer.smali" "replace" \
         "startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V" \
         "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
         "$TARGET_PRODUCT_SHIPPING_API_LEVEL"
-    SMALI_PATCH "system" "system/framework/services.jar" \
+    PF_SMALI_PATCH "system" "system/framework/services.jar" \
         "smali_classes2/com/android/server/power/PowerManagerUtil.smali" "replace" \
         "<clinit>()V" \
         "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
         "$TARGET_PRODUCT_SHIPPING_API_LEVEL"
-    SMALI_PATCH "system" "system/framework/services.jar" \
+    PF_SMALI_PATCH "system" "system/framework/services.jar" \
         "smali_classes2/com/android/server/sepunion/EngmodeService\$EngmodeTimeThread.smali" "replace" \
         "<clinit>()V" \
         "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
@@ -111,12 +187,12 @@ fi
 # SEC_PRODUCT_FEATURE_AUDIO_CONFIG_RECORDALIVE_LIB_VERSION
 if [[ "$SOURCE_AUDIO_CONFIG_RECORDALIVE_LIB_VERSION" != "$TARGET_AUDIO_CONFIG_RECORDALIVE_LIB_VERSION" ]]; then
     if [[ "$SOURCE_AUDIO_CONFIG_RECORDALIVE_LIB_VERSION" != "none" ]]; then
-        SMALI_PATCH "system" "system/framework/framework.jar" \
+        PF_SMALI_PATCH "system" "system/framework/framework.jar" \
             "smali_classes6/com/samsung/android/camera/mic/SemMultiMicManager.smali" "replace" \
             "isSupported()Z" \
             "$SOURCE_AUDIO_CONFIG_RECORDALIVE_LIB_VERSION" \
             "${TARGET_AUDIO_CONFIG_RECORDALIVE_LIB_VERSION//none/}"
-        SMALI_PATCH "system" "system/framework/framework.jar" \
+        PF_SMALI_PATCH "system" "system/framework/framework.jar" \
             "smali_classes6/com/samsung/android/camera/mic/SemMultiMicManager.smali" "replace" \
             "isSupported(I)Z" \
             "$SOURCE_AUDIO_CONFIG_RECORDALIVE_LIB_VERSION" \
@@ -130,7 +206,7 @@ fi
 # SEC_PRODUCT_FEATURE_AUDIO_CONFIG_HAPTIC
 if $SOURCE_AUDIO_SUPPORT_ACH_RINGTONE; then
     if ! $TARGET_AUDIO_SUPPORT_ACH_RINGTONE; then
-        APPLY_PATCH "system" "system/framework/framework.jar" \
+        PF_APPLY_PATCH "system" "system/framework/framework.jar" \
             "$MODPATH/audio/ach/framework.jar/0001-Disable-ACH-ringtone-support.patch"
     fi
 else
@@ -145,9 +221,9 @@ if $SOURCE_AUDIO_SUPPORT_DUAL_SPEAKER; then
     if ! $TARGET_AUDIO_SUPPORT_DUAL_SPEAKER; then
         SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_AUDIO_SUPPORT_DUAL_SPEAKER" --delete
 
-        APPLY_PATCH "system" "system/framework/framework.jar" \
+        PF_APPLY_PATCH "system" "system/framework/framework.jar" \
             "$MODPATH/audio/dual_speaker/framework.jar/0001-Disable-dual-speaker-support.patch"
-        APPLY_PATCH "system" "system/framework/services.jar" \
+        PF_APPLY_PATCH "system" "system/framework/services.jar" \
             "$MODPATH/audio/dual_speaker/services.jar/0001-Disable-dual-speaker-support.patch"
     fi
 else
@@ -160,20 +236,20 @@ fi
 # SEC_PRODUCT_FEATURE_AUDIO_SUPPORT_VIRTUAL_VIBRATION_SOUND
 if $SOURCE_AUDIO_SUPPORT_VIRTUAL_VIBRATION_SOUND; then
     if ! $TARGET_AUDIO_SUPPORT_VIRTUAL_VIBRATION_SOUND; then
-        APPLY_PATCH "system" "system/framework/framework.jar" \
+        PF_APPLY_PATCH "system" "system/framework/framework.jar" \
             "$MODPATH/audio/virtual_vib/framework.jar/0001-Disable-virtual-vibration-support.patch"
-        APPLY_PATCH "system" "system/framework/services.jar" \
+        PF_APPLY_PATCH "system" "system/framework/services.jar" \
             "$MODPATH/audio/virtual_vib/services.jar/0001-Disable-virtual-vibration-support.patch"
-        SMALI_PATCH "system" "system/framework/services.jar" \
+        PF_SMALI_PATCH "system" "system/framework/services.jar" \
             "smali/com/android/server/audio/BtHelper\$\$ExternalSyntheticLambda0.smali" "remove"
         EVAL "sed -i \"/.source/q\" \"$APKTOOL_DIR/system/framework/services.jar/smali_classes2/com/android/server/vibrator/VibratorManagerInternal.smali\""
-        SMALI_PATCH "system" "system/framework/services.jar" \
+        PF_SMALI_PATCH "system" "system/framework/services.jar" \
             "smali_classes2/com/android/server/vibrator/VibratorManagerService\$SamsungBroadcastReceiver\$\$ExternalSyntheticLambda1.smali" "remove"
-        SMALI_PATCH "system" "system/framework/services.jar" \
+        PF_SMALI_PATCH "system" "system/framework/services.jar" \
             "smali_classes2/com/android/server/vibrator/VirtualVibSoundHelper.smali" "remove"
-        APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+        PF_APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
             "$MODPATH/audio/virtual_vib/SecSettings.apk/0001-Disable-virtual-vibration-support.patch"
-        APPLY_PATCH "system" "system/priv-app/SettingsProvider/SettingsProvider.apk" \
+        PF_APPLY_PATCH "system" "system/priv-app/SettingsProvider/SettingsProvider.apk" \
             "$MODPATH/audio/virtual_vib/SettingsProvider.apk/0001-Disable-virtual-vibration-support.patch"
     fi
 else
@@ -187,7 +263,7 @@ fi
 if [[ "$SOURCE_COMMON_CONFIG_MDNIE_MODE" != "$TARGET_COMMON_CONFIG_MDNIE_MODE" ]]; then
     SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_COMMON_CONFIG_MDNIE_MODE" "$TARGET_COMMON_CONFIG_MDNIE_MODE"
 
-    SMALI_PATCH "system" "system/framework/services.jar" \
+    PF_SMALI_PATCH "system" "system/framework/services.jar" \
         "smali_classes2/com/samsung/android/hardware/display/SemMdnieManagerService.smali" "replace" \
         "<init>(Landroid/content/Context;)V" \
         "$SOURCE_COMMON_CONFIG_MDNIE_MODE" \
@@ -247,35 +323,35 @@ if ! $SOURCE_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL; then
         ADD_TO_WORK_DIR "b0qxxx" "system" "system/media/water_protection_usb.spi" 0 0 644 "u:object_r:system_file:s0"
 
         if [ "$TARGET_PLATFORM_SDK_VERSION" -ge "36" ]; then
-            APPLY_PATCH "system" "system/framework/framework.jar" \
+            PF_APPLY_PATCH "system" "system/framework/framework.jar" \
                 "$MODPATH/resolution/framework.jar/0001-Enable-FW_SUPPORT_MULTI_RESOLUTION.patch"
         else
-            APPLY_PATCH "system" "system/framework/framework.jar" \
+            PF_APPLY_PATCH "system" "system/framework/framework.jar" \
                 "$MODPATH/resolution/framework.jar/0001-Enable-FW_DYNAMIC_RESOLUTION_CONTROL.patch"
         fi
-        APPLY_PATCH "system" "system/framework/gamemanager.jar" \
+        PF_APPLY_PATCH "system" "system/framework/gamemanager.jar" \
             "$MODPATH/resolution/gamemanager.jar/0001-Enable-dynamic-resolution-control.patch"
-        APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+        PF_APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
             "$MODPATH/resolution/SecSettings.apk/0001-Enable-dynamic-resolution-control.patch"
-        SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+        PF_SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
             "smali_classes2/com/android/settings/Utils\$\$ExternalSyntheticLambda2.smali" "remove"
         EVAL "sed -i \"s/^\.implements.*/.implements Landroidx\/core\/view\/OnApplyWindowInsetsListener;/g\" \"$APKTOOL_DIR/system/priv-app/SecSettings/SecSettings.apk/smali_classes2/com/android/settings/Utils\\\$\\\$ExternalSyntheticLambda3.smali\""
-        SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+        PF_SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
             "smali_classes2/com/android/settings/applications/manageapplications/ManageApplications\$ApplicationsAdapter\$\$ExternalSyntheticLambda3.smali" "remove"
-        SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+        PF_SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
             "smali_classes2/com/android/settings/applications/manageapplications/ManageApplications\$ApplicationsAdapter\$\$ExternalSyntheticLambda7.smali" "remove"
-        SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+        PF_SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
             "smali_classes2/com/android/settings/applications/manageapplications/ManageApplications\$ApplicationsAdapter\$\$ExternalSyntheticLambda9.smali" "remove"
-        SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+        PF_SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
             "smali_classes2/com/android/settings/applications/manageapplications/ManageApplications\$ApplicationsAdapter\$\$ExternalSyntheticOutline0.smali" "remove"
         if [ "$TARGET_PLATFORM_SDK_VERSION" -lt "36" ]; then
-            APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+            PF_APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
                 "$MODPATH/resolution/SecSettings.apk/0002-Backport-legacy-DYN_RESOLUTION_CONTROL-code.patch"
             EVAL "sed -i \"/static fields/,+3d\" \"$APKTOOL_DIR/system/priv-app/SecSettings/SecSettings.apk/smali_classes4/com/samsung/android/settings/display/ScreenResolutionFragment.smali\""
-            SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+            PF_SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
                 "smali_classes4/com/samsung/android/settings/display/controller/ScreenResolutionPreferenceController\$2.smali" "remove"
         fi
-        APPLY_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
+        PF_APPLY_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
             "$MODPATH/resolution/SystemUI.apk/0001-Enable-dynamic-resolution-control.patch"
     fi
 else
@@ -302,9 +378,9 @@ if $SOURCE_COMMON_SUPPORT_HDR_EFFECT; then
     if ! $TARGET_COMMON_SUPPORT_HDR_EFFECT; then
         SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_COMMON_SUPPORT_HDR_EFFECT" --delete
 
-        APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+        PF_APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
             "$MODPATH/mdnie/hdr/SecSettings.apk/0001-Disable-HDR-Settings.patch"
-        APPLY_PATCH "system" "system/priv-app/SettingsProvider/SettingsProvider.apk" \
+        PF_APPLY_PATCH "system" "system/priv-app/SettingsProvider/SettingsProvider.apk" \
             "$MODPATH/mdnie/hdr/SettingsProvider.apk/0001-Disable-HDR-Settings.patch"
     else
         if [ ! "$(GET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_COMMON_SUPPORT_HDR_EFFECT")" ]; then
@@ -320,21 +396,21 @@ fi
 
 # SEC_PRODUCT_FEATURE_FINGERPRINT_CONFIG_SENSOR
 if [[ "$SOURCE_FINGERPRINT_CONFIG_SENSOR" != "$TARGET_FINGERPRINT_CONFIG_SENSOR" ]]; then
-    SMALI_PATCH "system" "system/framework/framework.jar" \
+    PF_SMALI_PATCH "system" "system/framework/framework.jar" \
         "smali_classes6/com/samsung/android/bio/fingerprint/SemFingerprintManager.smali" "replace" \
         "getMaxTemplateNumberFromSPF()I" \
         "$SOURCE_FINGERPRINT_CONFIG_SENSOR" \
         "$TARGET_FINGERPRINT_CONFIG_SENSOR"
-    SMALI_PATCH "system" "system/framework/framework.jar" \
+    PF_SMALI_PATCH "system" "system/framework/framework.jar" \
         "smali_classes6/com/samsung/android/bio/fingerprint/SemFingerprintManager.smali" "replace" \
         "getProductFeatureValue(Landroid/content/Context;)Ljava/lang/String;" \
         "$SOURCE_FINGERPRINT_CONFIG_SENSOR" \
         "$TARGET_FINGERPRINT_CONFIG_SENSOR"
-    SMALI_PATCH "system" "system/framework/framework.jar" \
+    PF_SMALI_PATCH "system" "system/framework/framework.jar" \
         "smali_classes6/com/samsung/android/bio/fingerprint/SemFingerprintManager\$Characteristics.smali" "replaceall" \
         "$SOURCE_FINGERPRINT_CONFIG_SENSOR" \
         "$TARGET_FINGERPRINT_CONFIG_SENSOR"
-    SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+    PF_SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
         "smali_classes4/com/samsung/android/settings/biometrics/fingerprint/FingerprintSettingsUtils.smali" "replaceall" \
         "$SOURCE_FINGERPRINT_CONFIG_SENSOR" \
         "$TARGET_FINGERPRINT_CONFIG_SENSOR"
@@ -370,27 +446,27 @@ if [[ "$SOURCE_FINGERPRINT_CONFIG_SENSOR" != "$TARGET_FINGERPRINT_CONFIG_SENSOR"
 
                 ADD_TO_WORK_DIR "r9qxxx" "system" "system/priv-app/BiometricSetting/BiometricSetting.apk" 0 0 644 "u:object_r:system_file:s0"
 
-                APPLY_PATCH "system" "system/framework/framework.jar" \
+                PF_APPLY_PATCH "system" "system/framework/framework.jar" \
                     "$MODPATH/fingerprint/optical_fod/framework.jar/0001-Add-optical-FOD-support.patch"
-                APPLY_PATCH "system" "system/framework/services.jar" \
+                PF_APPLY_PATCH "system" "system/framework/services.jar" \
                     "$MODPATH/fingerprint/optical_fod/services.jar/0001-Add-optical-FOD-support.patch"
-                APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+                PF_APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
                     "$MODPATH/fingerprint/optical_fod/SecSettings.apk/0001-Add-optical-FOD-support.patch"
-                APPLY_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
+                PF_APPLY_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
                     "$MODPATH/fingerprint/optical_fod/SystemUI.apk/0001-Add-optical-FOD-support.patch"
 
                 if [[ "$TARGET_FINGERPRINT_CONFIG_SENSOR" == *"no_delay_in_screen_off"* ]]; then
-                    APPLY_PATCH "system" "system/priv-app/BiometricSetting/BiometricSetting.apk" \
+                    PF_APPLY_PATCH "system" "system/priv-app/BiometricSetting/BiometricSetting.apk" \
                         "$MODPATH/fingerprint/optical_fod/BiometricSetting.apk/0001-Enable-FP_FEATURE_NO_DELAY_IN_SCREEN_OFF.patch"
                 fi
 
                 if [[ "$TARGET_FINGERPRINT_CONFIG_SENSOR" == *"transition_effect_on"* ]]; then
-                    SMALI_PATCH "system" "system/framework/framework.jar" \
+                    PF_SMALI_PATCH "system" "system/framework/framework.jar" \
                         "smali_classes2/android/hardware/fingerprint/FingerprintManager.smali" "return" \
                         "semGetTransitionEffectValue()I" \
                         "1"
                 elif [[ "$TARGET_FINGERPRINT_CONFIG_SENSOR" == *"transition_effect_off"* ]]; then
-                    SMALI_PATCH "system" "system/framework/framework.jar" \
+                    PF_SMALI_PATCH "system" "system/framework/framework.jar" \
                         "smali_classes2/android/hardware/fingerprint/FingerprintManager.smali" "return" \
                         "semGetTransitionEffectValue()I" \
                         "0"
@@ -399,40 +475,40 @@ if [[ "$SOURCE_FINGERPRINT_CONFIG_SENSOR" != "$TARGET_FINGERPRINT_CONFIG_SENSOR"
                 SOURCE_FINGERPRINT_CONFIG_SENSOR="google_touch_side,navi=1"
 
                 ADD_TO_WORK_DIR "b4qxxx" "system" "system/priv-app/BiometricSetting/BiometricSetting.apk" 0 0 644 "u:object_r:system_file:s0"
-                APPLY_PATCH "system" "system/priv-app/BiometricSetting/BiometricSetting.apk" \
+                PF_APPLY_PATCH "system" "system/priv-app/BiometricSetting/BiometricSetting.apk" \
                     "$MODPATH/fingerprint/side_fp/BiometricSetting.apk/0001-Add-FEATURE_FINGERPRINT_JDM_HAL-support.patch"
 
-                APPLY_PATCH "system" "system/framework/framework.jar" \
+                PF_APPLY_PATCH "system" "system/framework/framework.jar" \
                     "$MODPATH/fingerprint/side_fp/framework.jar/0001-Add-side-fingerprint-sensor-support.patch"
-                APPLY_PATCH "system" "system/framework/services.jar" \
+                PF_APPLY_PATCH "system" "system/framework/services.jar" \
                     "$MODPATH/fingerprint/side_fp/services.jar/0001-Add-side-fingerprint-sensor-support.patch"
                 EVAL "sed -i \"/implements/i .implements Lcom\/android\/server\/biometrics\/sensors\/fingerprint\/SemFpHalLifecycleListener;\" \"$APKTOOL_DIR/system/framework/services.jar/smali/com/android/server/biometrics/sensors/fingerprint/SemFingerprintServiceExtImpl.smali\""
-                APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+                PF_APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
                     "$MODPATH/fingerprint/side_fp/SecSettings.apk/0001-Add-side-fingerprint-sensor-support.patch"
                 EVAL "sed -i \"s/^\.implements.*/.implements Landroid\/widget\/CompoundButton\$OnCheckedChangeListener;/g\" \"$APKTOOL_DIR/system/priv-app/SecSettings/SecSettings.apk/smali_classes4/com/samsung/android/settings/biometrics/fingerprint/SuwFingerprintUsefulFeature\\\$\\\$ExternalSyntheticLambda1.smali\""
-                SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+                PF_SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
                     "smali_classes4/com/samsung/android/settings/biometrics/fingerprint/SuwFingerprintUsefulFeature\$\$ExternalSyntheticLambda4.smali" "remove"
-                SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+                PF_SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
                     "smali_classes4/com/samsung/android/settings/biometrics/fingerprint/SuwFingerprintUsefulFeature\$\$ExternalSyntheticLambda9.smali" "remove"
-                SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+                PF_SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
                     "smali_classes4/com/samsung/android/settings/biometrics/fingerprint/SuwFingerprintUsefulFeature\$1.smali" "remove"
-                APPLY_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
+                PF_APPLY_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
                     "$MODPATH/fingerprint/side_fp/SystemUI.apk/0001-Add-side-fingerprint-sensor-support.patch"
                 EVAL "sed -i \"s/^\.implements.*/.implements Ljava\/util\/function\/Consumer;/g\" \"$APKTOOL_DIR/system_ext/priv-app/SystemUI/SystemUI.apk/smali/com/android/keyguard/KeyguardSecUpdateMonitorImpl\\\$\\\$ExternalSyntheticLambda28.smali\""
-                SMALI_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
+                PF_SMALI_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
                     "smali/com/android/keyguard/KeyguardSecUpdateMonitorImpl\$\$ExternalSyntheticLambda24.smali" "remove"
-                SMALI_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
+                PF_SMALI_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
                     "smali/com/android/keyguard/KeyguardSecUpdateMonitorImpl\$\$ExternalSyntheticLambda29.smali" "remove"
-                SMALI_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
+                PF_SMALI_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
                     "smali/com/android/keyguard/KeyguardSecUpdateMonitorImpl\$\$ExternalSyntheticLambda33.smali" "remove"
-                SMALI_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
+                PF_SMALI_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
                     "smali/com/android/keyguard/KeyguardSecUpdateMonitorImpl\$\$ExternalSyntheticLambda40.smali" "remove"
-                SMALI_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
+                PF_SMALI_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
                     "smali/com/android/keyguard/KeyguardSecUpdateMonitorImpl\$\$ExternalSyntheticLambda42.smali" "remove"
 
                 if [[ "$TARGET_FINGERPRINT_CONFIG_SENSOR" == *"navi=1"* ]]; then
                     LOG "- Enabling FP_FEATURE_GESTURE_MODE:Z in /system/system/framework/services.jar/smali/com/android/server/biometrics/SemBiometricFeature.smali"
-                    SMALI_PATCH "system" "system/framework/services.jar" \
+                    PF_SMALI_PATCH "system" "system/framework/services.jar" \
                         "smali/com/android/server/biometrics/SemBiometricFeature.smali" "replace" \
                         "<clinit>()V" \
                         "sput-boolean v3, Lcom/android/server/biometrics/SemBiometricFeature;->FP_FEATURE_GESTURE_MODE:Z" \
@@ -441,7 +517,7 @@ if [[ "$SOURCE_FINGERPRINT_CONFIG_SENSOR" != "$TARGET_FINGERPRINT_CONFIG_SENSOR"
                 fi
                 if [[ "$TARGET_FINGERPRINT_CONFIG_SENSOR" == *"swipe_enroll"* ]]; then
                     LOG "- Enabling FP_FEATURE_SWIPE_ENROLL:Z in /system/system/framework/services.jar/smali/com/android/server/biometrics/SemBiometricFeature.smali"
-                    SMALI_PATCH "system" "system/framework/services.jar" \
+                    PF_SMALI_PATCH "system" "system/framework/services.jar" \
                         "smali/com/android/server/biometrics/SemBiometricFeature.smali" "replace" \
                         "<clinit>()V" \
                         "sput-boolean v3, Lcom/android/server/biometrics/SemBiometricFeature;->FP_FEATURE_SWIPE_ENROLL:Z" \
@@ -450,7 +526,7 @@ if [[ "$SOURCE_FINGERPRINT_CONFIG_SENSOR" != "$TARGET_FINGERPRINT_CONFIG_SENSOR"
                 fi
                 if [[ "$TARGET_FINGERPRINT_CONFIG_SENSOR" == *"wof_off"* ]]; then
                     LOG "- Enabling FP_FEATURE_WOF_OPTION_DEFAULT_OFF:Z in /system/system/framework/services.jar/smali/com/android/server/biometrics/SemBiometricFeature.smali"
-                    SMALI_PATCH "system" "system/framework/services.jar" \
+                    PF_SMALI_PATCH "system" "system/framework/services.jar" \
                         "smali/com/android/server/biometrics/SemBiometricFeature.smali" "replace" \
                         "<clinit>()V" \
                         "sput-boolean v3, Lcom/android/server/biometrics/SemBiometricFeature;->FP_FEATURE_WOF_OPTION_DEFAULT_OFF:Z" \
@@ -468,7 +544,7 @@ if [[ "$SOURCE_FINGERPRINT_CONFIG_SENSOR" != "$TARGET_FINGERPRINT_CONFIG_SENSOR"
     fi
 
     if [[ "$SOURCE_FINGERPRINT_CONFIG_SENSOR" != "$TARGET_FINGERPRINT_CONFIG_SENSOR" ]]; then
-        SMALI_PATCH "system" "system/priv-app/BiometricSetting/BiometricSetting.apk" \
+        PF_SMALI_PATCH "system" "system/priv-app/BiometricSetting/BiometricSetting.apk" \
             "smali/com/samsung/android/biometrics/app/setting/DisplayStateManager.smali" "replace" \
             "<init>(Lcom/samsung/android/biometrics/app/setting/BiometricsUIService;)V" \
             "$SOURCE_FINGERPRINT_CONFIG_SENSOR" \
@@ -480,17 +556,17 @@ fi
 if [[ "$SOURCE_LCD_CONFIG_CONTROL_AUTO_BRIGHTNESS" != "$TARGET_LCD_CONFIG_CONTROL_AUTO_BRIGHTNESS" ]]; then
     SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_LCD_CONFIG_CONTROL_AUTO_BRIGHTNESS" "$TARGET_LCD_CONFIG_CONTROL_AUTO_BRIGHTNESS"
 
-    SMALI_PATCH "system" "system/framework/services.jar" \
+    PF_SMALI_PATCH "system" "system/framework/services.jar" \
         "smali_classes2/com/android/server/power/PowerManagerUtil.smali" "replace" \
         "<clinit>()V" \
         "$SOURCE_LCD_CONFIG_CONTROL_AUTO_BRIGHTNESS" \
         "$TARGET_LCD_CONFIG_CONTROL_AUTO_BRIGHTNESS"
-    SMALI_PATCH "system" "system/framework/ssrm.jar" \
+    PF_SMALI_PATCH "system" "system/framework/ssrm.jar" \
         "smali/com/android/server/ssrm/PreMonitor.smali" "replace" \
         "getBrightness()Ljava/lang/String;" \
         "$SOURCE_LCD_CONFIG_CONTROL_AUTO_BRIGHTNESS" \
         "$TARGET_LCD_CONFIG_CONTROL_AUTO_BRIGHTNESS"
-    SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+    PF_SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
         "smali_classes4/com/samsung/android/settings/Rune.smali" "replace" \
         "<clinit>()V" \
         "$SOURCE_LCD_CONFIG_CONTROL_AUTO_BRIGHTNESS" \
@@ -505,7 +581,7 @@ if [[ "$SOURCE_LCD_CONFIG_SEAMLESS_BRT" != "$TARGET_LCD_CONFIG_SEAMLESS_BRT" ]] 
         [[ "$SOURCE_LCD_CONFIG_SEAMLESS_LUX" != "$TARGET_LCD_CONFIG_SEAMLESS_LUX" ]]; then
     if [[ "$SOURCE_LCD_CONFIG_SEAMLESS_BRT" != "none" ]] && [[ "$SOURCE_LCD_CONFIG_SEAMLESS_LUX" != "none" ]] && \
             [[ "$TARGET_LCD_CONFIG_SEAMLESS_BRT" == "none" ]] && [[ "$TARGET_LCD_CONFIG_SEAMLESS_LUX" == "none" ]]; then
-        APPLY_PATCH "system" "system/framework/framework.jar" \
+        PF_APPLY_PATCH "system" "system/framework/framework.jar" \
             "$MODPATH/hfr/framework.jar/0001-Remove-brightness-threshold-values.patch"
     elif [[ "$SOURCE_LCD_CONFIG_SEAMLESS_BRT" != "none" ]] && [[ "$SOURCE_LCD_CONFIG_SEAMLESS_LUX" != "none" ]] && \
             [[ "$TARGET_LCD_CONFIG_SEAMLESS_BRT" != "none" ]] && [[ "$TARGET_LCD_CONFIG_SEAMLESS_LUX" != "none" ]]; then
@@ -513,7 +589,7 @@ if [[ "$SOURCE_LCD_CONFIG_SEAMLESS_BRT" != "$TARGET_LCD_CONFIG_SEAMLESS_BRT" ]] 
             PATCH_RRC_DUMP "SEAMLESS_BRT" \
                 "$SOURCE_LCD_CONFIG_SEAMLESS_BRT" \
                 "$TARGET_LCD_CONFIG_SEAMLESS_BRT"
-            SMALI_PATCH "system" "system/framework/framework.jar" \
+            PF_SMALI_PATCH "system" "system/framework/framework.jar" \
                 "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
                 "getMainInstance()Lcom/samsung/android/hardware/display/RefreshRateConfig;" \
                 "$SOURCE_LCD_CONFIG_SEAMLESS_BRT" \
@@ -523,7 +599,7 @@ if [[ "$SOURCE_LCD_CONFIG_SEAMLESS_BRT" != "$TARGET_LCD_CONFIG_SEAMLESS_BRT" ]] 
             PATCH_RRC_DUMP "SEAMLESS_LUX" \
                 "$SOURCE_LCD_CONFIG_SEAMLESS_LUX" \
                 "$TARGET_LCD_CONFIG_SEAMLESS_LUX"
-            SMALI_PATCH "system" "system/framework/framework.jar" \
+            PF_SMALI_PATCH "system" "system/framework/framework.jar" \
                 "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
                 "getMainInstance()Lcom/samsung/android/hardware/display/RefreshRateConfig;" \
                 "$SOURCE_LCD_CONFIG_SEAMLESS_LUX" \
@@ -543,12 +619,12 @@ if [[ "$SOURCE_LCD_CONFIG_HFR_DEFAULT_REFRESH_RATE" != "$TARGET_LCD_CONFIG_HFR_D
     PATCH_RRC_DUMP "HFR_DEFAULT_REFRESH_RATE" \
         "$SOURCE_LCD_CONFIG_HFR_DEFAULT_REFRESH_RATE" \
         "$TARGET_LCD_CONFIG_HFR_DEFAULT_REFRESH_RATE"
-    SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+    PF_SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
         "smali_classes4/com/samsung/android/settings/display/SecDisplayUtils.smali" "replace" \
         "getHighRefreshRateDefaultValue(Landroid/content/Context;I)I" \
         "$SOURCE_LCD_CONFIG_HFR_DEFAULT_REFRESH_RATE" \
         "$TARGET_LCD_CONFIG_HFR_DEFAULT_REFRESH_RATE"
-    SMALI_PATCH "system" "system/priv-app/SettingsProvider/SettingsProvider.apk" \
+    PF_SMALI_PATCH "system" "system/priv-app/SettingsProvider/SettingsProvider.apk" \
         "smali/com/android/providers/settings/DatabaseHelper.smali" "replace" \
         "loadRefreshRateMode(Landroid/database/sqlite/SQLiteStatement;Ljava/lang/String;)V" \
         "$SOURCE_LCD_CONFIG_HFR_DEFAULT_REFRESH_RATE" \
@@ -559,7 +635,7 @@ fi
 if [[ "$SOURCE_LCD_CONFIG_HFR_MODE" != "$TARGET_LCD_CONFIG_HFR_MODE" ]]; then
     SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_LCD_CONFIG_HFR_MODE" "$TARGET_LCD_CONFIG_HFR_MODE"
 
-    SMALI_PATCH "system" "system/framework/framework.jar" \
+    PF_SMALI_PATCH "system" "system/framework/framework.jar" \
         "smali_classes2/android/inputmethodservice/SemImsRune.smali" "replace" \
         "<clinit>()V" \
         "$SOURCE_LCD_CONFIG_HFR_MODE" \
@@ -567,55 +643,55 @@ if [[ "$SOURCE_LCD_CONFIG_HFR_MODE" != "$TARGET_LCD_CONFIG_HFR_MODE" ]]; then
     PATCH_RRC_DUMP "HFR_MODE" \
         "$SOURCE_LCD_CONFIG_HFR_MODE" \
         "$TARGET_LCD_CONFIG_HFR_MODE"
-    SMALI_PATCH "system" "system/framework/framework.jar" \
+    PF_SMALI_PATCH "system" "system/framework/framework.jar" \
         "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
         "getMainInstance()Lcom/samsung/android/hardware/display/RefreshRateConfig;" \
         "$SOURCE_LCD_CONFIG_HFR_MODE" \
         "$TARGET_LCD_CONFIG_HFR_MODE"
-    SMALI_PATCH "system" "system/framework/framework.jar" \
+    PF_SMALI_PATCH "system" "system/framework/framework.jar" \
         "smali_classes6/com/samsung/android/rune/CoreRune.smali" "replace" \
         "<clinit>()V" \
         "$SOURCE_LCD_CONFIG_HFR_MODE" \
         "$TARGET_LCD_CONFIG_HFR_MODE"
-    SMALI_PATCH "system" "system/framework/gamemanager.jar" \
+    PF_SMALI_PATCH "system" "system/framework/gamemanager.jar" \
         "smali/com/samsung/android/game/GameManagerService.smali" "replace" \
         "isVariableRefreshRateSupported()Ljava/lang/String;" \
         "$SOURCE_LCD_CONFIG_HFR_MODE" \
         "$TARGET_LCD_CONFIG_HFR_MODE"
-    SMALI_PATCH "system" "system/framework/secinputdev-service.jar" \
+    PF_SMALI_PATCH "system" "system/framework/secinputdev-service.jar" \
         "smali/com/samsung/android/hardware/secinputdev/utils/SemInputFeatures.smali" "replaceall" \
         "\\\"$SOURCE_LCD_CONFIG_HFR_MODE\\\"" \
         "\\\"$TARGET_LCD_CONFIG_HFR_MODE\\\""
-    SMALI_PATCH "system" "system/framework/secinputdev-service.jar" \
+    PF_SMALI_PATCH "system" "system/framework/secinputdev-service.jar" \
         "smali/com/samsung/android/hardware/secinputdev/utils/SemInputFeaturesExtra.smali" "replaceall" \
         "\\\"$SOURCE_LCD_CONFIG_HFR_MODE\\\"" \
         "\\\"$TARGET_LCD_CONFIG_HFR_MODE\\\""
-    SMALI_PATCH "system" "system/framework/services.jar" \
+    PF_SMALI_PATCH "system" "system/framework/services.jar" \
         "smali_classes2/com/android/server/power/PowerManagerUtil.smali" "replace" \
         "<clinit>()V" \
         "$SOURCE_LCD_CONFIG_HFR_MODE" \
         "$TARGET_LCD_CONFIG_HFR_MODE"
-    SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+    PF_SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
         "smali_classes4/com/samsung/android/settings/display/SecDisplayUtils.smali" "replace" \
         "getHighRefreshRateSeamlessType(I)I" \
         "$SOURCE_LCD_CONFIG_HFR_MODE" \
         "$TARGET_LCD_CONFIG_HFR_MODE"
-    SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+    PF_SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
         "smali_classes4/com/samsung/android/settings/display/SecDisplayUtils.smali" "replace" \
         "isSupportMaxHS60RefreshRate(I)Z" \
         "$SOURCE_LCD_CONFIG_HFR_MODE" \
         "$TARGET_LCD_CONFIG_HFR_MODE"
-    SMALI_PATCH "system" "system/priv-app/SettingsProvider/SettingsProvider.apk" \
+    PF_SMALI_PATCH "system" "system/priv-app/SettingsProvider/SettingsProvider.apk" \
         "smali/com/android/providers/settings/DatabaseHelper.smali" "replace" \
         "loadRefreshRateMode(Landroid/database/sqlite/SQLiteStatement;Ljava/lang/String;)V" \
         "$SOURCE_LCD_CONFIG_HFR_MODE" \
         "$TARGET_LCD_CONFIG_HFR_MODE"
-    SMALI_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
+    PF_SMALI_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
         "smali/com/android/systemui/BasicRune.smali" "replace" \
         "<clinit>()V" \
         "$SOURCE_LCD_CONFIG_HFR_MODE" \
         "$TARGET_LCD_CONFIG_HFR_MODE"
-    SMALI_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
+    PF_SMALI_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
         "smali/com/android/systemui/LsRune.smali" "replace" \
         "<clinit>()V" \
         "$SOURCE_LCD_CONFIG_HFR_MODE" \
@@ -634,17 +710,17 @@ if [[ "$SOURCE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE" != "$TARGET_LCD_CONFIG_HFR
         PATCH_RRC_DUMP "HFR_SUPPORTED_REFRESH_RATE" \
             "$SOURCE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE" \
             "${TARGET_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE//none/}"
-        SMALI_PATCH "system" "system/framework/framework.jar" \
+        PF_SMALI_PATCH "system" "system/framework/framework.jar" \
             "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
             "getMainInstance()Lcom/samsung/android/hardware/display/RefreshRateConfig;" \
             "$SOURCE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE" \
             "${TARGET_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE//none/}"
-        SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+        PF_SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
             "smali_classes4/com/samsung/android/settings/display/SecDisplayUtils.smali" "replace" \
             "getHighRefreshRateSupportedValues(I)[Ljava/lang/String;" \
             "$SOURCE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE" \
             "${TARGET_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE//none/}"
-        SMALI_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
+        PF_SMALI_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
             "smali_classes2/com/android/systemui/keyguard/KeyguardViewMediatorHelperImpl\$\$ExternalSyntheticLambda0.smali" "replace" \
             "invoke()Ljava/lang/Object;" \
             "$SOURCE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE" \
@@ -667,7 +743,7 @@ if [[ "$SOURCE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS" != "$TARGET_LCD_CONFIG_
         PATCH_RRC_DUMP "HFR_SUPPORTED_REFRESH_RATE_NS" \
             "$SOURCE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS" \
             "${TARGET_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS//none/}"
-        SMALI_PATCH "system" "system/framework/framework.jar" \
+        PF_SMALI_PATCH "system" "system/framework/framework.jar" \
             "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
             "getMainInstance()Lcom/samsung/android/hardware/display/RefreshRateConfig;" \
             "$SOURCE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS" \
@@ -677,7 +753,7 @@ if [[ "$SOURCE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS" != "$TARGET_LCD_CONFIG_
         # argument in getMainInstance() is an empty string
         SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS" "$TARGET_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS"
 
-        SMALI_PATCH "system" "system/framework/framework.jar" \
+        PF_SMALI_PATCH "system" "system/framework/framework.jar" \
             "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
             "getMainInstance()Lcom/samsung/android/hardware/display/RefreshRateConfig;" \
             'const-string v3, ""' \
@@ -691,13 +767,13 @@ if $SOURCE_LCD_SUPPORT_MDNIE_HW && [[ "$SOURCE_LCD_CONFIG_COLOR_WEAKNESS_SOLUTIO
     if ! $TARGET_LCD_SUPPORT_MDNIE_HW; then
         SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_LCD_SUPPORT_MDNIE_HW" --delete
 
-        APPLY_PATCH "system" "system/framework/framework.jar" \
+        PF_APPLY_PATCH "system" "system/framework/framework.jar" \
             "$MODPATH/mdnie/hw/framework.jar/0001-Disable-HW-mDNIe.patch"
         if [[ "$TARGET_LCD_CONFIG_COLOR_WEAKNESS_SOLUTION" == "0" ]]; then
-            APPLY_PATCH "system" "system/framework/framework.jar" \
+            PF_APPLY_PATCH "system" "system/framework/framework.jar" \
                 "$MODPATH/mdnie/hw/framework.jar/0002-Disable-A11Y_COLOR_BOOL_SUPPORT_DMC_COLORWEAKNESS.patch"
         fi
-        APPLY_PATCH "system" "system/framework/services.jar" \
+        PF_APPLY_PATCH "system" "system/framework/services.jar" \
             "$MODPATH/mdnie/hw/services.jar/0001-Disable-HW-mDNIe.patch"
     fi
 elif $SOURCE_LCD_SUPPORT_MDNIE_HW && [[ "$SOURCE_LCD_CONFIG_COLOR_WEAKNESS_SOLUTION" == "0" ]]; then
@@ -716,20 +792,20 @@ fi
 # SEC_PRODUCT_FEATURE_RIL_FEATURES
 if [[ "$SOURCE_RIL_FEATURES" != "$TARGET_RIL_FEATURES" ]]; then
     if [[ "$SOURCE_RIL_FEATURES" != "none" ]]; then
-        SMALI_PATCH "system" "system/framework/framework.jar" \
-            "smali_classes4/com/android/internal/telephony/TelephonyFeatures.smali" "replaceall" \
+        PF_SMALI_PATCH "system" "system/framework/framework.jar" \
+            "smali_classes6/com/android/internal/telephony/TelephonyFeatures.smali" "replaceall" \
             "$SOURCE_RIL_FEATURES" \
             "${TARGET_RIL_FEATURES//none/}"
-        SMALI_PATCH "system" "system/framework/telephony-common.jar" \
+        PF_SMALI_PATCH "system" "system/framework/telephony-common.jar" \
             "smali/com/android/internal/telephony/TelephonyLogger.smali" "replace" \
             "dump(Ljava/io/FileDescriptor;Ljava/io/PrintWriter;[Ljava/lang/String;)V" \
             "$SOURCE_RIL_FEATURES" \
             "${TARGET_RIL_FEATURES//none/}"
-        SMALI_PATCH "system" "system/priv-app/TeleService/TeleService.apk" \
+        PF_SMALI_PATCH "system" "system/priv-app/TeleService/TeleService.apk" \
             "smali/com/samsung/telephony/model/feature/tag/SamsungProductFeatureTag.smali" "replaceall" \
             "$SOURCE_RIL_FEATURES" \
             "${TARGET_RIL_FEATURES//none/}"
-        SMALI_PATCH "system" "system/priv-app/TeleService/TeleService.apk" \
+        PF_SMALI_PATCH "system" "system/priv-app/TeleService/TeleService.apk" \
             "smali/com/samsung/telephony/model/feature/SamsungFeatureSatellite.smali" "replaceall" \
             "$SOURCE_RIL_FEATURES" \
             "${TARGET_RIL_FEATURES//none/}"
@@ -743,21 +819,23 @@ fi
 if [[ "$SOURCE_RIL_SIM_CONFIG_MULTISIM_TRAYCOUNT" != "$TARGET_RIL_SIM_CONFIG_MULTISIM_TRAYCOUNT" ]]; then
     if [[ "$SOURCE_RIL_SIM_CONFIG_MULTISIM_TRAYCOUNT" == "1" ]] && \
             [[ "$TARGET_RIL_SIM_CONFIG_MULTISIM_TRAYCOUNT" != "1" ]]; then
-        SMALI_PATCH "system" "system/framework/framework.jar" \
-            "smali_classes4/com/android/internal/telephony/TelephonyFeatures.smali" "return" \
+        PF_SMALI_PATCH "system" "system/framework/framework.jar" \
+            "smali_classes6/com/android/internal/telephony/TelephonyFeatures.smali" "return" \
             "isOneTray()Z" \
             "false"
     elif [[ "$SOURCE_RIL_SIM_CONFIG_MULTISIM_TRAYCOUNT" != "1" ]] && \
             [[ "$TARGET_RIL_SIM_CONFIG_MULTISIM_TRAYCOUNT" == "1" ]]; then
-        # TODO handle this condition
-        LOG_MISSING_PATCHES "SOURCE_RIL_SIM_CONFIG_MULTISIM_TRAYCOUNT" "TARGET_RIL_SIM_CONFIG_MULTISIM_TRAYCOUNT"
+        PF_SMALI_PATCH "system" "system/framework/framework.jar" \
+            "smali_classes6/com/android/internal/telephony/TelephonyFeatures.smali" "return" \
+            "isOneTray()Z" \
+            "true"
     fi
 fi
 
 # SEC_PRODUCT_FEATURE_RIL_SUPPORT_WATERPROOF_SIM_TRAY_MSG
 if $SOURCE_RIL_SUPPORT_WATERPROOF_SIM_TRAY_MSG; then
     if ! $TARGET_RIL_SUPPORT_WATERPROOF_SIM_TRAY_MSG; then
-        APPLY_PATCH "system" "system/framework/telephony-common.jar" \
+        PF_APPLY_PATCH "system" "system/framework/telephony-common.jar" \
             "$MODPATH/ril/telephony-common.jar/0001-Disable-RIL_SUPPORT_WATERPROOF_SIM_TRAY_MSG.patch"
     fi
 else
@@ -771,7 +849,7 @@ fi
 TARGET_FIRMWARE_PATH="$(cut -d "/" -f 1 -s <<< "$TARGET_FIRMWARE")_$(cut -d "/" -f 2 -s <<< "$TARGET_FIRMWARE")"
 
 if [ ! -f "$FW_DIR/$TARGET_FIRMWARE_PATH/vendor/etc/permissions/android.hardware.strongbox_keystore.xml" ]; then
-    SMALI_PATCH "system" "system/framework/framework.jar" \
+    PF_SMALI_PATCH "system" "system/framework/framework.jar" \
         "smali_classes6/com/samsung/android/service/DeviceIDProvisionService/DeviceIDProvisionManager\$DeviceIDProvisionWorker.smali" "return" \
         "isSupportStrongboxDeviceID()Z" \
         "false"
@@ -786,21 +864,21 @@ if [[ "$SOURCE_WLAN_CONFIG_CPU_CSTATE_DISABLE_THRESHOLD" != "$TARGET_WLAN_CONFIG
     if [[ "$SOURCE_WLAN_CONFIG_CPU_CSTATE_DISABLE_THRESHOLD" == "100" ]] && \
             [[ "$SOURCE_WLAN_CONFIG_DATA_ACTIVITY_AFFINITY_BOOSTER_THRESHOLD" == "0" ]] && \
             [[ "$SOURCE_WLAN_CONFIG_L1SS_DISABLE_THRESHOLD" == "0" ]]; then
-        APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
             "$MODPATH/wifi/thresholds/semwifi-service.jar/0001-Allow-custom-booster-thresholds-values.patch"
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/SemFrameworkFacade.smali" "replace" \
             "getBoosterThresholds()[I" \
             "CONFIG_DATA_ACTIVITY_AFFINITY_BOOSTER_THRESHOLD" \
             "$TARGET_WLAN_CONFIG_DATA_ACTIVITY_AFFINITY_BOOSTER_THRESHOLD" | \
             sed "s/CONFIG_DATA_ACTIVITY_AFFINITY_BOOSTER_THRESHOLD/$SOURCE_WLAN_CONFIG_DATA_ACTIVITY_AFFINITY_BOOSTER_THRESHOLD/g"
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/SemFrameworkFacade.smali" "replace" \
             "getBoosterThresholds()[I" \
             "CONFIG_CPU_CSTATE_DISABLE_THRESHOLD" \
             "$TARGET_WLAN_CONFIG_CPU_CSTATE_DISABLE_THRESHOLD" | \
             sed "s/CONFIG_CPU_CSTATE_DISABLE_THRESHOLD/$SOURCE_WLAN_CONFIG_CPU_CSTATE_DISABLE_THRESHOLD/g"
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/SemFrameworkFacade.smali" "replace" \
             "getBoosterThresholds()[I" \
             "CONFIG_L1SS_DISABLE_THRESHOLD" \
@@ -817,31 +895,31 @@ fi
 # SEC_PRODUCT_FEATURE_WLAN_CONFIG_CUSTOM_BACKOFF
 if [[ "$SOURCE_WLAN_CONFIG_CUSTOM_BACKOFF" != "$TARGET_WLAN_CONFIG_CUSTOM_BACKOFF" ]]; then
     if [[ "$SOURCE_WLAN_CONFIG_CUSTOM_BACKOFF" != "none" ]] && [[ "$TARGET_WLAN_CONFIG_CUSTOM_BACKOFF" != "none" ]]; then
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/SemWifiCoexManager.smali" "replaceall" \
             "$SOURCE_WLAN_CONFIG_CUSTOM_BACKOFF" \
             "$TARGET_WLAN_CONFIG_CUSTOM_BACKOFF"
     elif [[ "$SOURCE_WLAN_CONFIG_CUSTOM_BACKOFF" == "none" ]] && [[ "$TARGET_WLAN_CONFIG_CUSTOM_BACKOFF" != "none" ]]; then
-        APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
             "$MODPATH/wifi/custom_backoff/semwifi-service.jar/0001-Allow-custom-CUSTOM_BACKOFF-value.patch"
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/SemWifiCoexManager.smali" "replaceall" \
             "CONFIG_CUSTOM_BACKOFF" \
             "$TARGET_WLAN_CONFIG_CUSTOM_BACKOFF" | \
             sed "s/CONFIG_CUSTOM_BACKOFF/$SOURCE_WLAN_CONFIG_CUSTOM_BACKOFF/g"
     elif [[ "$SOURCE_WLAN_CONFIG_CUSTOM_BACKOFF" != "none" ]] && [[ "$TARGET_WLAN_CONFIG_CUSTOM_BACKOFF" == "none" ]]; then
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/SemWifiCoexManager.smali" "replaceall" \
             "$SOURCE_WLAN_CONFIG_CUSTOM_BACKOFF" \
             "CONFIG_CUSTOM_BACKOFF" > /dev/null
-        APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
             "$MODPATH/wifi/custom_backoff/semwifi-service.jar/0001-Remove-CUSTOM_BACKOFF-value.patch"
     fi
 fi
 
 # SEC_PRODUCT_FEATURE_WLAN_CONFIG_SEPARATE_ANT_BACKOFF
 if [[ "$SOURCE_WLAN_CONFIG_SEPARATE_ANT_BACKOFF" != "$TARGET_WLAN_CONFIG_SEPARATE_ANT_BACKOFF" ]]; then
-    SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+    PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
         "smali/com/samsung/android/server/wifi/backoff/BackOffFeatureUtil.smali" "return" \
         "getSeparateAntennaType()Ljava/lang/String;" \
         "${TARGET_WLAN_CONFIG_SEPARATE_ANT_BACKOFF//none/}"
@@ -849,7 +927,7 @@ fi
 
 # SEC_PRODUCT_FEATURE_WLAN_CONFIG_SINGLE_ANT_BACKOFF
 if [[ "$SOURCE_WLAN_CONFIG_SINGLE_ANT_BACKOFF" != "$TARGET_WLAN_CONFIG_SINGLE_ANT_BACKOFF" ]]; then
-    SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+    PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
         "smali/com/samsung/android/server/wifi/backoff/BackOffFeatureUtil.smali" "return" \
         "getSingleAntennaType()Ljava/lang/String;" \
         "${TARGET_WLAN_CONFIG_SINGLE_ANT_BACKOFF//none/}"
@@ -861,11 +939,11 @@ if $SOURCE_WLAN_SUPPORT_80211AX; then
     if $TARGET_WLAN_SUPPORT_80211AX; then
         if ! $SOURCE_WLAN_SUPPORT_80211AX_6GHZ; then
             if $TARGET_WLAN_SUPPORT_80211AX_6GHZ; then
-                APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+                PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
                     "$MODPATH/wifi/80211ax_6ghz/semwifi-service.jar/0001-Enable-80211AX_6GHZ-support.patch"
-                APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+                PF_APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
                     "$MODPATH/wifi/80211ax_6ghz/SecSettings.apk/0001-Enable-80211AX_6GHZ-support.patch"
-                APPLY_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
+                PF_APPLY_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
                     "$MODPATH/wifi/80211ax_6ghz/SystemUI.apk/0001-Enable-80211AX_6GHZ-support.patch"
             fi
         else
@@ -879,9 +957,9 @@ if $SOURCE_WLAN_SUPPORT_80211AX; then
             ABORT "TARGET_WLAN_SUPPORT_80211AX is required by TARGET_WLAN_SUPPORT_80211AX_6GHZ"
         fi
         if ! $SOURCE_WLAN_SUPPORT_80211AX_6GHZ; then
-            APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+            PF_APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
                 "$MODPATH/wifi/80211ax/SecSettings.apk/0001-Disable-80211AX-support.patch"
-            APPLY_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
+            PF_APPLY_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
                 "$MODPATH/wifi/80211ax/SystemUI.apk/0001-Disable-80211AX-support.patch"
         else
             # TODO handle these conditions
@@ -910,30 +988,30 @@ if [[ "$SOURCE_WLAN_CONFIG_CONNECTION_PERSONALIZATION" != "$TARGET_WLAN_CONFIG_C
         [[ "$SOURCE_WLAN_SUPPORT_APE_SERVICE" != "$TARGET_WLAN_SUPPORT_APE_SERVICE" ]]; then
     if [[ "$SOURCE_WLAN_CONFIG_CONNECTION_PERSONALIZATION" == "1" ]] && $SOURCE_WLAN_SUPPORT_APE_SERVICE; then
         if [[ "$SOURCE_WLAN_CONFIG_DYNAMIC_SWITCH" != "0" ]]; then
-            SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+            PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
                 "smali/com/samsung/android/server/wifi/SemWifiInjector.smali" "replace" \
                 "<init>(Landroid/content/Context;)V" \
                 "$SOURCE_WLAN_CONFIG_DYNAMIC_SWITCH" \
                 "0" > /dev/null
         fi
-        APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
             "$MODPATH/wifi/connection_personalization/semwifi-service.jar/0001-Allow-custom-CONNECTION_PERSONALIZATION-value.patch"
         if [[ "$SOURCE_WLAN_CONFIG_DYNAMIC_SWITCH" != "0" ]]; then
-            SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+            PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
                 "smali/com/samsung/android/server/wifi/SemWifiInjector.smali" "replace" \
                 "<init>(Landroid/content/Context;)V" \
                 "0" \
                 "$SOURCE_WLAN_CONFIG_DYNAMIC_SWITCH" > /dev/null
         fi
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/SemWifiInjector.smali" "replace" \
             "<init>(Landroid/content/Context;)V" \
             "CONFIG_CONNECTION_PERSONALIZATION" \
             "$TARGET_WLAN_CONFIG_CONNECTION_PERSONALIZATION" | \
             sed "s/CONFIG_CONNECTION_PERSONALIZATION/$SOURCE_WLAN_CONFIG_CONNECTION_PERSONALIZATION/g"
-        APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+        PF_APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
             "$MODPATH/wifi/connection_personalization/SecSettings.apk/0001-Allow-custom-CONNECTION_PERSONALIZATION-value.patch"
-        SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+        PF_SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
             "smali_classes3/com/samsung/android/settings/wifi/develop/btm/BtmController.smali" "replace" \
             "getAvailabilityStatus()I" \
             "CONFIG_CONNECTION_PERSONALIZATION" \
@@ -941,17 +1019,17 @@ if [[ "$SOURCE_WLAN_CONFIG_CONNECTION_PERSONALIZATION" != "$TARGET_WLAN_CONFIG_C
             sed "s/CONFIG_CONNECTION_PERSONALIZATION/$SOURCE_WLAN_CONFIG_CONNECTION_PERSONALIZATION/g"
 
         if [[ "$SOURCE_WLAN_CONFIG_DYNAMIC_SWITCH" != "$TARGET_WLAN_CONFIG_DYNAMIC_SWITCH" ]]; then
-            SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+            PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
                 "smali/com/samsung/android/server/wifi/SemWifiInjector.smali" "replace" \
                 "<init>(Landroid/content/Context;)V" \
                 "$SOURCE_WLAN_CONFIG_DYNAMIC_SWITCH" \
                 "$TARGET_WLAN_CONFIG_DYNAMIC_SWITCH"
-            SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+            PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
                 "smali/com/samsung/android/server/wifi/SemWifiResourceManager.smali" "replace" \
                 "<init>(Landroid/content/Context;Lcom/samsung/android/server/wifi/halclient/SemWifiNative;Lcom/samsung/android/server/wifi/SemWifiInjector;)V" \
                 "$SOURCE_WLAN_CONFIG_DYNAMIC_SWITCH" \
                 "$TARGET_WLAN_CONFIG_DYNAMIC_SWITCH"
-            SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+            PF_SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
                 "smali_classes2/com/android/settings/development/WifiSafePreferenceController.smali" "replace" \
                 "<init>(Landroid/content/Context;)V" \
                 "$SOURCE_WLAN_CONFIG_DYNAMIC_SWITCH" \
@@ -959,11 +1037,11 @@ if [[ "$SOURCE_WLAN_CONFIG_CONNECTION_PERSONALIZATION" != "$TARGET_WLAN_CONFIG_C
         fi
 
         if ! $TARGET_WLAN_SUPPORT_APE_SERVICE; then
-            APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+            PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
                 "$MODPATH/wifi/ape_service/semwifi-service.jar/0001-Disable-APE_SERVICE-support.patch"
-            SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+            PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
                 "smali/com/samsung/android/server/wifi/SemQboxController\$1.smali" "remove"
-            APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+            PF_APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
                 "$MODPATH/wifi/ape_service/SecSettings.apk/0001-Disable-APE_SERVICE-support.patch"
         fi
     else
@@ -975,12 +1053,12 @@ fi
 
 # SEC_PRODUCT_FEATURE_WLAN_SUPPORT_MBO
 if ! $SOURCE_WLAN_SUPPORT_MBO && $TARGET_WLAN_SUPPORT_MBO; then
-    SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+    PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
         "smali/com/samsung/android/server/wifi/SemFrameworkFacade.smali" "return" \
         "isMBOSupported()Z" \
         "true"
 elif $SOURCE_WLAN_SUPPORT_MBO && ! $TARGET_WLAN_SUPPORT_MBO; then
-    SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+    PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
         "smali/com/samsung/android/server/wifi/SemFrameworkFacade.smali" "return" \
         "isMBOSupported()Z" \
         "false"
@@ -988,12 +1066,12 @@ fi
 
 # SEC_PRODUCT_FEATURE_WLAN_SUPPORT_MIMO
 if ! $SOURCE_WLAN_SUPPORT_MIMO && $TARGET_WLAN_SUPPORT_MIMO; then
-    SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+    PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
         "smali/com/samsung/android/server/wifi/SemWifiServiceImpl.smali" "return" \
         "getNumOfWifiAnt()I" \
         "2"
 elif $SOURCE_WLAN_SUPPORT_MIMO && ! $TARGET_WLAN_SUPPORT_MIMO; then
-    SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+    PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
         "smali/com/samsung/android/server/wifi/SemWifiServiceImpl.smali" "return" \
         "getNumOfWifiAnt()I" \
         "1"
@@ -1002,7 +1080,7 @@ fi
 # SEC_PRODUCT_FEATURE_WLAN_SUPPORT_MOBILEAP_11AX
 if $SOURCE_WLAN_SUPPORT_MOBILEAP_11AX; then
     if ! $TARGET_WLAN_SUPPORT_MOBILEAP_11AX; then
-        APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
             "$MODPATH/wifi/80211ax/semwifi-service.jar/0001-Disable-MOBILEAP_11AX-support.patch"
     fi
 else
@@ -1015,9 +1093,9 @@ fi
 # SEC_PRODUCT_FEATURE_WLAN_SUPPORT_MOBILEAP_5G_BASEDON_COUNTRY
 if ! $SOURCE_WLAN_SUPPORT_MOBILEAP_5G_BASEDON_COUNTRY; then
     if $TARGET_WLAN_SUPPORT_MOBILEAP_5G_BASEDON_COUNTRY; then
-        APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
             "$MODPATH/wifi/5g_basedon_country/semwifi-service.jar/0001-Enable-MOBILEAP_5G_BASEDON_COUNTRY-support.patch"
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/ap/SemSoftApConfiguration.smali" "replaceall" \
             "SPF_5G_BASEDON_COUNTRY=false" \
             "SPF_5G_BASEDON_COUNTRY=true"
@@ -1033,22 +1111,22 @@ fi
 if ! $SOURCE_WLAN_SUPPORT_MOBILEAP_6G && $TARGET_WLAN_SUPPORT_MOBILEAP_6G; then
     ADD_TO_WORK_DIR "b0qxxx" "product" "overlay/SoftapOverlay6GHz/SoftapOverlay6GHz.apk" 0 0 644 "u:object_r:system_file:s0"
 
-    SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+    PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
         "smali/com/samsung/android/server/wifi/ap/SemSoftApConfiguration.smali" "replaceall" \
         "SPF_6G=false" \
         "SPF_6G=true"
-    SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+    PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
         "smali/com/samsung/android/server/wifi/SemFrameworkFacade.smali" "return" \
         "isSupportMobileAp6G()Z" \
         "true"
 elif $SOURCE_WLAN_SUPPORT_MOBILEAP_6G && ! $TARGET_WLAN_SUPPORT_MOBILEAP_6G; then
     DELETE_FROM_WORK_DIR "product" "overlay/SoftapOverlay6GHz"
 
-    SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+    PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
         "smali/com/samsung/android/server/wifi/ap/SemSoftApConfiguration.smali" "replaceall" \
         "SPF_6G=true" \
         "SPF_6G=false"
-    SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+    PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
         "smali/com/samsung/android/server/wifi/SemFrameworkFacade.smali" "return" \
         "isSupportMobileAp6G()Z" \
         "false"
@@ -1059,26 +1137,26 @@ if ! $SOURCE_WLAN_SUPPORT_MOBILEAP_DUALAP; then
     if $TARGET_WLAN_SUPPORT_MOBILEAP_DUALAP; then
         ADD_TO_WORK_DIR "dm1qxxx" "product" "overlay/SoftapOverlayDualAp/SoftapOverlayDualAp.apk" 0 0 644 "u:object_r:system_file:s0"
 
-        APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
             "$MODPATH/wifi/dualap/semwifi-service.jar/0001-Enable-MOBILEAP_DUALAP-support.patch"
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/ap/SemSoftApConfiguration.smali" "replaceall" \
             "SPF_DualAp=false" \
             "SPF_DualAp=true"
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/ap/SemSoftApConfiguration\$6.smali" "remove"
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/ap/SemSoftApConfiguration\$12.smali" "remove"
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/ap/SemSoftApConfiguration\$16.smali" "remove"
         if $TARGET_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL; then
-            APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+            PF_APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
                 "$MODPATH/wifi/dualap_resolution/SecSettings.apk/0001-Enable-MOBILEAP_DUALAP-support.patch"
         else
-            APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+            PF_APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
                 "$MODPATH/wifi/dualap/SecSettings.apk/0001-Enable-MOBILEAP_DUALAP-support.patch"
         fi
-        SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+        PF_SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
             "smali_classes3/com/samsung/android/settings/wifi/mobileap/WifiApSmartSwitchBackupRestore\$5.smali" "remove"
     fi
 else
@@ -1093,13 +1171,13 @@ if ! $SOURCE_WLAN_SUPPORT_MOBILEAP_OWE; then
     if $TARGET_WLAN_SUPPORT_MOBILEAP_OWE; then
         ADD_TO_WORK_DIR "dm1qxxx" "product" "overlay/SoftapOverlayOWE/SoftapOverlayOWE.apk" 0 0 644 "u:object_r:system_file:s0"
 
-        APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
             "$MODPATH/wifi/owe/semwifi-service.jar/0001-Enable-MOBILEAP_OWE-support.patch"
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/ap/SemSoftApConfiguration.smali" "replaceall" \
             "SPF_OWE=false" \
             "SPF_OWE=true"
-        APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+        PF_APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
             "$MODPATH/wifi/owe/SecSettings.apk/0001-Enable-MOBILEAP_OWE-support.patch"
     fi
 else
@@ -1112,15 +1190,15 @@ fi
 # SEC_PRODUCT_FEATURE_WLAN_SUPPORT_MOBILEAP_POWER_SAVEMODE
 if $SOURCE_WLAN_SUPPORT_MOBILEAP_POWER_SAVEMODE; then
     if ! $TARGET_WLAN_SUPPORT_MOBILEAP_POWER_SAVEMODE; then
-        APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
             "$MODPATH/wifi/power_savemode/semwifi-service.jar/0001-Disable-MOBILEAP_POWER_SAVEMODE-support.patch"
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/ap/SemSoftApConfiguration.smali" "replaceall" \
             "SPF_POWER_SAVEMODE=true" \
             "SPF_POWER_SAVEMODE=false"
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/ap/SemWifiApPowerSaveImpl\$\$ExternalSyntheticLambda0.smali" "remove"
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/ap/SemWifiApPowerSaveImpl\$\$ExternalSyntheticLambda1.smali" "remove"
     fi
 else
@@ -1136,13 +1214,13 @@ if $SOURCE_WLAN_SUPPORT_MOBILEAP_PRIORITIZE_TRAFFIC; then
         DELETE_FROM_WORK_DIR "system" "system/app/MhsAiService"
         DELETE_FROM_WORK_DIR "system" "system/etc/xgb_mhs_l1.model"
 
-        APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
             "$MODPATH/wifi/prioritize_traffic/semwifi-service.jar/0001-Disable-MOBILEAP_PRIORITIZE_TRAFFIC-support.patch"
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/ap/SemSoftApConfiguration.smali" "replaceall" \
             "SPF_Prio_Traffic=true" \
             "SPF_Prio_Traffic=false"
-        APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+        PF_APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
             "$MODPATH/wifi/prioritize_traffic/SecSettings.apk/0001-Disable-MOBILEAP_PRIORITIZE_TRAFFIC-support.patch"
     fi
 else
@@ -1157,13 +1235,13 @@ if ! $SOURCE_WLAN_SUPPORT_MOBILEAP_WIFI_CONCURRENCY; then
     if $TARGET_WLAN_SUPPORT_MOBILEAP_WIFI_CONCURRENCY; then
         # Check for target flag instead as we've already took care of this SPF above
         if ! $TARGET_WLAN_SUPPORT_MOBILEAP_POWER_SAVEMODE; then
-            APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+            PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
                 "$MODPATH/wifi/power_savemode/semwifi-service.jar/0002-Enable-MOBILEAP_WIFI_CONCURRENCY-support.patch"
         else
-            APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+            PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
                 "$MODPATH/wifi/wifisharing/semwifi-service.jar/0001-Enable-MOBILEAP_WIFI_CONCURRENCY-support.patch"
         fi
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/ap/SemSoftApConfiguration.smali" "replaceall" \
             "SPF_Concurrency=false" \
             "SPF_Concurrency=true"
@@ -1180,13 +1258,13 @@ if ! $SOURCE_WLAN_SUPPORT_MOBILEAP_WIFISHARING_LITE; then
     if $TARGET_WLAN_SUPPORT_MOBILEAP_WIFISHARING_LITE; then
         # Check for target flag instead as we've already took care of this SPF above
         if ! $TARGET_WLAN_SUPPORT_MOBILEAP_POWER_SAVEMODE; then
-            APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+            PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
                 "$MODPATH/wifi/power_savemode/semwifi-service.jar/0003-Enable-MOBILEAP_WIFISHARING_LITE-support.patch"
         else
-            APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+            PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
                 "$MODPATH/wifi/wifisharing/semwifi-service.jar/0002-Enable-MOBILEAP_WIFISHARING_LITE-support.patch"
         fi
-        SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
             "smali/com/samsung/android/server/wifi/ap/SemSoftApConfiguration.smali" "replaceall" \
             "SPF_WS_Lite=false" \
             "SPF_WS_Lite=true"
@@ -1202,15 +1280,15 @@ fi
 # SEC_PRODUCT_FEATURE_WLAN_SUPPORT_LOWLATENCY
 if $SOURCE_WLAN_SUPPORT_TWT_CONTROL && $SOURCE_WLAN_SUPPORT_LOWLATENCY; then
     if ! $TARGET_WLAN_SUPPORT_TWT_CONTROL; then
-        APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
             "$MODPATH/wifi/twt_control/semwifi-service.jar/0001-Disable-TWT_CONTROL-support.patch"
 
         if ! $TARGET_WLAN_SUPPORT_LOWLATENCY; then
-            APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+            PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
                 "$MODPATH/wifi/twt_control/semwifi-service.jar/0002-Disable-LOWLATENCY-support.patch"
         fi
     elif ! $TARGET_WLAN_SUPPORT_LOWLATENCY; then
-        APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
             "$MODPATH/wifi/lowlatency/semwifi-service.jar/0001-Disable-LOWLATENCY-support.patch"
     fi
 else
@@ -1226,7 +1304,7 @@ fi
 # SEC_PRODUCT_FEATURE_WLAN_SUPPORT_SWITCH_FOR_INDIVIDUAL_APPS
 if $SOURCE_WLAN_SUPPORT_SWITCH_FOR_INDIVIDUAL_APPS; then
     if ! $TARGET_WLAN_SUPPORT_SWITCH_FOR_INDIVIDUAL_APPS; then
-        APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
+        PF_APPLY_PATCH "system" "system/framework/semwifi-service.jar" \
             "$MODPATH/wifi/individual_apps/semwifi-service.jar/0001-Disable-SWITCH_FOR_INDIVIDUAL_APPS-support.patch"
     fi
 else
@@ -1238,12 +1316,12 @@ fi
 
 # SEC_PRODUCT_FEATURE_WLAN_SUPPORT_WIFI_TO_CELLULAR
 if ! $SOURCE_WLAN_SUPPORT_WIFI_TO_CELLULAR && $TARGET_WLAN_SUPPORT_WIFI_TO_CELLULAR; then
-    SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+    PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
         "smali/com/samsung/android/server/wifi/SemFrameworkFacade.smali" "return" \
         "isWifiToCellularSupported()Z" \
         "true"
 elif $SOURCE_WLAN_SUPPORT_WIFI_TO_CELLULAR && ! $TARGET_WLAN_SUPPORT_WIFI_TO_CELLULAR; then
-    SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+    PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
         "smali/com/samsung/android/server/wifi/SemFrameworkFacade.smali" "return" \
         "isWifiToCellularSupported()Z" \
         "false"
@@ -1251,3 +1329,5 @@ fi
 
 unset TARGET_FIRMWARE_PATH
 unset -f GET_FINGERPRINT_SENSOR_TYPE LOG_MISSING_PATCHES
+
+unset -f PF_FIND_SMALI PF_SMALI_PATCH PF_APPLY_PATCH
