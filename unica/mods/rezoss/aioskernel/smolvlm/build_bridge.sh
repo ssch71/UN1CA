@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
-: "${SRC_DIR:?Source buildenv.sh dm3q first}"
+: "${SRC_DIR:?Source buildenv.sh dm1q first}"
 : "${QNN_SDK_ROOT:?Point to the runtime matching the model export}"
 WORK=${1:?Usage: build_bridge.sh RUNNER_WORK_DIRECTORY NEW_APK_PATH}
 OUTPUT=${2:?Provide a new output APK path}

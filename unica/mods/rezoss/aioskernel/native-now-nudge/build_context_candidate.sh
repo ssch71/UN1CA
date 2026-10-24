@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Offline incremental candidate from the exact installed timeout-fix APK.
 set -euo pipefail
-: "${SRC_DIR:?Source buildenv.sh dm3q first}"
+: "${SRC_DIR:?Source buildenv.sh dm1q first}"
 APK=${1:?Usage: build_context_candidate.sh TIMEOUT_FIX_APK NEW_OUTPUT_APK}
 OUTPUT=${2:?Provide a new output APK path}
 [[ ! -e "$OUTPUT" ]] || { echo "Refusing existing output: $OUTPUT" >&2; exit 1; }

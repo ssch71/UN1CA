@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
-: "${SRC_DIR:?Source buildenv.sh dm3q first}"
+: "${SRC_DIR:?Source buildenv.sh dm1q first}"
 OUTPUT=${1:?Provide new APK path}
 [[ ! -e "$OUTPUT" ]] || exit 1
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)

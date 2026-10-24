@@ -3,9 +3,9 @@
 # Sourced by the parent Rezoss mod. No changes until the app is built successfully.
 if [[ -f "$MODPATH/scheduled-power-on/disable" ]]; then
     LOG "- Scheduled power on is disabled"
-elif [[ "$TARGET_CODENAME" == "dm3q" ]]; then
+elif [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q)$ ]]; then
     LOG "- Adding experimental Scheduled power on (no schedule enabled by default)"
-    REZOSS_POWERON_SOURCE="$FW_DIR/SM-S918B_EUX/vendor_dlkm/lib/modules/sec_pon_alarm.ko"
+    REZOSS_POWERON_SOURCE="$FW_DIR/SM-S911N_KOO/vendor_dlkm/lib/modules/sec_pon_alarm.ko"
     [[ -f "$REZOSS_POWERON_SOURCE" ]] || ABORT "Scheduled power on requires the inspected S918B driver"
     # Both drivers were inspected for the same 14-byte Samsung alarm ioctl ABI.
     case "$(sha256sum "$REZOSS_POWERON_SOURCE" | cut -d ' ' -f 1)" in

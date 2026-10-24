@@ -6,7 +6,7 @@ ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 ADB=/mnt/c/platform-tools/adb.exe
 (cd "$ROOT"; sha256sum -c SHA256SUMS)
 MODEL=$("$ADB" shell getprop ro.product.model | tr -d '\r')
-[[ "$MODEL" == SM-S918B ]] || { echo "Expected tested SM-S918B, found $MODEL" >&2; exit 1; }
+[[ "$MODEL" == SM-S911N ]] || { echo "Expected tested SM-S918B, found $MODEL" >&2; exit 1; }
 "$ADB" shell su -c id | tr -d '\r' | rg -q 'uid=0' || { echo 'Root required for private model provisioning' >&2; exit 1; }
 OFFLINE_CODE=$("$ADB" shell dumpsys package com.samsung.android.offline.languagemodel | tr -d '\r' | sed -n 's/.*versionCode=\([0-9]*\).*/\1/p' | head -n1)
 [[ "$OFFLINE_CODE" == 400124010 ]] || { echo "Requires tested full OfflineLanguageModel 4.0.01.24; found $OFFLINE_CODE" >&2; exit 1; }

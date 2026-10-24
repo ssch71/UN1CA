@@ -4,12 +4,12 @@
 set -euo pipefail
 
 if [[ $# -ne 1 ]]; then
-    echo "Usage: source buildenv.sh dm3q; $0 OUTPUT.apk" >&2
+    echo "Usage: source buildenv.sh dm1q; $0 OUTPUT.apk" >&2
     exit 2
 fi
 
-: "${SRC_DIR:?Source buildenv.sh dm3q first}"
-: "${FW_DIR:?Source buildenv.sh dm3q first}"
+: "${SRC_DIR:?Source buildenv.sh dm1q first}"
+: "${FW_DIR:?Source buildenv.sh dm1q first}"
 
 MODPATH=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 OUTPUT=$(realpath -m "$1")

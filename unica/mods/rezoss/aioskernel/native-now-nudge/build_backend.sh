@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
-: "${SRC_DIR:?Source buildenv.sh dm3q first}"
+: "${SRC_DIR:?Source buildenv.sh dm1q first}"
 : "${QNN_SDK_ROOT:?Use the matching 2.37.1 runtime}"
 WORK=${1:?Usage: build_backend.sh EXECUTORCH_WORK ORIGINAL_DECODE NEW_APK}
 DECODED=${2:?Provide original AIOS decode}

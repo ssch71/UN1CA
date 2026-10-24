@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
-: "${SRC_DIR:?Source buildenv.sh dm3q first}"
+: "${SRC_DIR:?Source buildenv.sh dm1q first}"
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 OUT="${1:-$SRC_DIR/out/archived/QWEN_LLM/QWEN_LLM_rezoss.apk}"
 MODEL_DIR="${QWEN_MODEL_DIR:-$SRC_DIR/out/archived/QWEN_LLM/model}"

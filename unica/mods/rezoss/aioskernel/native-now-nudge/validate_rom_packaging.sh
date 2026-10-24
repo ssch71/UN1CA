@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Exercise real packaging helpers in /tmp; never touch out/target or a phone.
 set -e
-: "${SRC_DIR:?Source buildenv.sh dm3q first}"
+: "${SRC_DIR:?Source buildenv.sh dm1q first}"
 cd "$SRC_DIR"
 source scripts/utils/common_utils.sh
 source scripts/utils/build_utils.sh

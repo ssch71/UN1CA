@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Build only in a new scratch directory. No ROM output or firmware is modified.
 set -euo pipefail
-: "${SRC_DIR:?Source buildenv.sh dm3q first}"
+: "${SRC_DIR:?Source buildenv.sh dm1q first}"
 : "${QNN_SDK_ROOT:?Point to an extracted QAIRT SDK with QNN headers and V73 libraries}"
 WORK=${1:?Usage: build_runner.sh NEW_WORK_DIRECTORY}
 [[ ! -e "$WORK" ]] || { echo "Refusing existing work directory: $WORK" >&2; exit 1; }

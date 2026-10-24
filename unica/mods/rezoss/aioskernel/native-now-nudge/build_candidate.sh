@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Offline candidate only. Never installs an APK or changes the live route.
 set -euo pipefail
-: "${SRC_DIR:?Source buildenv.sh dm3q first}"
+: "${SRC_DIR:?Source buildenv.sh dm1q first}"
 APK=${1:?Usage: build_candidate.sh EXACT_INSTALLED_APK DECODED_DIRECTORY NEW_OUTPUT_APK}
 DECODED=${2:?Provide the exact APK decode}
 OUTPUT=${3:?Provide a new output APK path}
