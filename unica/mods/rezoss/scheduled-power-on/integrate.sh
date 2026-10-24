@@ -1,18 +1,29 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Sourced by the parent Rezoss mod. No changes until the app is built successfully.
+REZOSS_POWERON_OK=false
 if [[ -f "$MODPATH/scheduled-power-on/disable" ]]; then
     LOG "- Scheduled power on is disabled"
 elif [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q)$ ]]; then
     LOG "- Adding experimental Scheduled power on (no schedule enabled by default)"
-    REZOSS_POWERON_SOURCE="$FW_DIR/SM-S911N_KOO/vendor_dlkm/lib/modules/sec_pon_alarm.ko"
-    [[ -f "$REZOSS_POWERON_SOURCE" ]] || ABORT "Scheduled power on requires the inspected S918B driver"
-    # Both drivers were inspected for the same 14-byte Samsung alarm ioctl ABI.
-    case "$(sha256sum "$REZOSS_POWERON_SOURCE" | cut -d ' ' -f 1)" in
-        9949d2045d979e8f25d0f84d7bffe2364263195e227155d2364e570bf29a31d6|\
-        c187518e90a9bddd8d9a87c635970ba5cf35728ad90e47ae72980c2f2360fb10) ;;
-        *) ABORT "Scheduled power-on driver changed; revalidate its ioctl ABI before enabling this mod" ;;
-    esac
+    # The driver that runs on the device comes from the target firmware vendor_dlkm.
+    REZOSS_POWERON_SOURCE="$FW_DIR/$(cut -d "/" -f 1 -s <<< "$TARGET_FIRMWARE")_$(cut -d "/" -f 2 -s <<< "$TARGET_FIRMWARE")/vendor_dlkm/lib/modules/sec_pon_alarm.ko"
+    if [[ -f "$REZOSS_POWERON_SOURCE" ]]; then
+        # Drivers inspected for the same 14-byte Samsung alarm ioctl ABI.
+        case "$(sha256sum "$REZOSS_POWERON_SOURCE" | cut -d ' ' -f 1)" in
+            9949d2045d979e8f25d0f84d7bffe2364263195e227155d2364e570bf29a31d6|\
+            c187518e90a9bddd8d9a87c635970ba5cf35728ad90e47ae72980c2f2360fb10)
+                REZOSS_POWERON_OK=true
+                ;;
+            *)
+                LOGW "Scheduled power on: unvalidated sec_pon_alarm.ko ($(sha256sum "$REZOSS_POWERON_SOURCE" | cut -d ' ' -f 1)), skipping"
+                ;;
+        esac
+    else
+        LOGW "Scheduled power on: ${REZOSS_POWERON_SOURCE//$FW_DIR\//} not found, skipping"
+    fi
+fi
+if $REZOSS_POWERON_OK; then
     REZOSS_POWERON_STAGE=$(mktemp -d /tmp/rezoss-poweron.XXXXXX) || return 1
     mkdir -p "$REZOSS_POWERON_STAGE/system/system/app/RezossPowerOn" || return 1
     bash "$MODPATH/scheduled-power-on/build.sh" \
@@ -51,3 +62,4 @@ EOF
         "system/etc/sysconfig/rezoss-poweron.xml" 0 0 644 "u:object_r:system_file:s0" || return 1
     unset REZOSS_POWERON_SOURCE REZOSS_POWERON_STAGE REZOSS_POWERON_DIR
 fi
+unset REZOSS_POWERON_OK
