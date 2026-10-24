@@ -621,16 +621,22 @@ if [ "$TARGET_PLATFORM_SDK_VERSION" -lt "36" ]; then
             "onChange(Z)V" \
             "CLOUDY_WORK_MODE" \
             "1"
+        # The handler inner class index changes between builds ($8 on One UI 8, $11 on One UI 9)
+        USB_HANDLER="$(grep -l -F '"SUNNY_WORK_MODE"' \
+            "$APKTOOL_DIR/system/framework/services.jar/smali_classes2/com/android/server/usb/UsbHostRestrictor\$"*.smali | head -n 1)"
+        [ "$USB_HANDLER" ] || ABORT "UsbHostRestrictor handler class not found in services.jar"
+        USB_HANDLER="smali_classes2/com/android/server/usb/$(basename "$USB_HANDLER")"
         SMALI_PATCH "system" "system/framework/services.jar" \
-            "smali_classes2/com/android/server/usb/UsbHostRestrictor\$8.smali" "replace" \
+            "$USB_HANDLER" "replace" \
             "handleMessage(Landroid/os/Message;)V" \
             "SUNNY_WORK_MODE" \
             "0"
         SMALI_PATCH "system" "system/framework/services.jar" \
-            "smali_classes2/com/android/server/usb/UsbHostRestrictor\$8.smali" "replace" \
+            "$USB_HANDLER" "replace" \
             "handleMessage(Landroid/os/Message;)V" \
             "RAINY_RESTRICT_MODE" \
             "2"
+        unset USB_HANDLER
         SMALI_PATCH "system" "system/framework/services.jar" \
             "smali_classes2/com/android/server/usb/UsbService\$Lifecycle.smali" "replace" \
             "onBootPhase(I)V" \
