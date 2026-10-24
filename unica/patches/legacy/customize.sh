@@ -482,16 +482,29 @@ if [ "$TARGET_PLATFORM_SDK_VERSION" -lt "35" ]; then
     if ! find "$WORK_DIR/vendor/etc" -maxdepth 1 -type f -name "media_codecs*.xml" ! -name "*performance*" -exec cat {} + | \
             grep -q -P -z '<MediaCodec\s[^>]*name="c2\.(?!android\.|sec\.)[^"]*"(?:(?!</?MediaCodec[\s>])[\s\S])*?="video/'; then
         PATCHED=true
-        SMALI_PATCH "system" "system/app/MotionPhoto/MotionPhoto.apk" \
-            "smali/com/samsung/android/motionphoto/utils/v2/video/VideoTranscoder.smali" "replace" \
-            'configVideoEncoderParameters(Landroid/media/MediaFormat;Lcom/samsung/android/motionphoto/utils/v2/video/VideoTranscodingTask;)V' \
-            'const p2, 0x7f420888' \
-            'const p2, 0x7f000789'
-        SMALI_PATCH "system" "system/app/MotionPhoto/MotionPhoto.apk" \
-            "smali/com/samsung/android/sum/core/filter/EncoderFilter.smali" "replace" \
-            'configCodec(Lcom/samsung/android/sum/core/message/Message;)V' \
-            'const v4, 0x7f420888' \
-            'const v4, 0x7f000789'
+        # MotionPhoto smali changes between source firmwares, only patch
+        # the encoder color format where the expected method is still there.
+        DECODE_APK "system" "system/app/MotionPhoto/MotionPhoto.apk"
+        while IFS="|" read -r SMALI METHOD REG; do
+            if grep -q -F ".method" "$APKTOOL_DIR/system/app/MotionPhoto/MotionPhoto.apk/$SMALI" 2> /dev/null && \
+                    awk -v FN="$METHOD" -v STR="const $REG, 0x7f420888" '
+                        /^\.method/ && index($0, FN) { inside = 1 }
+                        inside && index($0, STR) { found = 1 }
+                        inside && /^\.end method/ { inside = 0 }
+                        END { exit !found }
+                    ' "$APKTOOL_DIR/system/app/MotionPhoto/MotionPhoto.apk/$SMALI"; then
+                SMALI_PATCH "system" "system/app/MotionPhoto/MotionPhoto.apk" \
+                    "$SMALI" "replace" "$METHOD" \
+                    "const $REG, 0x7f420888" \
+                    "const $REG, 0x7f000789"
+            else
+                LOGW "Skipping MotionPhoto OMX color format patch: \"$METHOD\" not found in /system/system/app/MotionPhoto/MotionPhoto.apk/$SMALI"
+            fi
+        done <<'EOF'
+smali/com/samsung/android/motionphoto/utils/v2/video/VideoTranscoder.smali|configVideoEncoderParameters(Landroid/media/MediaFormat;Lcom/samsung/android/motionphoto/utils/v2/video/VideoTranscodingTask;)V|p2
+smali/com/samsung/android/sum/core/filter/EncoderFilter.smali|configCodec(Lcom/samsung/android/sum/core/message/Message;)V|v4
+EOF
+        unset SMALI METHOD REG
         if xxd -p -c 0 "$WORK_DIR/system/system/lib/libstagefright.so" | grep -q "ceec002848d1724c0620"; then
             HEX_PATCH "$WORK_DIR/system/system/lib/libstagefright.so" \
                 "ceec002848d1724c0620" "ceec002848e0724c0620"
