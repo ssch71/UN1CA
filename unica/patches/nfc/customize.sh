@@ -49,13 +49,8 @@ elif [ -f "$FW_DIR/$TARGET_FIRMWARE_PATH/system/system/lib/libnfc_nci_jni.so" ];
 elif [ -f "$FW_DIR/$TARGET_FIRMWARE_PATH/system/system/lib64/libnfc_nxpsn_jni.so" ]; then
     # The NFC service only loads the 64-bit JNI, a missing 32-bit copy is fine
     # as long as the source firmware ships the 64-bit one.
-    if [ -f "$WORK_DIR/system/system/lib64/libnfc_nci_jni.so" ]; then
-        LOG "- Skipping 32-bit NXP_SN100U NFC blobs (64-bit libnfc_nci_jni.so is present)"
-    else
-        # TODO
-        _LOG "Missing prebuilt blobs for NXP_SN100U NFC chip"
-        return 0
-    fi
+    # The NFC service only loads the 64-bit JNI, see below.
+    LOG "- Skipping 32-bit NXP_SN100U NFC blobs"
 fi
 if [ -f "$WORK_DIR/system/system/lib64/libnfc_nci_jni.so" ]; then
     if [ ! -f "$FW_DIR/$TARGET_FIRMWARE_PATH/system/system/lib64/libnfc_nci_jni.so" ] && \
@@ -72,9 +67,9 @@ elif [ -f "$FW_DIR/$TARGET_FIRMWARE_PATH/system/system/lib64/libnfc_nci_jni.so" 
     ADD_TO_WORK_DIR "$TARGET_FIRMWARE" "system" "system/lib64/libnfc_prop_extn.so" 0 0 644 "u:object_r:system_lib_file:s0"
     ADD_TO_WORK_DIR "$TARGET_FIRMWARE" "system" "system/lib64/libnfc_vendor_extn.so" 0 0 644 "u:object_r:system_lib_file:s0"
 elif [ -f "$FW_DIR/$TARGET_FIRMWARE_PATH/system/system/lib64/libnfc_nxpsn_jni.so" ]; then
-    # TODO
-    _LOG "Missing prebuilt blobs for NXP_SN100U NFC chip"
-    return 0
+    # Newer source firmwares ship the NFC stack (incl. its JNI) inside the
+    # com.android.nfcservices APEX instead of /system/lib64, nothing to add then.
+    LOGW "No system NXP_SN100U NFC JNI in source firmware, relying on the NFC APEX (verify NFC on device)"
 fi
 
 # SEC_PRODUCT_FEATURE_NFC_CHIP_NAME:=STM_ST21
