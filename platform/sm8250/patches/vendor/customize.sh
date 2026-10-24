@@ -1,15 +1,30 @@
-LOG_STEP_IN "- Replacing vibrator blobs with a73xqxx"
-DELETE_FROM_WORK_DIR "vendor" "bin/hw/vendor.samsung.hardware.vibrator@2.2-service"
-DELETE_FROM_WORK_DIR "vendor" "etc/init/vendor.samsung.hardware.vibrator@2.2-service.rc"
-DELETE_FROM_WORK_DIR "vendor" "lib64/vendor.samsung.hardware.vibrator@2.0.so"
-DELETE_FROM_WORK_DIR "vendor" "lib64/vendor.samsung.hardware.vibrator@2.1.so"
-DELETE_FROM_WORK_DIR "vendor" "lib64/vendor.samsung.hardware.vibrator@2.2.so"
+VIB_FILES=(
+    "bin/hw/vendor.samsung.hardware.vibrator-service"
+    "etc/init/vendor.samsung.hardware.vibrator-default.rc"
+    "etc/vintf/manifest/vendor.samsung.hardware.vibrator-default.xml"
+    "lib64/vendor.samsung.hardware.vibrator-V3-ndk_platform.so"
+)
+VIB_OK=true
+for VIB_FILE in "${VIB_FILES[@]}"; do
+    [ -e "$SRC_DIR/prebuilts/samsung/a73xqxx/vendor/$VIB_FILE" ] || VIB_OK=false
+done
+if $VIB_OK; then
+    LOG_STEP_IN "- Replacing vibrator blobs with a73xqxx"
+    DELETE_FROM_WORK_DIR "vendor" "bin/hw/vendor.samsung.hardware.vibrator@2.2-service"
+    DELETE_FROM_WORK_DIR "vendor" "etc/init/vendor.samsung.hardware.vibrator@2.2-service.rc"
+    DELETE_FROM_WORK_DIR "vendor" "lib64/vendor.samsung.hardware.vibrator@2.0.so"
+    DELETE_FROM_WORK_DIR "vendor" "lib64/vendor.samsung.hardware.vibrator@2.1.so"
+    DELETE_FROM_WORK_DIR "vendor" "lib64/vendor.samsung.hardware.vibrator@2.2.so"
 
-ADD_TO_WORK_DIR "a73xqxx" "vendor" "bin/hw/vendor.samsung.hardware.vibrator-service" 0 2000 755 "u:object_r:hal_vibrator_default_exec:s0"
-ADD_TO_WORK_DIR "a73xqxx" "vendor" "etc/init/vendor.samsung.hardware.vibrator-default.rc" 0 0 644 "u:object_r:vendor_configs_file:s0"
-ADD_TO_WORK_DIR "a73xqxx" "vendor" "etc/vintf/manifest/vendor.samsung.hardware.vibrator-default.xml" 0 0 644 "u:object_r:vendor_configs_file:s0"
-ADD_TO_WORK_DIR "a73xqxx" "vendor" "lib64/vendor.samsung.hardware.vibrator-V3-ndk_platform.so" 0 0 644 "u:object_r:vendor_configs_file:s0"
-LOG_STEP_OUT
+    ADD_TO_WORK_DIR "a73xqxx" "vendor" "bin/hw/vendor.samsung.hardware.vibrator-service" 0 2000 755 "u:object_r:hal_vibrator_default_exec:s0"
+    ADD_TO_WORK_DIR "a73xqxx" "vendor" "etc/init/vendor.samsung.hardware.vibrator-default.rc" 0 0 644 "u:object_r:vendor_configs_file:s0"
+    ADD_TO_WORK_DIR "a73xqxx" "vendor" "etc/vintf/manifest/vendor.samsung.hardware.vibrator-default.xml" 0 0 644 "u:object_r:vendor_configs_file:s0"
+    ADD_TO_WORK_DIR "a73xqxx" "vendor" "lib64/vendor.samsung.hardware.vibrator-V3-ndk_platform.so" 0 0 644 "u:object_r:vendor_configs_file:s0"
+    LOG_STEP_OUT
+else
+    LOGW "a73xqxx AIDL vibrator blobs are not in prebuilts, keeping the stock vibrator HAL"
+fi
+unset VIB_FILES VIB_OK VIB_FILE
 
 if [[ "$TARGET_CODENAME" == "x1q" || \
       "$TARGET_CODENAME" == "y2q" || \

@@ -1,3 +1,24 @@
+# Prebuilts carried over from other ports are not all in this repo; skip the
+# missing ones instead of aborting (the source already ships its own copies).
+_SB_ADD()
+{
+    local SRC="$1" PART="$2" FILE="${3#/}" BLOB
+
+    if [ ! -d "$SRC" ] && [ -z "$(cut -d "/" -f 2 -s <<< "$SRC")" ]; then
+        BLOB="$SRC_DIR/prebuilts/samsung/$SRC"
+        if [[ "$PART" == "system" ]]; then
+            BLOB+="/system/${FILE#system/}"
+        else
+            BLOB+="/$PART/$FILE"
+        fi
+        if [ ! -e "$BLOB" ] && [ ! -e "$BLOB.00" ]; then
+            LOGW "Skipping /$PART/$FILE: not in prebuilts/samsung/$SRC"
+            return 0
+        fi
+    fi
+    ADD_TO_WORK_DIR "$@"
+}
+
 LOG_STEP_IN "- Merging stock framework vintf HALs from $TARGET_CODENAME"
 SB_TARGET_MANIFEST="$FW_DIR/$(cut -d "/" -f 1 <<< "$TARGET_FIRMWARE")_$(cut -d "/" -f 2 <<< "$TARGET_FIRMWARE")/system/system/etc/vintf/manifest.xml"
 SB_SOURCE_MANIFEST="$WORK_DIR/system/system/etc/vintf/manifest.xml"
@@ -68,44 +89,44 @@ LOG_STEP_IN "- Adding r9qxxx keymaster libs"
 DELETE_FROM_WORK_DIR "system" "system/lib/android.hardware.security.secureclock-V1-ndk.so"
 DELETE_FROM_WORK_DIR "system" "system/lib/libdk_native_keymint.so"
 DELETE_FROM_WORK_DIR "system" "system/lib64/libdk_native_keymint.so"
-ADD_TO_WORK_DIR "r9qxxx" "system" "system/lib/android.hardware.keymaster@3.0.so" 0 0 644 "u:object_r:system_lib_file:s0"
-ADD_TO_WORK_DIR "r9qxxx" "system" "system/lib/android.hardware.keymaster@4.0.so" 0 0 644 "u:object_r:system_lib_file:s0"
-ADD_TO_WORK_DIR "r9qxxx" "system" "system/lib/android.hardware.keymaster@4.1.so" 0 0 644 "u:object_r:system_lib_file:s0"
-ADD_TO_WORK_DIR "r9qxxx" "system" "system/lib/lib_nativeJni.dk.samsung.so" 0 0 644 "u:object_r:system_lib_file:s0"
-ADD_TO_WORK_DIR "r9qxxx" "system" "system/lib/libdk_native_keymaster.so" 0 0 644 "u:object_r:system_lib_file:s0"
-ADD_TO_WORK_DIR "r9qxxx" "system" "system/lib/libkeymaster4_1support.so" 0 0 644 "u:object_r:system_lib_file:s0"
-ADD_TO_WORK_DIR "r9qxxx" "system" "system/lib/libkeymaster4support.so" 0 0 644 "u:object_r:system_lib_file:s0"
-ADD_TO_WORK_DIR "r9qxxx" "system" "system/lib64/lib_nativeJni.dk.samsung.so" 0 0 644 "u:object_r:system_lib_file:s0"
-ADD_TO_WORK_DIR "r9qxxx" "system" "system/lib64/libdk_native_keymaster.so" 0 0 644 "u:object_r:system_lib_file:s0"
+_SB_ADD "r9qxxx" "system" "system/lib/android.hardware.keymaster@3.0.so" 0 0 644 "u:object_r:system_lib_file:s0"
+_SB_ADD "r9qxxx" "system" "system/lib/android.hardware.keymaster@4.0.so" 0 0 644 "u:object_r:system_lib_file:s0"
+_SB_ADD "r9qxxx" "system" "system/lib/android.hardware.keymaster@4.1.so" 0 0 644 "u:object_r:system_lib_file:s0"
+_SB_ADD "r9qxxx" "system" "system/lib/lib_nativeJni.dk.samsung.so" 0 0 644 "u:object_r:system_lib_file:s0"
+_SB_ADD "r9qxxx" "system" "system/lib/libdk_native_keymaster.so" 0 0 644 "u:object_r:system_lib_file:s0"
+_SB_ADD "r9qxxx" "system" "system/lib/libkeymaster4_1support.so" 0 0 644 "u:object_r:system_lib_file:s0"
+_SB_ADD "r9qxxx" "system" "system/lib/libkeymaster4support.so" 0 0 644 "u:object_r:system_lib_file:s0"
+_SB_ADD "r9qxxx" "system" "system/lib64/lib_nativeJni.dk.samsung.so" 0 0 644 "u:object_r:system_lib_file:s0"
+_SB_ADD "r9qxxx" "system" "system/lib64/libdk_native_keymaster.so" 0 0 644 "u:object_r:system_lib_file:s0"
 LOG_STEP_OUT
 
 LOG_STEP_IN "- Adding a73xqxx NightMode libs"
-ADD_TO_WORK_DIR "a73xqxx" "system" "system/lib64/libSwIsp_core.camera.samsung.so" 0 0 644 "u:object_r:system_lib_file:s0"
-ADD_TO_WORK_DIR "a73xqxx" "system" "system/lib64/libSwIsp_wrapper_v1.camera.samsung.so" 0 0 644 "u:object_r:system_lib_file:s0"
+_SB_ADD "a73xqxx" "system" "system/lib64/libSwIsp_core.camera.samsung.so" 0 0 644 "u:object_r:system_lib_file:s0"
+_SB_ADD "a73xqxx" "system" "system/lib64/libSwIsp_wrapper_v1.camera.samsung.so" 0 0 644 "u:object_r:system_lib_file:s0"
 LOG_STEP_OUT
 
 LOG_STEP_IN "- Fixing MIDAS, AI and camera"
-ADD_TO_WORK_DIR "a73xqxx" "system" "system/lib64/libSlowShutter_jni.media.samsung.so"
-ADD_TO_WORK_DIR "a73xqxx" "system" "system/lib64/lib_nativeJni.dk.samsung.so"
+_SB_ADD "a73xqxx" "system" "system/lib64/libSlowShutter_jni.media.samsung.so"
+_SB_ADD "a73xqxx" "system" "system/lib64/lib_nativeJni.dk.samsung.so"
 # TEST: use source midas libs (match libRemasterEngine) # ADD_TO_WORK_DIR "a73xqxx" "system" "system/lib64/libmidas_DNNInterface.camera.samsung.so"
 # TEST: use source midas libs (match libRemasterEngine) # ADD_TO_WORK_DIR "a73xqxx" "system" "system/lib64/libmidas_core.camera.samsung.so"
-ADD_TO_WORK_DIR "a73xqxx" "system" "system/lib64/libsamsung_videoengine_9_0.so"
-ADD_TO_WORK_DIR "a73xqxx" "system" "system/lib64/libtensorflowLite.camera.samsung.so"
-ADD_TO_WORK_DIR "a73xqxx" "system" "system/lib64/libtensorflowlite_inference_api.camera.samsung.so"
+_SB_ADD "a73xqxx" "system" "system/lib64/libsamsung_videoengine_9_0.so"
+_SB_ADD "a73xqxx" "system" "system/lib64/libtensorflowLite.camera.samsung.so"
+_SB_ADD "a73xqxx" "system" "system/lib64/libtensorflowlite_inference_api.camera.samsung.so"
 LOG_STEP_OUT
 
 LOG_STEP_IN "- Fixing Google Assistant"
 DELETE_FROM_WORK_DIR "product" "priv-app/HotwordEnrollmentOKGoogleEx4HEXAGON"
 DELETE_FROM_WORK_DIR "product" "priv-app/HotwordEnrollmentXGoogleEx4HEXAGON"
-ADD_TO_WORK_DIR "a73xqxx" "product" "priv-app/HotwordEnrollmentOKGoogleEx3HEXAGON"
-ADD_TO_WORK_DIR "a73xqxx" "product" "priv-app/HotwordEnrollmentXGoogleEx3HEXAGON"
+_SB_ADD "a73xqxx" "product" "priv-app/HotwordEnrollmentOKGoogleEx3HEXAGON"
+_SB_ADD "a73xqxx" "product" "priv-app/HotwordEnrollmentXGoogleEx3HEXAGON"
 LOG_STEP_OUT
 
 LOG_STEP_IN "- Adding pa1qxxx nfc blobs"
-ADD_TO_WORK_DIR "pa1qxxx" "system" "system/lib64/libnfc_sec_jni.so"
-ADD_TO_WORK_DIR "pa1qxxx" "system" "system/lib64/libnfc-nci_flags.so"
-ADD_TO_WORK_DIR "pa1qxxx" "system" "system/lib64/libnfc-sec.so"
-ADD_TO_WORK_DIR "pa1qxxx" "system" "system/lib64/libstatslog_nfc.so"
+_SB_ADD "pa1qxxx" "system" "system/lib64/libnfc_sec_jni.so"
+_SB_ADD "pa1qxxx" "system" "system/lib64/libnfc-nci_flags.so"
+_SB_ADD "pa1qxxx" "system" "system/lib64/libnfc-sec.so"
+_SB_ADD "pa1qxxx" "system" "system/lib64/libstatslog_nfc.so"
 ADD_TO_WORK_DIR "$TARGET_FIRMWARE" "system" "system/etc/permissions/com.sec.feature.cover.clearsideviewcover.xml" 0 0 644 "u:object_r:system_file:s0"
 ADD_TO_WORK_DIR "$TARGET_FIRMWARE" "system" "system/etc/permissions/com.sec.feature.cover.xml" 0 0 644 "u:object_r:system_file:s0"
 ADD_TO_WORK_DIR "$TARGET_FIRMWARE" "system" "system/etc/permissions/com.sec.feature.cover.sview.xml" 0 0 644 "u:object_r:system_file:s0"
@@ -115,10 +136,12 @@ LOG_STEP_OUT
 LOG_STEP_IN "- Adding r9qxxx biometric blobs"
 DELETE_FROM_WORK_DIR "vendor" "bin/hw/vendor.samsung.hardware.biometrics.face@2.0-service"
 DELETE_FROM_WORK_DIR "vendor" "etc/init/vendor.samsung.hardware.biometrics.face@2.0-service.rc"
-ADD_TO_WORK_DIR "r9qxxx" "vendor" "bin/hw/vendor.samsung.hardware.biometrics.face@3.0-service"
-ADD_TO_WORK_DIR "r9qxxx" "vendor" "etc/init/vendor.samsung.hardware.biometrics.face@3.0-service.rc"
-ADD_TO_WORK_DIR "r9qxxx" "vendor" "lib/vendor.samsung.hardware.biometrics.face@2.0.so"
-ADD_TO_WORK_DIR "r9qxxx" "vendor" "lib/vendor.samsung.hardware.biometrics.face@3.0.so"
-ADD_TO_WORK_DIR "r9qxxx" "vendor" "lib64/vendor.samsung.hardware.biometrics.face@2.0.so"
-ADD_TO_WORK_DIR "r9qxxx" "vendor" "lib64/vendor.samsung.hardware.biometrics.face@3.0.so"
+_SB_ADD "r9qxxx" "vendor" "bin/hw/vendor.samsung.hardware.biometrics.face@3.0-service"
+_SB_ADD "r9qxxx" "vendor" "etc/init/vendor.samsung.hardware.biometrics.face@3.0-service.rc"
+_SB_ADD "r9qxxx" "vendor" "lib/vendor.samsung.hardware.biometrics.face@2.0.so"
+_SB_ADD "r9qxxx" "vendor" "lib/vendor.samsung.hardware.biometrics.face@3.0.so"
+_SB_ADD "r9qxxx" "vendor" "lib64/vendor.samsung.hardware.biometrics.face@2.0.so"
+_SB_ADD "r9qxxx" "vendor" "lib64/vendor.samsung.hardware.biometrics.face@3.0.so"
 LOG_STEP_OUT
+
+unset -f _SB_ADD
