@@ -2,6 +2,38 @@
 SKIPUNZIP=1
 
 # [
+# Replaces COLOR_FormatYUV420Flexible with OMX_COLOR_FormatAndroidOpaque in the
+# supplied encoder method. Smali dir and register differ between source
+# firmwares, so look them up instead of hardcoding them.
+PATCH_OMX_COLOR_FORMAT()
+{
+    local FILE="$1"
+    local CLASS="$2"
+    local METHOD="$3"
+    local APK_DIR="$APKTOOL_DIR/system/${FILE//system\//}"
+    local SMALI
+    local LINE
+
+    [ -f "$WORK_DIR/system/$FILE" ] || return 0
+    DECODE_APK "system" "$FILE" || return 1
+
+    for SMALI in "$APK_DIR"/smali*/"$CLASS"; do
+        [ -f "$SMALI" ] || continue
+        LINE="$(awk -v FN="$METHOD" '
+            /^\.method/ && index($0, FN) { inside = 1 }
+            inside && /^[[:space:]]*const [pv][0-9]+, 0x7f420888$/ { gsub(/^[ \t]+/, ""); print; exit }
+            inside && /^\.end method/ { inside = 0 }
+        ' "$SMALI")"
+        if [ "$LINE" ]; then
+            SMALI_PATCH "system" "$FILE" "${SMALI#"$APK_DIR"/}" "replace" \
+                "$METHOD" "$LINE" "${LINE/0x7f420888/0x7f000789}"
+            return $?
+        fi
+    done
+
+    LOGW "Skipping OMX color format patch: \"$METHOD\" not found in /system/$FILE"
+}
+
 # SamsungCamera smali is obfuscated and changes between source firmwares,
 # skip camera backports that no longer match instead of failing the build.
 APPLY_CAMERA_PATCH()
@@ -482,29 +514,12 @@ if [ "$TARGET_PLATFORM_SDK_VERSION" -lt "35" ]; then
     if ! find "$WORK_DIR/vendor/etc" -maxdepth 1 -type f -name "media_codecs*.xml" ! -name "*performance*" -exec cat {} + | \
             grep -q -P -z '<MediaCodec\s[^>]*name="c2\.(?!android\.|sec\.)[^"]*"(?:(?!</?MediaCodec[\s>])[\s\S])*?="video/'; then
         PATCHED=true
-        # MotionPhoto smali changes between source firmwares, only patch
-        # the encoder color format where the expected method is still there.
-        DECODE_APK "system" "system/app/MotionPhoto/MotionPhoto.apk"
-        while IFS="|" read -r SMALI METHOD REG; do
-            if grep -q -F ".method" "$APKTOOL_DIR/system/app/MotionPhoto/MotionPhoto.apk/$SMALI" 2> /dev/null && \
-                    awk -v FN="$METHOD" -v STR="const $REG, 0x7f420888" '
-                        /^\.method/ && index($0, FN) { inside = 1 }
-                        inside && index($0, STR) { found = 1 }
-                        inside && /^\.end method/ { inside = 0 }
-                        END { exit !found }
-                    ' "$APKTOOL_DIR/system/app/MotionPhoto/MotionPhoto.apk/$SMALI"; then
-                SMALI_PATCH "system" "system/app/MotionPhoto/MotionPhoto.apk" \
-                    "$SMALI" "replace" "$METHOD" \
-                    "const $REG, 0x7f420888" \
-                    "const $REG, 0x7f000789"
-            else
-                LOGW "Skipping MotionPhoto OMX color format patch: \"$METHOD\" not found in /system/system/app/MotionPhoto/MotionPhoto.apk/$SMALI"
-            fi
-        done <<'EOF'
-smali/com/samsung/android/motionphoto/utils/v2/video/VideoTranscoder.smali|configVideoEncoderParameters(Landroid/media/MediaFormat;Lcom/samsung/android/motionphoto/utils/v2/video/VideoTranscodingTask;)V|p2
-smali/com/samsung/android/sum/core/filter/EncoderFilter.smali|configCodec(Lcom/samsung/android/sum/core/message/Message;)V|v4
-EOF
-        unset SMALI METHOD REG
+        PATCH_OMX_COLOR_FORMAT "system/app/MotionPhoto/MotionPhoto.apk" \
+            "com/samsung/android/motionphoto/utils/v2/video/VideoTranscoder.smali" \
+            "configVideoEncoderParameters(Landroid/media/MediaFormat;Lcom/samsung/android/motionphoto/utils/v2/video/VideoTranscodingTask;)V"
+        PATCH_OMX_COLOR_FORMAT "system/app/MotionPhoto/MotionPhoto.apk" \
+            "com/samsung/android/sum/core/filter/EncoderFilter.smali" \
+            "configCodec(Lcom/samsung/android/sum/core/message/Message;)V"
         if xxd -p -c 0 "$WORK_DIR/system/system/lib/libstagefright.so" | grep -q "ceec002848d1724c0620"; then
             HEX_PATCH "$WORK_DIR/system/system/lib/libstagefright.so" \
                 "ceec002848d1724c0620" "ceec002848e0724c0620"
@@ -512,7 +527,7 @@ EOF
             HEX_PATCH "$WORK_DIR/system/system/lib/libstagefright.so" \
                 "aaea002879d1264c0620" "aaea002879e0264c0620"
         else
-            ABORT "No known patch available for the supplied libstagefright.so"
+            LOGW "No known ACodec HEVC patch for /system/system/lib/libstagefright.so, skipping"
         fi
         if xxd -p -c 0 "$WORK_DIR/system/system/lib64/libstagefright.so" | grep -q "70690594205100347a9a40f9"; then
             HEX_PATCH "$WORK_DIR/system/system/lib64/libstagefright.so" \
@@ -521,25 +536,17 @@ EOF
             HEX_PATCH "$WORK_DIR/system/system/lib64/libstagefright.so" \
                 "864d0594604d00347a9a40f9" "864d05941f2003d57a9a40f9"
         else
-            ABORT "No known patch available for the supplied libstagefright.so"
+            LOGW "No known ACodec HEVC patch for /system/system/lib64/libstagefright.so, skipping"
         fi
-        if [ -f "$WORK_DIR/system/system/priv-app/GlobalPostProcMgr/GlobalPostProcMgr.apk" ]; then
-            SMALI_PATCH "system" "system/priv-app/GlobalPostProcMgr/GlobalPostProcMgr.apk" \
-                "smali/com/samsung/android/sum/core/filter/EncoderFilter.smali" "replace" \
-                'configCodec(Lcom/samsung/android/sum/core/message/Message;)V' \
-                'const v3, 0x7f420888' \
-                'const v3, 0x7f000789'
-        fi
-        SMALI_PATCH "system" "system/priv-app/SamsungCamera/SamsungCamera.apk" \
-            "smali_classes3/com/samsung/android/sum/core/filter/EncoderFilter.smali" "replace" \
-            'configCodec(Lcom/samsung/android/sum/core/message/Message;)V' \
-            'const v4, 0x7f420888' \
-            'const v4, 0x7f000789'
-        SMALI_PATCH "system" "system/priv-app/vexfwk_service/vexfwk_service.apk" \
-            "smali/com/samsung/android/sum/core/filter/EncoderFilter.smali" "replace" \
-            'configCodec(Lcom/samsung/android/sum/core/message/Message;)V' \
-            'const v3, 0x7f420888' \
-            'const v3, 0x7f000789'
+        PATCH_OMX_COLOR_FORMAT "system/priv-app/GlobalPostProcMgr/GlobalPostProcMgr.apk" \
+            "com/samsung/android/sum/core/filter/EncoderFilter.smali" \
+            "configCodec(Lcom/samsung/android/sum/core/message/Message;)V"
+        PATCH_OMX_COLOR_FORMAT "system/priv-app/SamsungCamera/SamsungCamera.apk" \
+            "com/samsung/android/sum/core/filter/EncoderFilter.smali" \
+            "configCodec(Lcom/samsung/android/sum/core/message/Message;)V"
+        PATCH_OMX_COLOR_FORMAT "system/priv-app/vexfwk_service/vexfwk_service.apk" \
+            "com/samsung/android/sum/core/filter/EncoderFilter.smali" \
+            "configCodec(Lcom/samsung/android/sum/core/message/Message;)V"
     fi
 fi
 
@@ -708,4 +715,4 @@ if [ -d "$TMP_DIR" ]; then
 fi
 
 unset PATCHED TARGET_FIRMWARE_PATH
-unset -f APPLY_CAMERA_PATCH BACKPORT_SF_PROPS EXTRACT_KERNEL_IMAGE EXTRACT_KERNEL_MODULES
+unset -f APPLY_CAMERA_PATCH PATCH_OMX_COLOR_FORMAT BACKPORT_SF_PROPS EXTRACT_KERNEL_IMAGE EXTRACT_KERNEL_MODULES
