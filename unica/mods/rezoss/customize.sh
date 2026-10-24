@@ -777,12 +777,7 @@ done
 # Experimental dm3q-only horizon correction, linked into the stock S23U EIS node.
 # Exact-firmware checks and stock backup are handled by the installer.
 # The adapter is built against the S23U EIS node; other SM8550 targets skip it.
-
-if [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ ]]; then
-    . "$MODPATH/horizontal-lock/install.sh"
-else
-    LOG "- Skipping S23U Horizontal Lock EIS adapter on $TARGET_CODENAME"
-fi
+. "$MODPATH/horizontal-lock/install.sh"
 
 # =============================================================================
 # Disabled Experiments - Camera Vendor Stack

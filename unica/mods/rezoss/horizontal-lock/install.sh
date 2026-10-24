@@ -3,7 +3,7 @@
 # Sourced by rezoss/customize.sh; use the project's copy/metadata helpers.
 REZOSS_INSTALL_HORIZON_LOCK()
 {
-    [[ "$TARGET_CODENAME" == "dm3q" ]] || return 0
+    [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ ]] || return 0
     local hl_root="$MODPATH/horizontal-lock"
     if [[ -f "$hl_root/disable" ]]; then
         LOG "- Horizontal Lock ROM experiment disabled"
