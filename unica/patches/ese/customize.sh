@@ -89,11 +89,17 @@ if [[ "$SOURCE_SECURITY_CONFIG_ESE_CHIP_VENDOR" != "none" ]] && [[ "$SOURCE_SECU
             "eSE_Vendor: ${TARGET_SECURITY_CONFIG_ESE_CHIP_VENDOR//none/}"
     fi
     if [[ "$SOURCE_SECURITY_CONFIG_ESE_COS_NAME" != "$TARGET_SECURITY_CONFIG_ESE_COS_NAME" ]]; then
+        # One UI 9.0 only keeps the COS name in a ", eSE_COS: <name>" debug string here
+        ESE_HAL_PREFIX=""
+        grep -q "\", eSE_COS: $SOURCE_SECURITY_CONFIG_ESE_COS_NAME\"" \
+            "$APKTOOL_DIR/system/app/SecureElement/SecureElement.apk/smali/com/android/se/internal/UtilExtension.smali" && \
+            ESE_HAL_PREFIX=", eSE_COS: "
         SMALI_PATCH "system" "system/app/SecureElement/SecureElement.apk" \
             "smali/com/android/se/internal/UtilExtension.smali" "replace" \
             "supportEseHal()Z" \
-            "$SOURCE_SECURITY_CONFIG_ESE_COS_NAME" \
-            "${TARGET_SECURITY_CONFIG_ESE_COS_NAME//none/}"
+            "$ESE_HAL_PREFIX$SOURCE_SECURITY_CONFIG_ESE_COS_NAME" \
+            "$ESE_HAL_PREFIX${TARGET_SECURITY_CONFIG_ESE_COS_NAME//none/}"
+        unset ESE_HAL_PREFIX
     fi
     if [[ "$SOURCE_SECURITY_CONFIG_ESE_CHIP_VENDOR" != "$TARGET_SECURITY_CONFIG_ESE_CHIP_VENDOR" ]]; then
         SMALI_PATCH "system" "system/framework/framework.jar" \
