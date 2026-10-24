@@ -2,6 +2,21 @@
 SKIPUNZIP=1
 
 # [
+# SamsungCamera smali is obfuscated and changes between source firmwares,
+# skip camera backports that no longer match instead of failing the build.
+APPLY_CAMERA_PATCH()
+{
+    local CAMERA_APK="$APKTOOL_DIR/system/priv-app/SamsungCamera/SamsungCamera.apk"
+
+    DECODE_APK "system" "system/priv-app/SamsungCamera/SamsungCamera.apk" || return 1
+
+    if LC_ALL=C patch -p1 -d "$CAMERA_APK" -N --forward -l --dry-run -s < "$1" &> /dev/null; then
+        APPLY_PATCH "system" "system/priv-app/SamsungCamera/SamsungCamera.apk" "$1"
+    else
+        LOGW "Skipping \"$(basename "$1")\": SamsungCamera smali does not match"
+    fi
+}
+
 BACKPORT_SF_PROPS()
 {
     local FILE="$WORK_DIR/vendor/build.prop"
@@ -131,20 +146,20 @@ if [ "$TARGET_PLATFORM_SDK_VERSION" -lt "34" ]; then
     APPLY_PATCH "system" "system/framework/framework.jar" \
         "$MODPATH/camera/framework.jar/0001-Backport-legacy-CameraMetadataNative-code.patch"
     if $TARGET_CAMERA_SUPPORT_MASS_APP_FLAVOR; then
-        APPLY_PATCH "system" "system/priv-app/SamsungCamera/SamsungCamera.apk" \
+        APPLY_CAMERA_PATCH \
             "$MODPATH/camera_mass/SamsungCamera.apk/0001-Backport-legacy-Scene-detection-code.patch"
     else
-        APPLY_PATCH "system" "system/priv-app/SamsungCamera/SamsungCamera.apk" \
+        APPLY_CAMERA_PATCH \
             "$MODPATH/camera/SamsungCamera.apk/0001-Backport-legacy-Scene-detection-code.patch"
     fi
 fi
 if [ "$TARGET_PLATFORM_SDK_VERSION" -lt "35" ]; then
     PATCHED=true
     if $TARGET_CAMERA_SUPPORT_MASS_APP_FLAVOR; then
-        APPLY_PATCH "system" "system/priv-app/SamsungCamera/SamsungCamera.apk" \
+        APPLY_CAMERA_PATCH \
             "$MODPATH/camera_mass/SamsungCamera.apk/0001-Backport-CONTROL_AVAILABLE_FEATURE_SECOND_PICTURE_CO.patch"
     else
-        APPLY_PATCH "system" "system/priv-app/SamsungCamera/SamsungCamera.apk" \
+        APPLY_CAMERA_PATCH \
             "$MODPATH/camera/SamsungCamera.apk/0001-Backport-CONTROL_AVAILABLE_FEATURE_SECOND_PICTURE_CO.patch"
     fi
 fi
@@ -680,4 +695,4 @@ if [ -d "$TMP_DIR" ]; then
 fi
 
 unset PATCHED TARGET_FIRMWARE_PATH
-unset -f BACKPORT_SF_PROPS EXTRACT_KERNEL_IMAGE EXTRACT_KERNEL_MODULES
+unset -f APPLY_CAMERA_PATCH BACKPORT_SF_PROPS EXTRACT_KERNEL_IMAGE EXTRACT_KERNEL_MODULES

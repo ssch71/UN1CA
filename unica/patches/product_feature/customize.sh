@@ -22,6 +22,46 @@ LOG_MISSING_PATCHES()
         ABORT "${MESSAGE}. Aborting"
     fi
 }
+
+# One UI 9 moved the SPF dump into dumpProductFeature() and split most
+# "KEY: value" strings into "KEY: " + "value", so handle both layouts.
+# The dump is informational only, values that can't be matched safely are skipped.
+PATCH_RRC_DUMP()
+{
+    local RRC="smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali"
+    local RRC_PATH="$APKTOOL_DIR/system/framework/framework.jar/$RRC"
+    local METHOD="dump(Ljava/io/PrintWriter;Ljava/lang/String;Z)V"
+    local COUNT
+
+    DECODE_APK "system" "system/framework/framework.jar" || return 1
+
+    if grep -q "^\.method.* dumpProductFeature(Ljava/io/PrintWriter;Ljava/lang/String;Z)V" "$RRC_PATH"; then
+        METHOD="dumpProductFeature(Ljava/io/PrintWriter;Ljava/lang/String;Z)V"
+    fi
+
+    if grep -qF "\"$1: $2\"" "$RRC_PATH"; then
+        SMALI_PATCH "system" "system/framework/framework.jar" "$RRC" "replace" \
+            "$METHOD" "$1: $2" "$1: $3"
+        return $?
+    fi
+
+    COUNT=0
+    if [ "$2" ]; then
+        COUNT="$(awk -v FN=" ${METHOD}" -v STR="\"$2\"" '
+            /^\.method/ && index($0, FN) { inside = 1 }
+            inside && /^[[:space:]]*const-string/ && index($0, STR) { n++ }
+            inside && /^\.end method/ { inside = 0 }
+            END { print n + 0 }
+        ' "$RRC_PATH")"
+    fi
+
+    if [[ "$COUNT" == "1" ]]; then
+        SMALI_PATCH "system" "system/framework/framework.jar" "$RRC" "replace" \
+            "$METHOD" "$2" "$3"
+    else
+        LOGW "Skipping RefreshRateConfig dump patch for $1 ($2 -> $3)"
+    fi
+}
 # ]
 
 # SEC_PRODUCT_FEATURE_BUILD_MAINLINE_API_LEVEL
@@ -469,26 +509,26 @@ if [[ "$SOURCE_LCD_CONFIG_SEAMLESS_BRT" != "$TARGET_LCD_CONFIG_SEAMLESS_BRT" ]] 
             "$MODPATH/hfr/framework.jar/0001-Remove-brightness-threshold-values.patch"
     elif [[ "$SOURCE_LCD_CONFIG_SEAMLESS_BRT" != "none" ]] && [[ "$SOURCE_LCD_CONFIG_SEAMLESS_LUX" != "none" ]] && \
             [[ "$TARGET_LCD_CONFIG_SEAMLESS_BRT" != "none" ]] && [[ "$TARGET_LCD_CONFIG_SEAMLESS_LUX" != "none" ]]; then
-        SMALI_PATCH "system" "system/framework/framework.jar" \
-            "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
-            "dump(Ljava/io/PrintWriter;Ljava/lang/String;Z)V" \
-            "SEAMLESS_BRT: $SOURCE_LCD_CONFIG_SEAMLESS_BRT" \
-            "SEAMLESS_BRT: $TARGET_LCD_CONFIG_SEAMLESS_BRT"
-        SMALI_PATCH "system" "system/framework/framework.jar" \
-            "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
-            "dump(Ljava/io/PrintWriter;Ljava/lang/String;Z)V" \
-            "SEAMLESS_LUX: $SOURCE_LCD_CONFIG_SEAMLESS_LUX" \
-            "SEAMLESS_LUX: $TARGET_LCD_CONFIG_SEAMLESS_LUX"
-        SMALI_PATCH "system" "system/framework/framework.jar" \
-            "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
-            "getMainInstance()Lcom/samsung/android/hardware/display/RefreshRateConfig;" \
-            "$SOURCE_LCD_CONFIG_SEAMLESS_BRT" \
-            "$TARGET_LCD_CONFIG_SEAMLESS_BRT"
-        SMALI_PATCH "system" "system/framework/framework.jar" \
-            "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
-            "getMainInstance()Lcom/samsung/android/hardware/display/RefreshRateConfig;" \
-            "$SOURCE_LCD_CONFIG_SEAMLESS_LUX" \
-            "$TARGET_LCD_CONFIG_SEAMLESS_LUX"
+        if [[ "$SOURCE_LCD_CONFIG_SEAMLESS_BRT" != "$TARGET_LCD_CONFIG_SEAMLESS_BRT" ]]; then
+            PATCH_RRC_DUMP "SEAMLESS_BRT" \
+                "$SOURCE_LCD_CONFIG_SEAMLESS_BRT" \
+                "$TARGET_LCD_CONFIG_SEAMLESS_BRT"
+            SMALI_PATCH "system" "system/framework/framework.jar" \
+                "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
+                "getMainInstance()Lcom/samsung/android/hardware/display/RefreshRateConfig;" \
+                "$SOURCE_LCD_CONFIG_SEAMLESS_BRT" \
+                "$TARGET_LCD_CONFIG_SEAMLESS_BRT"
+        fi
+        if [[ "$SOURCE_LCD_CONFIG_SEAMLESS_LUX" != "$TARGET_LCD_CONFIG_SEAMLESS_LUX" ]]; then
+            PATCH_RRC_DUMP "SEAMLESS_LUX" \
+                "$SOURCE_LCD_CONFIG_SEAMLESS_LUX" \
+                "$TARGET_LCD_CONFIG_SEAMLESS_LUX"
+            SMALI_PATCH "system" "system/framework/framework.jar" \
+                "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
+                "getMainInstance()Lcom/samsung/android/hardware/display/RefreshRateConfig;" \
+                "$SOURCE_LCD_CONFIG_SEAMLESS_LUX" \
+                "$TARGET_LCD_CONFIG_SEAMLESS_LUX"
+        fi
     else
         # TODO handle these conditions
         LOG_MISSING_PATCHES "SOURCE_LCD_CONFIG_SEAMLESS_BRT" "TARGET_LCD_CONFIG_SEAMLESS_BRT" || true
@@ -500,11 +540,9 @@ fi
 if [[ "$SOURCE_LCD_CONFIG_HFR_DEFAULT_REFRESH_RATE" != "$TARGET_LCD_CONFIG_HFR_DEFAULT_REFRESH_RATE" ]]; then
     SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_LCD_CONFIG_HFR_DEFAULT_REFRESH_RATE" "$TARGET_LCD_CONFIG_HFR_DEFAULT_REFRESH_RATE"
 
-    SMALI_PATCH "system" "system/framework/framework.jar" \
-        "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
-        "dump(Ljava/io/PrintWriter;Ljava/lang/String;Z)V" \
-        "HFR_DEFAULT_REFRESH_RATE: $SOURCE_LCD_CONFIG_HFR_DEFAULT_REFRESH_RATE" \
-        "HFR_DEFAULT_REFRESH_RATE: $TARGET_LCD_CONFIG_HFR_DEFAULT_REFRESH_RATE"
+    PATCH_RRC_DUMP "HFR_DEFAULT_REFRESH_RATE" \
+        "$SOURCE_LCD_CONFIG_HFR_DEFAULT_REFRESH_RATE" \
+        "$TARGET_LCD_CONFIG_HFR_DEFAULT_REFRESH_RATE"
     SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
         "smali_classes4/com/samsung/android/settings/display/SecDisplayUtils.smali" "replace" \
         "getHighRefreshRateDefaultValue(Landroid/content/Context;I)I" \
@@ -526,11 +564,9 @@ if [[ "$SOURCE_LCD_CONFIG_HFR_MODE" != "$TARGET_LCD_CONFIG_HFR_MODE" ]]; then
         "<clinit>()V" \
         "$SOURCE_LCD_CONFIG_HFR_MODE" \
         "$TARGET_LCD_CONFIG_HFR_MODE"
-    SMALI_PATCH "system" "system/framework/framework.jar" \
-        "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
-        "dump(Ljava/io/PrintWriter;Ljava/lang/String;Z)V" \
-        "HFR_MODE: $SOURCE_LCD_CONFIG_HFR_MODE" \
-        "HFR_MODE: $TARGET_LCD_CONFIG_HFR_MODE"
+    PATCH_RRC_DUMP "HFR_MODE" \
+        "$SOURCE_LCD_CONFIG_HFR_MODE" \
+        "$TARGET_LCD_CONFIG_HFR_MODE"
     SMALI_PATCH "system" "system/framework/framework.jar" \
         "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
         "getMainInstance()Lcom/samsung/android/hardware/display/RefreshRateConfig;" \
@@ -595,11 +631,9 @@ if [[ "$SOURCE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE" != "$TARGET_LCD_CONFIG_HFR
     fi
 
     if [[ "$SOURCE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE" != "none" ]]; then
-        SMALI_PATCH "system" "system/framework/framework.jar" \
-            "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
-            "dump(Ljava/io/PrintWriter;Ljava/lang/String;Z)V" \
-            "HFR_SUPPORTED_REFRESH_RATE: $SOURCE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE" \
-            "HFR_SUPPORTED_REFRESH_RATE: ${TARGET_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE//none/}"
+        PATCH_RRC_DUMP "HFR_SUPPORTED_REFRESH_RATE" \
+            "$SOURCE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE" \
+            "${TARGET_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE//none/}"
         SMALI_PATCH "system" "system/framework/framework.jar" \
             "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
             "getMainInstance()Lcom/samsung/android/hardware/display/RefreshRateConfig;" \
@@ -630,19 +664,24 @@ if [[ "$SOURCE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS" != "$TARGET_LCD_CONFIG_
             SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS" --delete
         fi
 
-        SMALI_PATCH "system" "system/framework/framework.jar" \
-            "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
-            "dump(Ljava/io/PrintWriter;Ljava/lang/String;Z)V" \
-            "HFR_SUPPORTED_REFRESH_RATE_NS: $SOURCE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS" \
-            "HFR_SUPPORTED_REFRESH_RATE_NS: ${TARGET_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS//none/}"
+        PATCH_RRC_DUMP "HFR_SUPPORTED_REFRESH_RATE_NS" \
+            "$SOURCE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS" \
+            "${TARGET_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS//none/}"
         SMALI_PATCH "system" "system/framework/framework.jar" \
             "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
             "getMainInstance()Lcom/samsung/android/hardware/display/RefreshRateConfig;" \
             "$SOURCE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS" \
             "${TARGET_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS//none/}"
     else
-        # TODO handle this condition
-        LOG_MISSING_PATCHES "SOURCE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS" "TARGET_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS"
+        # Source has no NS refresh rates, the third createRefreshRateConfig()
+        # argument in getMainInstance() is an empty string
+        SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS" "$TARGET_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS"
+
+        SMALI_PATCH "system" "system/framework/framework.jar" \
+            "smali_classes6/com/samsung/android/hardware/display/RefreshRateConfig.smali" "replace" \
+            "getMainInstance()Lcom/samsung/android/hardware/display/RefreshRateConfig;" \
+            'const-string v3, ""' \
+            "    const-string v3, \"$TARGET_LCD_CONFIG_HFR_SUPPORTED_REFRESH_RATE_NS\"\n"
     fi
 fi
 
