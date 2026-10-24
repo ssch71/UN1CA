@@ -249,8 +249,11 @@ if $SOURCE_BLUETOOTH_SUPPORT_XLNA_CONTROL; then
     if ! $TARGET_BLUETOOTH_SUPPORT_XLNA_CONTROL; then
         DECODE_APK_IN_APEX "$BLUETOOTH_APK_IN_APEX"
         LOG "- Applying \"Disable SUPPORT_XLNA_CONTROL support\" to $BLUETOOTH_APK_LOG_PATH"
-        APPLY_PATCH "system" "$BLUETOOTH_APK_SYSTEM_PATH" \
-            "$MODPATH/xlna/Bluetooth.apk/0001-Disable-SUPPORT_XLNA_CONTROL-support.patch" \
+        # One UI 9.0 moved startLNAControl() into ScanManager; stubbing it keeps
+        # the accelerometer-driven LNA switching from ever starting.
+        SMALI_PATCH "system" "$BLUETOOTH_APK_SYSTEM_PATH" \
+            "smali/com/android/bluetooth/le_scan/ScanManager.smali" "null" \
+            'startLNAControl(II)V' \
             > /dev/null
     fi
 else
