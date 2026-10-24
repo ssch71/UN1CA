@@ -227,8 +227,20 @@ if ! $SOURCE_BLUETOOTH_SUPPORT_HEAD_SAR_BACKOFF; then
     fi
 else
     if ! $TARGET_BLUETOOTH_SUPPORT_HEAD_SAR_BACKOFF; then
-        # TODO handle this condition
-        LOG_MISSING_PATCHES "SOURCE_BLUETOOTH_SUPPORT_HEAD_SAR_BACKOFF" "TARGET_BLUETOOTH_SUPPORT_HEAD_SAR_BACKOFF"
+        DECODE_APK_IN_APEX "$BLUETOOTH_APK_IN_APEX"
+        LOG "- Applying \"Disable SUPPORT_HEAD_SAR_BACKOFF support\" to $BLUETOOTH_APK_LOG_PATH"
+        SMALI_PATCH "system" "$BLUETOOTH_APK_SYSTEM_PATH" \
+            "smali/com/android/bluetooth/btservice/AdapterService.smali" "return" \
+            'SarType()Ljava/lang/String;' 'NONE' \
+            > /dev/null
+        SMALI_PATCH "system" "$BLUETOOTH_APK_SYSTEM_PATH" \
+            "smali/com/android/bluetooth/btservice/AdapterService.smali" "null" \
+            'sarBackoffEnable()V' \
+            > /dev/null
+        SMALI_PATCH "system" "$BLUETOOTH_APK_SYSTEM_PATH" \
+            "smali/com/android/bluetooth/btservice/AdapterService.smali" "null" \
+            'sarBackoffDisable()V' \
+            > /dev/null
     fi
 fi
 
