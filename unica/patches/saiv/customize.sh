@@ -1,8 +1,44 @@
 SOURCE_FIRMWARE_PATH="$(cut -d "/" -f 1 -s <<< "$SOURCE_FIRMWARE")_$(cut -d "/" -f 2 -s <<< "$SOURCE_FIRMWARE")"
 TARGET_FIRMWARE_PATH="$(cut -d "/" -f 1 -s <<< "$TARGET_FIRMWARE")_$(cut -d "/" -f 2 -s <<< "$TARGET_FIRMWARE")"
 
+# Source/target firmwares do not always ship every SAIV model (e.g. One UI 9 moved
+# image_understanding/db/aig), so skip missing payloads instead of aborting the build.
+SAIV_ADD()
+{
+    local SOURCE="$1"
+    local PARTITION="$2"
+    local FILE="$3"
+    local SOURCE_DIR="$SOURCE"
+    local SOURCE_FILE
+
+    if [ ! -d "$SOURCE_DIR" ]; then
+        if [ "$(cut -d "/" -f 2 -s <<< "$SOURCE_DIR")" ]; then
+            SOURCE_DIR="$FW_DIR/$(cut -d "/" -f 1 <<< "$SOURCE_DIR")_$(cut -d "/" -f 2 <<< "$SOURCE_DIR")"
+        else
+            SOURCE_DIR="$SRC_DIR/prebuilts/samsung/$SOURCE_DIR"
+        fi
+    fi
+
+    if [[ "$PARTITION" == "system" ]]; then
+        if [ -d "$SOURCE_DIR/system/system" ]; then
+            SOURCE_FILE="$SOURCE_DIR/system/$FILE"
+        else
+            SOURCE_FILE="$SOURCE_DIR/system/${FILE//system\//}"
+        fi
+    else
+        SOURCE_FILE="$SOURCE_DIR/$PARTITION/$FILE"
+    fi
+
+    if [ ! -e "$SOURCE_FILE" ] && [ ! -L "$SOURCE_FILE" ] && [ ! -e "$SOURCE_FILE.00" ]; then
+        LOGW "Skipping SAIV payload, not found in $SOURCE: /$PARTITION/$FILE"
+        return 0
+    fi
+
+    ADD_TO_WORK_DIR "$@"
+}
+
 DELETE_FROM_WORK_DIR "system" "system/saiv"
-ADD_TO_WORK_DIR "$TARGET_FIRMWARE" "system" "system/saiv" 0 0 755 "u:object_r:system_file:s0"
+SAIV_ADD "$TARGET_FIRMWARE" "system" "system/saiv" 0 0 755 "u:object_r:system_file:s0"
 
 # SEC_PRODUCT_FEATURE_VISION_CONFIG_FACE_RECOGNITION_SOLUTION
 SOURCE_VISION_CONFIG_FACE_RECOGNITION_SOLUTION="$(GET_FLOATING_FEATURE_CONFIG "$FW_DIR/$SOURCE_FIRMWARE_PATH/system/system/etc/floating_feature.xml" "SEC_FLOATING_FEATURE_GALLERY_CONFIG_FACE_CLUSTER_VERSION")"
@@ -13,19 +49,19 @@ if [[ "$(GET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_GALLERY_CONFIG_FACE_C
         if [ -d "$WORK_DIR/system/system/saiv/face/cluster_pb" ]; then
             DELETE_FROM_WORK_DIR "system" "system/saiv/face/cluster_pb"
         fi
-        ADD_TO_WORK_DIR "$SOURCE_FIRMWARE" "system" "system/saiv/face/cluster_pb" 0 0 755 "u:object_r:system_file:s0"
+        SAIV_ADD "$SOURCE_FIRMWARE" "system" "system/saiv/face/cluster_pb" 0 0 755 "u:object_r:system_file:s0"
     fi
 fi
 
 # SEC_PRODUCT_FEATURE_SAIV_CONFIG_MIDAS
 if [ ! -f "$WORK_DIR/vendor/etc/midas/moire_detection/moire_detection.tflite" ]; then
-    ADD_TO_WORK_DIR "$SOURCE_FIRMWARE" "vendor" "etc/midas/moire_detection/moire_detection.tflite" 0 0 644 "u:object_r:vendor_configs_file:s0"
+    SAIV_ADD "$SOURCE_FIRMWARE" "vendor" "etc/midas/moire_detection/moire_detection.tflite" 0 0 644 "u:object_r:vendor_configs_file:s0"
 fi
 if [ ! "$(find "$WORK_DIR/vendor/etc/midas" -maxdepth 1 -type f -name "SRIBMQA_aiFiQA*" 2> /dev/null)" ]; then
-    ADD_TO_WORK_DIR "$SOURCE_FIRMWARE" "vendor" "etc/midas/SRIBMQA_aiFiQA_V100_FP32.tflite" 0 0 644 "u:object_r:vendor_configs_file:s0"
+    SAIV_ADD "$SOURCE_FIRMWARE" "vendor" "etc/midas/SRIBMQA_aiFiQA_V100_FP32.tflite" 0 0 644 "u:object_r:vendor_configs_file:s0"
 fi
 if [ ! -f "$WORK_DIR/vendor/etc/midas/SRIBMQA_aiIQA_V100_FP32.tflite" ]; then
-    ADD_TO_WORK_DIR "$SOURCE_FIRMWARE" "vendor" "etc/midas/SRIBMQA_aiIQA_V100_FP32.tflite" 0 0 644 "u:object_r:vendor_configs_file:s0"
+    SAIV_ADD "$SOURCE_FIRMWARE" "vendor" "etc/midas/SRIBMQA_aiIQA_V100_FP32.tflite" 0 0 644 "u:object_r:vendor_configs_file:s0"
 fi
 if [ "$(find "$WORK_DIR/vendor/etc/midas" -maxdepth 1 -type f -name "*UPSCALER_*_LITE*" 2> /dev/null)" ]; then
     # Ensure AI_UPSCALE LITE models are loaded if available
@@ -44,22 +80,22 @@ if [[ "$(GET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_GALLERY_CONFIG_IMAGE_
         if [ -d "$WORK_DIR/system/system/saiv/image_understanding/db/aig" ]; then
             DELETE_FROM_WORK_DIR "system" "system/saiv/image_understanding/db/aig"
         fi
-        ADD_TO_WORK_DIR "$SOURCE_FIRMWARE" "system" "system/saiv/image_understanding/db/aig" 0 0 755 "u:object_r:system_file:s0"
+        SAIV_ADD "$SOURCE_FIRMWARE" "system" "system/saiv/image_understanding/db/aig" 0 0 755 "u:object_r:system_file:s0"
         if [ -d "$WORK_DIR/vendor/saiv/image_understanding/db/aig_classifier" ]; then
             DELETE_FROM_WORK_DIR "vendor" "saiv/image_understanding/db/aig_classifier"
         fi
-        ADD_TO_WORK_DIR "$SOURCE_FIRMWARE" "vendor" "saiv/image_understanding/db/aig_classifier" 0 2000 755 "u:object_r:vendor_snap_file:s0"
+        SAIV_ADD "$SOURCE_FIRMWARE" "vendor" "saiv/image_understanding/db/aig_classifier" 0 2000 755 "u:object_r:vendor_snap_file:s0"
         if [ -d "$WORK_DIR/vendor/saiv/image_understanding/db/aig_detector" ]; then
             DELETE_FROM_WORK_DIR "vendor" "saiv/image_understanding/db/aig_detector"
         fi
         if [ -d "$WORK_DIR/vendor/saiv/image_understanding/db/aig_document_classifier" ]; then
             DELETE_FROM_WORK_DIR "vendor" "saiv/image_understanding/db/aig_document_classifier"
         fi
-        ADD_TO_WORK_DIR "$SOURCE_FIRMWARE" "vendor" "saiv/image_understanding/db/aig_document_classifier" 0 2000 755 "u:object_r:vendor_snap_file:s0"
+        SAIV_ADD "$SOURCE_FIRMWARE" "vendor" "saiv/image_understanding/db/aig_document_classifier" 0 2000 755 "u:object_r:vendor_snap_file:s0"
         if [ -d "$WORK_DIR/vendor/saiv/image_understanding/db/aig_document_detector" ]; then
             DELETE_FROM_WORK_DIR "vendor" "saiv/image_understanding/db/aig_document_detector"
         fi
-        ADD_TO_WORK_DIR "$SOURCE_FIRMWARE" "vendor" "saiv/image_understanding/db/aig_document_detector" 0 2000 755 "u:object_r:vendor_snap_file:s0"
+        SAIV_ADD "$SOURCE_FIRMWARE" "vendor" "saiv/image_understanding/db/aig_document_detector" 0 2000 755 "u:object_r:vendor_snap_file:s0"
         if [ -d "$WORK_DIR/vendor/saiv/image_understanding/db/srr_interaction" ]; then
             DELETE_FROM_WORK_DIR "vendor" "saiv/image_understanding/db/srr_interaction"
         fi
@@ -74,8 +110,8 @@ if [ -f "$WORK_DIR/system/system/priv-app/PhotoEditor_Full/PhotoEditor_Full.apk"
         if [ -d "$WORK_DIR/vendor/etc/saiv/image_understanding/db/hs_segmenter" ]; then
             DELETE_FROM_WORK_DIR "vendor" "etc/saiv/image_understanding/db/hs_segmenter"
         fi
-        ADD_TO_WORK_DIR "$SOURCE_FIRMWARE" "vendor" "etc/saiv/image_understanding/db/hs_segmenter/hs_segmenter.info" 0 0 644 "u:object_r:vendor_configs_file:s0"
-        ADD_TO_WORK_DIR "$SOURCE_FIRMWARE" "vendor" "etc/saiv/image_understanding/db/hs_segmenter/hs_segmenter.tflite" 0 0 644 "u:object_r:vendor_configs_file:s0"
+        SAIV_ADD "$SOURCE_FIRMWARE" "vendor" "etc/saiv/image_understanding/db/hs_segmenter/hs_segmenter.info" 0 0 644 "u:object_r:vendor_configs_file:s0"
+        SAIV_ADD "$SOURCE_FIRMWARE" "vendor" "etc/saiv/image_understanding/db/hs_segmenter/hs_segmenter.tflite" 0 0 644 "u:object_r:vendor_configs_file:s0"
     fi
 else
     if [ -d "$WORK_DIR/vendor/etc/saiv/image_understanding/db/hs_segmenter" ]; then
@@ -93,11 +129,11 @@ if [[ "$(GET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_GALLERY_CONFIG_PET_CL
             if [ -d "$WORK_DIR/vendor/saiv/image_understanding/db/pet_detector" ]; then
                 DELETE_FROM_WORK_DIR "vendor" "saiv/image_understanding/db/pet_detector"
             fi
-            ADD_TO_WORK_DIR "$SOURCE_FIRMWARE" "vendor" "saiv/image_understanding/db/pet_detector" 0 2000 755 "u:object_r:vendor_snap_file:s0"
+            SAIV_ADD "$SOURCE_FIRMWARE" "vendor" "saiv/image_understanding/db/pet_detector" 0 2000 755 "u:object_r:vendor_snap_file:s0"
             if [ -d "$WORK_DIR/vendor/saiv/image_understanding/db/pet_mypetsearch" ]; then
                 DELETE_FROM_WORK_DIR "vendor" "saiv/image_understanding/db/pet_mypetsearch"
             fi
-            ADD_TO_WORK_DIR "$SOURCE_FIRMWARE" "vendor" "saiv/image_understanding/db/pet_mypetsearch" 0 2000 755 "u:object_r:vendor_snap_file:s0"
+            SAIV_ADD "$SOURCE_FIRMWARE" "vendor" "saiv/image_understanding/db/pet_mypetsearch" 0 2000 755 "u:object_r:vendor_snap_file:s0"
         fi
     else
         if [ -d "$WORK_DIR/vendor/saiv/image_understanding/db/pet_detector" ]; then
@@ -116,11 +152,11 @@ if [ -f "$WORK_DIR/system/system/priv-app/BixbyVisionFramework3.5/BixbyVisionFra
         if [ -d "$WORK_DIR/system/system/saiv/image_understanding/db/slens_classifier" ]; then
             DELETE_FROM_WORK_DIR "system" "system/saiv/image_understanding/db/slens_classifier"
         fi
-        ADD_TO_WORK_DIR "pa2qxxx" "system" "system/saiv/image_understanding/db/slens_classifier/slens_classifier_cnn.sni" 0 0 644 "u:object_r:system_file:s0"
+        SAIV_ADD "pa2qxxx" "system" "system/saiv/image_understanding/db/slens_classifier/slens_classifier_cnn.sni" 0 0 644 "u:object_r:system_file:s0"
         if [ -d "$WORK_DIR/vendor/etc/saiv/image_understanding/db/slens_classifier" ]; then
             DELETE_FROM_WORK_DIR "vendor" "etc/saiv/image_understanding/db/slens_classifier"
         fi
-        ADD_TO_WORK_DIR "pa2qxxx" "vendor" "etc/saiv/image_understanding/db/slens_classifier/slens_classifier_cnn.tflite" 0 0 644 "u:object_r:vendor_configs_file:s0"
+        SAIV_ADD "pa2qxxx" "vendor" "etc/saiv/image_understanding/db/slens_classifier/slens_classifier_cnn.tflite" 0 0 644 "u:object_r:vendor_configs_file:s0"
         if [ -d "$WORK_DIR/vendor/saiv/image_understanding/db/slens_classifier" ]; then
             DELETE_FROM_WORK_DIR "vendor" "saiv/image_understanding/db/slens_classifier"
         fi
@@ -130,11 +166,11 @@ if [ -f "$WORK_DIR/system/system/priv-app/BixbyVisionFramework3.5/BixbyVisionFra
         if [ -d "$WORK_DIR/system/system/saiv/image_understanding/db/slens_detector" ]; then
             DELETE_FROM_WORK_DIR "system" "system/saiv/image_understanding/db/slens_detector"
         fi
-        ADD_TO_WORK_DIR "pa2qxxx" "system" "system/saiv/image_understanding/db/slens_detector/slens_detector_cnn.sni" 0 0 644 "u:object_r:system_file:s0"
+        SAIV_ADD "pa2qxxx" "system" "system/saiv/image_understanding/db/slens_detector/slens_detector_cnn.sni" 0 0 644 "u:object_r:system_file:s0"
         if [ -d "$WORK_DIR/vendor/etc/saiv/image_understanding/db/slens_detector" ]; then
             DELETE_FROM_WORK_DIR "vendor" "etc/saiv/image_understanding/db/slens_detector"
         fi
-        ADD_TO_WORK_DIR "pa2qxxx" "vendor" "etc/saiv/image_understanding/db/slens_detector/slens_detector_cnn.tflite" 0 0 644 "u:object_r:vendor_configs_file:s0"
+        SAIV_ADD "pa2qxxx" "vendor" "etc/saiv/image_understanding/db/slens_detector/slens_detector_cnn.tflite" 0 0 644 "u:object_r:vendor_configs_file:s0"
         if [ -d "$WORK_DIR/vendor/saiv/image_understanding/db/slens_detector" ]; then
             DELETE_FROM_WORK_DIR "vendor" "saiv/image_understanding/db/slens_detector"
         fi
@@ -167,9 +203,9 @@ if [[ "$(GET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_CAMERA_DOCUMENTSCAN_S
     if [[ "$SOURCE_CAMERA_CONFIG_DOCUMENT_DEWARP_VERSION" == *"AI_DEWARPING"* ]]; then
         if [[ "$TARGET_CAMERA_CONFIG_DOCUMENT_DEWARP_VERSION" != *"AI_DEWARPING"* ]] || \
                 [ "$TARGET_PLATFORM_SDK_VERSION" -lt "$SOURCE_PLATFORM_SDK_VERSION" ]; then
-            ADD_TO_WORK_DIR "$SOURCE_FIRMWARE" \
+            SAIV_ADD "$SOURCE_FIRMWARE" \
                 "system" "system/saiv/image_understanding/db/smartscan_rectifier/deep_dewarp_cnn.sni" 0 0 644 "u:object_r:system_file:s0"
-            ADD_TO_WORK_DIR "$SOURCE_FIRMWARE" \
+            SAIV_ADD "$SOURCE_FIRMWARE" \
                 "vendor" "saiv/image_understanding/db/smartscan_rectifier/deep_dewarp_cnn.onnx" 0 0 644 "u:object_r:vendor_snap_file:s0"
         fi
     else
@@ -203,7 +239,7 @@ fi
 if [ -d "$WORK_DIR/system/system/saiv/textrecognition" ]; then
     DELETE_FROM_WORK_DIR "system" "system/saiv/textrecognition"
 fi
-ADD_TO_WORK_DIR "$SOURCE_FIRMWARE" "system" "system/saiv/textrecognition" 0 0 755 "u:object_r:system_file:s0"
+SAIV_ADD "$SOURCE_FIRMWARE" "system" "system/saiv/textrecognition" 0 0 755 "u:object_r:system_file:s0"
 
 # SEC_PRODUCT_FEATURE_CAMERA_CONFIG_VENDOR_LIB_INFO:=*smart_scan.samsung.v2*
 if [ -f "$WORK_DIR/system/system/lib64/libSmartScan.camera.samsung.so" ]; then
@@ -212,7 +248,7 @@ if [ -f "$WORK_DIR/system/system/lib64/libSmartScan.camera.samsung.so" ]; then
         if [ -d "$WORK_DIR/vendor/etc/saiv/image_understanding/db/SS_segmenter" ]; then
             DELETE_FROM_WORK_DIR "vendor" "etc/saiv/image_understanding/db/SS_segmenter"
         fi
-        ADD_TO_WORK_DIR "$SOURCE_FIRMWARE" "vendor" "etc/saiv/image_understanding/db/SS_segmenter" 0 2000 755 "u:object_r:vendor_configs_file:s0"
+        SAIV_ADD "$SOURCE_FIRMWARE" "vendor" "etc/saiv/image_understanding/db/SS_segmenter" 0 2000 755 "u:object_r:vendor_configs_file:s0"
     fi
 fi
 
@@ -221,3 +257,4 @@ unset SOURCE_FIRMWARE_PATH TARGET_FIRMWARE_PATH \
     SOURCE_GALLERY_CONFIG_IMAGE_TAGGER_VERSION TARGET_GALLERY_CONFIG_IMAGE_TAGGER_VERSION \
     SOURCE_GALLERY_CONFIG_PET_CLUSTER_VERSION TARGET_GALLERY_CONFIG_PET_CLUSTER_VERSION \
     SOURCE_CAMERA_CONFIG_DOCUMENT_DEWARP_VERSION TARGET_CAMERA_CONFIG_DOCUMENT_DEWARP_VERSION
+unset -f SAIV_ADD
