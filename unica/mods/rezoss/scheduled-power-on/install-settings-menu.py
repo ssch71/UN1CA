@@ -20,5 +20,5 @@ def configure(path, active):
 
 if __name__ == '__main__':
     root = Path(__file__).resolve().parent
-    active = sys.argv[2] == 'dm3q' and not (root / 'disable').exists() and not (root.parent / 'disable').exists()
+    active = sys.argv[2] in ('dm1q', 'dm2q', 'dm3q', 'b5q', 'q5q') and not (root / 'disable').exists() and not (root.parent / 'disable').exists()
     configure(Path(sys.argv[1]), active)

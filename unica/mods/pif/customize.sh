@@ -3,14 +3,21 @@ APPLY_PATCH "system" "system/framework/framework.jar" \
 APPLY_PATCH "system" "system/framework/framework.jar" \
     "$MODPATH/framework.jar/0002-Spoof-PIF-system-properties.patch"
 # SDK 37 child startup hook; retain the existing implementation on other targets.
-if [[ "$TARGET_CODENAME" == "dm3q" && "$SOURCE_PLATFORM_SDK_VERSION" == "37" ]]; then
-    python3 "$MODPATH/native/build_native.py" --check || {
-        ABORT "PIF native payload is stale; run $MODPATH/native/build_native.py" || return 1
-    }
-    ADD_TO_WORK_DIR "$MODPATH/native/payload" "system" "system/lib64/libunica_pif.so" 0 0 644 "u:object_r:system_lib_file:s0"
-    ADD_TO_WORK_DIR "$MODPATH/native/payload" "system" "system/lib/libunica_pif.so" 0 0 644 "u:object_r:system_lib_file:s0"
-    APPLY_PATCH "system" "system/framework/framework.jar" \
-        "$MODPATH/framework.jar/0003-Initialize-native-PIF-in-app-child.patch"
+if [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ && "$SOURCE_PLATFORM_SDK_VERSION" == "37" ]]; then
+    # flip-qssi/fold-qssi framework.jar may differ, only hook where the patch fits.
+    DECODE_APK "system" "system/framework/framework.jar"
+    if LC_ALL=C patch -p1 -d "$APKTOOL_DIR/system/framework/framework.jar" -N --forward -l --dry-run -s \
+            < "$MODPATH/framework.jar/0003-Initialize-native-PIF-in-app-child.patch" &> /dev/null; then
+        python3 "$MODPATH/native/build_native.py" --check || {
+            ABORT "PIF native payload is stale; run $MODPATH/native/build_native.py" || return 1
+        }
+        ADD_TO_WORK_DIR "$MODPATH/native/payload" "system" "system/lib64/libunica_pif.so" 0 0 644 "u:object_r:system_lib_file:s0"
+        ADD_TO_WORK_DIR "$MODPATH/native/payload" "system" "system/lib/libunica_pif.so" 0 0 644 "u:object_r:system_lib_file:s0"
+        APPLY_PATCH "system" "system/framework/framework.jar" \
+            "$MODPATH/framework.jar/0003-Initialize-native-PIF-in-app-child.patch"
+    else
+        LOGW "Skipping native PIF hook: framework.jar does not match on $TARGET_CODENAME"
+    fi
 fi
 SMALI_PATCH "system" "system/framework/framework.jar" \
     "smali/android/app/Instrumentation.smali" "replace" \

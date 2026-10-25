@@ -4,7 +4,7 @@
 REZOSS_POWERON_OK=false
 if [[ -f "$MODPATH/scheduled-power-on/disable" ]]; then
     LOG "- Scheduled power on is disabled"
-elif [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q)$ ]]; then
+elif [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ ]]; then
     LOG "- Adding experimental Scheduled power on (no schedule enabled by default)"
     # The driver that runs on the device comes from the target firmware vendor_dlkm.
     REZOSS_POWERON_SOURCE="$FW_DIR/$(cut -d "/" -f 1 -s <<< "$TARGET_FIRMWARE")_$(cut -d "/" -f 2 -s <<< "$TARGET_FIRMWARE")/vendor_dlkm/lib/modules/sec_pon_alarm.ko"

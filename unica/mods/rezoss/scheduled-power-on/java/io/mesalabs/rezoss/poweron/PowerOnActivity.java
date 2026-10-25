@@ -132,8 +132,8 @@ public final class PowerOnActivity extends Activity {
         heading.setPadding(dp(18),dp(24),dp(18),dp(8));content.addView(heading);
         TextView intro=text("Choose when your phone turns off and starts again.",15,secondary);
         intro.setPadding(dp(18),0,dp(18),dp(24));content.addView(intro);
-        if (!Build.DEVICE.startsWith("dm3q")) {
-            row(card(),"Not available","Power scheduling is supported on S23 Ultra (dm3q).",null);setContentView(scroll);return;
+        if (!Build.DEVICE.matches("^(dm1q|dm2q|dm3q|b5q|q5q).*")) {
+            row(card(),"Not available","Power scheduling is supported on SM8550 Galaxy devices (S23 series, Z Flip5, Z Fold5).",null);setContentView(scroll);return;
         }
         LinearLayout mode=card();LinearLayout toggleRow=new LinearLayout(this);toggleRow.setGravity(Gravity.CENTER_VERTICAL);
         toggleRow.setPadding(0,dp(17),0,dp(17));
