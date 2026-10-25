@@ -173,7 +173,14 @@ jobs:
           echo "vendor plat_sepolicy_vers: $VER"
           for d in "$S" "$SE" "$P"; do echo "== ${d#"$WORK_DIR"/}/etc/selinux/mapping"; ls "$d/etc/selinux/mapping" 2>&1; done
           ls "$V/etc/selinux" "$O/etc/selinux" 2>&1
-          sudo apt-get install -yq secilc > /dev/null
+          # Ubuntu's secilc is too old for Android 16+ policy (nlmsg xperms); build upstream.
+          sudo apt-get install -yq flex > /dev/null
+          git clone -q --depth 1 https://github.com/SELinuxProject/selinux /tmp/selinux
+          make -s -C /tmp/selinux/libsepol/src -j"$(nproc)" libsepol.a
+          make -s -C /tmp/selinux/secilc -j"$(nproc)" secilc \
+            LIBSEPOLA=/tmp/selinux/libsepol/src/libsepol.a CFLAGS="-O2 -I/tmp/selinux/libsepol/include"
+          export PATH="/tmp/selinux/secilc:$PATH"
+          secilc --help 2>&1 | head -n 1 || true
           ARGS=("$S/etc/selinux/plat_sepolicy.cil" "$S/etc/selinux/mapping/$VER.cil")
           [ -f "$S/etc/selinux/mapping/$VER.compat.cil" ] && ARGS+=("$S/etc/selinux/mapping/$VER.compat.cil")
           for d in "$SE:system_ext" "$P:product"; do
@@ -186,7 +193,8 @@ jobs:
             [ -f "$f" ] && ARGS+=("$f")
           done
           printf "  %s\n" "${ARGS[@]#"$WORK_DIR"/}"
-          if secilc -m -M true -G -N -c 30 "${ARGS[@]}" -o /tmp/precompiled_sepolicy -f /dev/null; then
+          # 31 = highest policy version the z3q 4.19 kernel accepts (what init passes via -c)
+          if secilc -m -M true -G -N -c 31 "${ARGS[@]}" -o /tmp/precompiled_sepolicy -f /dev/null; then
             echo "SELinux policy compiles OK"
           else
             echo "::error::SELinux policy compile FAILED (this is what makes init reboot)"
