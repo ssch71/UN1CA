@@ -104,7 +104,7 @@ public final class QwenEngine {
                 handler.postDelayed(() -> {
                     try { context.unbindService(connection); } catch (IllegalArgumentException ignored) { }
                     thread.quitSafely();
-                }, completed ? 30000 : 0);
+                }, completed ? 20000 : 0);
             } else thread.quitSafely();
         }
     }
@@ -120,7 +120,7 @@ public final class QwenEngine {
     }
 
     public static String summary(String input) {
-        String result = generate(input, true, 25000);
+        String result = generate(input, true, 70000);
         if (result != null) return result;
         Log.i("RezossAI", "summary status=fallback");
         return "New messages are waiting.";

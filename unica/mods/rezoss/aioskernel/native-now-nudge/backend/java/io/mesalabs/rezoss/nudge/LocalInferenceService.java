@@ -18,7 +18,7 @@ public final class LocalInferenceService extends Service {
     private final class Job implements Runnable,TextBackend.Control,IBinder.DeathRecipient {
         final Messenger callback;final int uid;final String input;final boolean summary;final long deadline;
         volatile String cancellation;volatile Process process;volatile Thread thread;
-        Job(Message m){callback=m.replyTo;uid=m.sendingUid;Bundle b=m.getData();input=b.getString("input","");summary=b.getBoolean("summary");deadline=Math.min(b.getLong("deadline",0),SystemClock.elapsedRealtime()+45000);}
+        Job(Message m){callback=m.replyTo;uid=m.sendingUid;Bundle b=m.getData();input=b.getString("input","");summary=b.getBoolean("summary");deadline=Math.min(b.getLong("deadline",0),SystemClock.elapsedRealtime()+(summary?75000:45000));}
         public boolean cancelled(){return cancellation!=null;}
         public long deadline(){return deadline;}
         public void process(Process p){process=p;if(p!=null&&cancelled())p.destroyForcibly();}
