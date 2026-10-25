@@ -234,7 +234,7 @@ if [[ "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" != "$TARGET_PRODUCT_SHIPPING_API_LEVE
         "updateServiceHolder(Z)V" \
         "$TARGET_PRODUCT_SHIPPING_API_LEVEL" \
         "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
-        > /dev/null
+        > /dev/null || LOGW "Skipping shipping API level patch in TAProxy (pattern not found)"
 fi
 
 # SEC_PRODUCT_FEATURE_KNOX_SUPPORT_SDP
@@ -283,13 +283,13 @@ if [[ "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" != "$TARGET_PRODUCT_SHIPPING_API_LEVE
         "isSupported(Landroid/content/Context;)Z" \
         "$TARGET_PRODUCT_SHIPPING_API_LEVEL" \
         "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
-        > /dev/null
+        > /dev/null || LOGW "Skipping HDM shipping API level patch in HdmSakManager (pattern not found)"
     SMALI_PATCH "system" "system/framework/services.jar" \
         "smali/com/android/server/enterprise/hdm/HdmVendorController.smali" "replace" \
         "<init>()V" \
         "$TARGET_PRODUCT_SHIPPING_API_LEVEL" \
         "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
-        > /dev/null
+        > /dev/null || LOGW "Skipping HDM shipping API level patch in HdmVendorController (pattern not found)"
 fi
 # Nuke HDM service and vendor controller
 #
@@ -391,13 +391,29 @@ SMALI_PATCH "system" "system/framework/framework.jar" \
     "smali_classes6/com/samsung/android/ProductPackagesRune.smali" "replaceall" \
     "SERVICE_SAMSUNG_BLOCKCHAIN:Z = true" \
     "SERVICE_SAMSUNG_BLOCKCHAIN:Z = false"
+# Both variants only remove BlockchainTZService; they differ in the SystemServer
+# lambda/register layout of the *source* services.jar, so pick the one that
+# matches instead of keying it off the target eSE config (z3q has an eSE).
+BLOCKCHAIN_PATCHES=("$MODPATH/blockchain/services.jar/0001-Nuke-BlockchainTZService.patch")
 if [[ "$TARGET_SECURITY_CONFIG_ESE_CHIP_VENDOR" == "none" ]] && [[ "$TARGET_SECURITY_CONFIG_ESE_COS_NAME" == "none" ]]; then
-    APPLY_PATCH "system" "system/framework/services.jar" \
-        "$MODPATH/ese+blockchain/services.jar/0001-Nuke-BlockchainTZService.patch"
+    BLOCKCHAIN_PATCHES=("$MODPATH/ese+blockchain/services.jar/0001-Nuke-BlockchainTZService.patch" "${BLOCKCHAIN_PATCHES[@]}")
 else
-    APPLY_PATCH "system" "system/framework/services.jar" \
-        "$MODPATH/blockchain/services.jar/0001-Nuke-BlockchainTZService.patch"
+    BLOCKCHAIN_PATCHES+=("$MODPATH/ese+blockchain/services.jar/0001-Nuke-BlockchainTZService.patch")
 fi
+DECODE_APK "system" "system/framework/services.jar"
+BLOCKCHAIN_PATCHED=false
+for BLOCKCHAIN_PATCH in "${BLOCKCHAIN_PATCHES[@]}"; do
+    if LC_ALL=C patch -p1 -d "$APKTOOL_DIR/system/framework/services.jar" \
+            -N --forward -l --dry-run -s < "$BLOCKCHAIN_PATCH" &> /dev/null; then
+        APPLY_PATCH "system" "system/framework/services.jar" "$BLOCKCHAIN_PATCH"
+        BLOCKCHAIN_PATCHED=true
+        break
+    fi
+done
+if ! $BLOCKCHAIN_PATCHED; then
+    LOGW "Skipping BlockchainTZService patch: services.jar smali does not match any variant"
+fi
+unset BLOCKCHAIN_PATCHES BLOCKCHAIN_PATCH BLOCKCHAIN_PATCHED
 
 # TODO get rid of the following features
 # SEC_PRODUCT_FEATURE_KNOX_SUPPORT_UCS
