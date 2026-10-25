@@ -737,7 +737,12 @@ ADD_TO_WORK_DIR "m3qxxx" "vendor" "etc/saiv/image_understanding/db/fm" 0 2000 75
 ADD_TO_WORK_DIR "m3qxxx" "vendor" "etc/saiv/image_understanding/db/dvs" 0 2000 755 "u:object_r:vendor_configs_file:s0"
 # Keep the target firmware's GPU/TFLite document rectifier. The S26U DLC
 # contains a V81/SM8850 cache that cannot run on the S23U's V73 DSP.
-ADD_TO_WORK_DIR "$TARGET_FIRMWARE" "vendor" "etc/saiv/image_understanding/db/doc_rectifier" 0 2000 755 "u:object_r:vendor_configs_file:s0"
+# Older targets (e.g. z3q) do not ship this model at all; keep what is there.
+if [ -d "$FW_DIR/${TARGET_FIRMWARE%%/*}_$(cut -d "/" -f 2 <<< "$TARGET_FIRMWARE")/vendor/etc/saiv/image_understanding/db/doc_rectifier" ]; then
+    ADD_TO_WORK_DIR "$TARGET_FIRMWARE" "vendor" "etc/saiv/image_understanding/db/doc_rectifier" 0 2000 755 "u:object_r:vendor_configs_file:s0"
+else
+    LOGW "Target firmware has no doc_rectifier SAIV model, skipping"
+fi
 # S26U enhanced document-scan configs/models.
 # WARNING: Might cause crash.
 # SNPE 2.10 audit: no validated Document Scan conversion is available.
