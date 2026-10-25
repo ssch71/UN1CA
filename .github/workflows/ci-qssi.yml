@@ -178,7 +178,7 @@ jobs:
           git clone -q --depth 1 https://github.com/SELinuxProject/selinux /tmp/selinux
           make -s -C /tmp/selinux/libsepol/src -j"$(nproc)" libsepol.a
           make -s -C /tmp/selinux/secilc -j"$(nproc)" secilc \
-            LIBSEPOLA=/tmp/selinux/libsepol/src/libsepol.a CFLAGS="-O2 -I/tmp/selinux/libsepol/include"
+            CFLAGS="-O2 -I/tmp/selinux/libsepol/include" LDFLAGS="-L/tmp/selinux/libsepol/src"
           export PATH="/tmp/selinux/secilc:$PATH"
           secilc --help 2>&1 | head -n 1 || true
           ARGS=("$S/etc/selinux/plat_sepolicy.cil" "$S/etc/selinux/mapping/$VER.cil")
