@@ -230,6 +230,24 @@ jobs:
           path: /tmp/stock-dm1q.tgz
           if-no-files-found: ignore
 
+      - name: Build Qwen model APK (SM8550)
+        if: contains(fromJSON('["dm1q","dm2q","dm3q","b5q","q5q"]'), matrix.target)
+        continue-on-error: true
+        run: |
+          # The ROM only ships the Qwen stub; Now Nudge / AI reply need this
+          # separately installable model APK (io.mesalabs.rezoss.qwen.v73).
+          bash unica/mods/rezoss/qwen-llm/build.sh "$OUT_DIR/QWEN_LLM_rezoss.apk"
+
+      - name: Upload Qwen model APK
+        if: contains(fromJSON('["dm1q","dm2q","dm3q","b5q","q5q"]'), matrix.target)
+        uses: actions/upload-artifact@v4
+        with:
+          name: qwen-llm-${{ matrix.target }}
+          path: out/QWEN_LLM_rezoss.apk
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Upload to GoFile
         id: gofile
         continue-on-error: true
