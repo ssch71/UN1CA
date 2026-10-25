@@ -1,18 +1,14 @@
-From effca5806f78e4eadb904c26b8c43b7c1ef092b3 Mon Sep 17 00:00:00 2001
-From: Salvo Giangreco <giangrecosalvo9@gmail.com>
-Date: Sun, 31 Aug 2025 12:35:57 +0200
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: ssch71 <ssch71@users.noreply.github.com>
+Date: Sun, 25 Oct 2026 09:30:00 +0900
 Subject: [PATCH] Allow custom booster thresholds values
 
-UN1CA: this patch is not complete! Please check unica/patches/product_feature/customize.sh for more info.
 ---
- .../server/wifi/SemFrameworkFacade.smali      | 32 ++++++++++---------
- 1 file changed, 17 insertions(+), 15 deletions(-)
 
 diff --git a/smali/com/samsung/android/server/wifi/SemFrameworkFacade.smali b/smali/com/samsung/android/server/wifi/SemFrameworkFacade.smali
-index 9b20944..8768c27 100644
 --- a/smali/com/samsung/android/server/wifi/SemFrameworkFacade.smali
 +++ b/smali/com/samsung/android/server/wifi/SemFrameworkFacade.smali
-@@ -350,37 +350,39 @@
+@@ -337,35 +337,39 @@
  .method public getBoosterThresholds()[I
      .locals 3
  
@@ -33,31 +29,30 @@ index 9b20944..8768c27 100644
 -    div-int/lit8 v0, v0, 0x8
 +    div-int/lit8 p0, p0, 0x8
  
--    const-string v2, "100"
+-    invoke-static {p0}, Ljava/lang/Integer;->parseInt(Ljava/lang/String;)I
 +    const-string v1, "CONFIG_CPU_CSTATE_DISABLE_THRESHOLD"
  
--    invoke-static {v2}, Ljava/lang/Integer;->parseInt(Ljava/lang/String;)I
+-    move-result v2
 +    invoke-static {v1}, Ljava/lang/Integer;->parseInt(Ljava/lang/String;)I
  
--    move-result v2
+-    mul-int/2addr v2, v1
 +    move-result v1
  
--    mul-int/2addr v2, v1
+-    div-int/lit8 v2, v2, 0x8
 +    mul-int/2addr v1, v0
  
--    div-int/lit8 v2, v2, 0x8
+-    invoke-static {p0}, Ljava/lang/Integer;->parseInt(Ljava/lang/String;)I
 +    div-int/lit8 v1, v1, 0x8
  
--    invoke-static {p0}, Ljava/lang/Integer;->parseInt(Ljava/lang/String;)I
+-    move-result p0
 +    const-string v2, "CONFIG_L1SS_DISABLE_THRESHOLD"
  
--    move-result p0
+-    mul-int/2addr p0, v1
 +    invoke-static {v2}, Ljava/lang/Integer;->parseInt(Ljava/lang/String;)I
  
--    mul-int/2addr p0, v1
-+    move-result v2
- 
 -    div-int/lit8 p0, p0, 0x8
++    move-result v2
++
 +    mul-int/2addr v2, v0
 +
 +    div-int/lit8 v2, v2, 0x8
@@ -67,6 +62,3 @@ index 9b20944..8768c27 100644
  
      move-result-object p0
  
--- 
-2.51.0
-

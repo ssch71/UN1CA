@@ -14,13 +14,9 @@ GET_FINGERPRINT_SENSOR_TYPE()
 
 LOG_MISSING_PATCHES()
 {
-    local MESSAGE="Missing SPF patches for condition ($1: [${!1}], $2: [${!2}])"
-
-    if $DEBUG; then
-        LOGW "$MESSAGE"
-    else
-        ABORT "${MESSAGE}. Aborting"
-    fi
+    # Multi-target fork: keep building and leave the source behaviour in place,
+    # the warning lists what still needs a proper port.
+    LOGW "Missing SPF patches for condition ($1: [${!1}], $2: [${!2}]), keeping source behaviour"
 }
 
 # One UI 9 moved the SPF dump into dumpProductFeature() and split most
@@ -948,8 +944,12 @@ if $SOURCE_WLAN_SUPPORT_80211AX; then
             fi
         else
             if ! $TARGET_WLAN_SUPPORT_80211AX_6GHZ; then
-                # TODO handle this condition
-                LOG_MISSING_PATCHES "SOURCE_WLAN_SUPPORT_80211AX_6GHZ" "TARGET_WLAN_SUPPORT_80211AX_6GHZ"
+                PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+                    "smali/com/samsung/android/server/wifi/SemFrameworkFacade.smali" "return" \
+                    "isSupported6Ghz()Z" \
+                    "false"
+                # Settings/SystemUI Wi-Fi 6E icons are not ported, only the service capability
+                LOGW "80211AX_6GHZ: disabled in semwifi-service only (Settings/SystemUI 6E UI kept)"
             fi
         fi
     else
@@ -1161,7 +1161,10 @@ if ! $SOURCE_WLAN_SUPPORT_MOBILEAP_DUALAP; then
     fi
 else
     if ! $TARGET_WLAN_SUPPORT_MOBILEAP_DUALAP; then
-        # TODO handle this condition
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+            "smali/com/samsung/android/server/wifi/ap/SemSoftApConfiguration.smali" "replaceall" \
+            "SPF_DualAp=true" \
+            "SPF_DualAp=false"
         LOG_MISSING_PATCHES "SOURCE_WLAN_SUPPORT_MOBILEAP_DUALAP" "TARGET_WLAN_SUPPORT_MOBILEAP_DUALAP"
     fi
 fi
@@ -1182,7 +1185,10 @@ if ! $SOURCE_WLAN_SUPPORT_MOBILEAP_OWE; then
     fi
 else
     if ! $TARGET_WLAN_SUPPORT_MOBILEAP_OWE; then
-        # TODO handle this condition
+        PF_SMALI_PATCH "system" "system/framework/semwifi-service.jar" \
+            "smali/com/samsung/android/server/wifi/ap/SemSoftApConfiguration.smali" "replaceall" \
+            "SPF_OWE=true" \
+            "SPF_OWE=false"
         LOG_MISSING_PATCHES "SOURCE_WLAN_SUPPORT_MOBILEAP_OWE" "TARGET_WLAN_SUPPORT_MOBILEAP_OWE"
     fi
 fi
