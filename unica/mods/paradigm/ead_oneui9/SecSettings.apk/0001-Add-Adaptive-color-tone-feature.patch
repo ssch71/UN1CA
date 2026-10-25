@@ -9,7 +9,9 @@ with ead_enabled and hide vividness from search while EAD is on.
 Bixby routine actions, Smart Switch backup (DisplayItem), reset defaults
 and NewModePreview hunks are not ported.
 ---
+
 diff --git a/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisplaySettings$19.smali b/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisplaySettings$19.smali
+index 78d8d61..25066e7 100644
 --- a/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisplaySettings$19.smali
 +++ b/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisplaySettings$19.smali
 @@ -5,7 +5,7 @@
@@ -94,9 +96,19 @@ diff --git a/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisp
  .end method
  
 diff --git a/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisplaySettings.smali b/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisplaySettings.smali
+index 4d5376e..4572a78 100644
 --- a/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisplaySettings.smali
 +++ b/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisplaySettings.smali
-@@ -1728,6 +1728,16 @@
+@@ -167,6 +167,8 @@
+ 
+     invoke-direct {v1, p0, v2, v3}, Lcom/samsung/android/settings/display/SecAdaptiveDisplaySettings$3;-><init>(Lcom/samsung/android/settings/display/SecAdaptiveDisplaySettings;Landroid/os/Handler;I)V
+ 
++    iput-object v1, p0, Lcom/samsung/android/settings/display/SecAdaptiveDisplaySettings;->mEadObserver:Lcom/samsung/android/settings/display/SecAdaptiveDisplaySettings$3;
++
+     new-instance v1, Lcom/samsung/android/settings/display/SecAdaptiveDisplaySettings$3;
+ 
+     new-instance v2, Landroid/os/Handler;
+@@ -1728,6 +1730,16 @@
  
      sget-object v0, Lcom/samsung/android/settings/Rune;->COMMON_CONFIG_PACKAGE_NAME_SMART_MANAGER:Ljava/lang/String;
  
@@ -113,7 +125,7 @@ diff --git a/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisp
      iget-boolean v0, p0, Lcom/samsung/android/settings/display/SecAdaptiveDisplaySettings;->mIsSupportAdvancedWhiteBalance:Z
  
      if-eqz v0, :cond_1
-@@ -1827,6 +1837,24 @@
+@@ -1827,6 +1839,24 @@
  
      sget-object v0, Lcom/samsung/android/settings/Rune;->COMMON_CONFIG_PACKAGE_NAME_SMART_MANAGER:Ljava/lang/String;
  
@@ -139,6 +151,7 @@ diff --git a/smali_classes3/com/samsung/android/settings/display/SecAdaptiveDisp
  
      if-eqz v0, :cond_2
 diff --git a/smali_classes3/com/samsung/android/settings/display/controller/SecEADPreferenceController.smali b/smali_classes3/com/samsung/android/settings/display/controller/SecEADPreferenceController.smali
+index 200da92..5cde9f1 100644
 --- a/smali_classes3/com/samsung/android/settings/display/controller/SecEADPreferenceController.smali
 +++ b/smali_classes3/com/samsung/android/settings/display/controller/SecEADPreferenceController.smali
 @@ -194,7 +194,7 @@
@@ -150,5 +163,3 @@ diff --git a/smali_classes3/com/samsung/android/settings/display/controller/SecE
  
      return p0
  .end method
--- 
-2.47.0
