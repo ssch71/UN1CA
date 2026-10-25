@@ -56,6 +56,57 @@ GET_SYSTEM_EXT()
 }
 
 CIL_NAME="$(head -n 1 "$WORK_DIR/vendor/etc/selinux/plat_sepolicy_vers.txt")"
+
+# Newer system images drop mapping files for old vendor APIs (One UI 9 ships
+# nothing older than 31.0), so init cannot compile the split policy on e.g.
+# Android 11 (30.0) vendors and reboots right after first-stage mount.
+# Synthesize the missing mapping from the oldest one that is still shipped.
+GEN_COMPAT_MAPPING()
+{
+    local DIR="$1"
+    local WITH_TYPES="$2"
+    local BASE
+    local PLATFORM=()
+
+    [ -d "$DIR" ] || return 0
+    [ -f "$DIR/$CIL_NAME.cil" ] && return 0
+    BASE="$(find "$DIR" -maxdepth 1 -type f -name "[0-9]*.[0-9]*.cil" ! -name "*.compat.cil" -printf "%f\n" | \
+        sed "s/\.cil$//" | sort -V | awk -v v="$CIL_NAME" '$0 + 0 > v + 0 { print; exit }')"
+    if [ -z "$BASE" ]; then
+        LOGW "No legacy sepolicy mapping to derive $CIL_NAME from in ${DIR//$WORK_DIR/}"
+        return 0
+    fi
+
+    if $WITH_TYPES; then
+        PLATFORM=("$WORK_DIR/system/system/etc/selinux/plat_sepolicy.cil")
+        [ -f "$WORK_DIR/$(GET_SYSTEM_EXT)/etc/selinux/system_ext_sepolicy.cil" ] && \
+            PLATFORM+=("$WORK_DIR/$(GET_SYSTEM_EXT)/etc/selinux/system_ext_sepolicy.cil")
+    fi
+
+    LOG "- Generating ${DIR//$WORK_DIR/}/$CIL_NAME.cil from $BASE.cil"
+    EVAL "python3 \"$SRC_DIR/unica/patches/selinux/gen_compat_mapping.py\" \"$DIR/$BASE.cil\" \"$DIR/$CIL_NAME.cil\" \
+        \"$BASE\" \"$CIL_NAME\" \"$WORK_DIR/vendor/etc/selinux/plat_pub_versioned.cil\" ${PLATFORM[*]}" || return 1
+    if [ -f "$DIR/$BASE.compat.cil" ]; then
+        EVAL "python3 \"$SRC_DIR/unica/patches/selinux/gen_compat_mapping.py\" \"$DIR/$BASE.compat.cil\" \
+            \"$DIR/$CIL_NAME.compat.cil\" \"$BASE\" \"$CIL_NAME\" \"$WORK_DIR/vendor/etc/selinux/plat_pub_versioned.cil\"" || return 1
+    fi
+
+    local REL="${DIR#"$WORK_DIR"/}"
+    local f
+    for f in "$CIL_NAME.cil" "$CIL_NAME.compat.cil"; do
+        [ -f "$DIR/$f" ] || continue
+        SET_METADATA "${REL%%/*}" "${REL#*/}/$f" 0 0 644 "u:object_r:system_file:s0" || return 1
+    done
+}
+
+if [ -f "$WORK_DIR/vendor/etc/selinux/plat_pub_versioned.cil" ]; then
+    GEN_COMPAT_MAPPING "$WORK_DIR/system/system/etc/selinux/mapping" true || ABORT "Failed to generate $CIL_NAME sepolicy mapping"
+    GEN_COMPAT_MAPPING "$WORK_DIR/$(GET_SYSTEM_EXT)/etc/selinux/mapping" false || ABORT "Failed to generate $CIL_NAME sepolicy mapping"
+    for PRODUCT_MAPPING in "$WORK_DIR/product/etc/selinux/mapping" "$WORK_DIR/system/system/product/etc/selinux/mapping"; do
+        GEN_COMPAT_MAPPING "$PRODUCT_MAPPING" false || ABORT "Failed to generate $CIL_NAME sepolicy mapping"
+    done
+    unset PRODUCT_MAPPING
+fi
 PATCHED=false
 VENDOR_API_LIST="$(find "$WORK_DIR/$(GET_SYSTEM_EXT)/etc/selinux/mapping" -type f -printf "%f\n" | \
                     sed '/.compat./d' | sed 's/.cil//' | sed 's/\./_/' | sort)"
