@@ -160,6 +160,38 @@ jobs:
       - name: Build ROM
         run: ./scripts/make_rom.sh
 
+      # z3q boot loops right after first-stage mount: reproduce init's SELinux compile.
+      - name: Check SELinux policy compile (z3q)
+        if: always() && matrix.target == 'z3q'
+        continue-on-error: true
+        run: |
+          S="$WORK_DIR/system/system"
+          SE="$S/system_ext"; [ -d "$WORK_DIR/system_ext/etc" ] && SE="$WORK_DIR/system_ext"
+          P="$WORK_DIR/product"; [ -d "$P/etc" ] || P="$S/product"
+          V="$WORK_DIR/vendor"; O="$WORK_DIR/odm"
+          VER="$(head -n 1 "$V/etc/selinux/plat_sepolicy_vers.txt")"
+          echo "vendor plat_sepolicy_vers: $VER"
+          for d in "$S" "$SE" "$P"; do echo "== ${d#"$WORK_DIR"/}/etc/selinux/mapping"; ls "$d/etc/selinux/mapping" 2>&1; done
+          ls "$V/etc/selinux" "$O/etc/selinux" 2>&1
+          sudo apt-get install -yq secilc > /dev/null
+          ARGS=("$S/etc/selinux/plat_sepolicy.cil" "$S/etc/selinux/mapping/$VER.cil")
+          [ -f "$S/etc/selinux/mapping/$VER.compat.cil" ] && ARGS+=("$S/etc/selinux/mapping/$VER.compat.cil")
+          for d in "$SE:system_ext" "$P:product"; do
+            dir="${d%%:*}"; name="${d##*:}"
+            [ -f "$dir/etc/selinux/${name}_sepolicy.cil" ] && ARGS+=("$dir/etc/selinux/${name}_sepolicy.cil")
+            [ -f "$dir/etc/selinux/mapping/$VER.cil" ] && ARGS+=("$dir/etc/selinux/mapping/$VER.cil")
+          done
+          for f in "$V/etc/selinux/plat_pub_versioned.cil" "$V/etc/selinux/vendor_sepolicy.cil" \
+                   "$V/etc/selinux/nonplat_sepolicy.cil" "$O/etc/selinux/odm_sepolicy.cil"; do
+            [ -f "$f" ] && ARGS+=("$f")
+          done
+          printf "  %s\n" "${ARGS[@]#"$WORK_DIR"/}"
+          if secilc -m -M true -G -N -c 30 "${ARGS[@]}" -o /tmp/precompiled_sepolicy -f /dev/null; then
+            echo "SELinux policy compiles OK"
+          else
+            echo "::error::SELinux policy compile FAILED (this is what makes init reboot)"
+          fi
+
       - name: Collect patch debug files
         if: failure()
         run: |
