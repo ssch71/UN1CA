@@ -1,0 +1,10 @@
+# UN1CA z3q boot debugging: copy logcat into /dev/kmsg so recovery's
+# /proc/last_kmsg keeps it across the boot loop (no adb/pstore before boot).
+service unica_bootlog /system/bin/logcat -b main -b system -b crash -v brief -f /dev/kmsg *:I
+    user root
+    group root log
+    seclabel u:r:unica_bootlog:s0
+    disabled
+
+on post-fs
+    start unica_bootlog

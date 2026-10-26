@@ -1,0 +1,4 @@
+id=bootlog
+name=Boot log to kmsg (debug)
+author=ssch71
+description=Temporary: mirror early logcat into the kernel log so /proc/last_kmsg shows why z3q boot loops. Drop a "disable" file here once z3q boots.
