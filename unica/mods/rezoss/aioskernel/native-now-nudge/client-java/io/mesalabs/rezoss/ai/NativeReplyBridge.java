@@ -12,8 +12,43 @@ public final class NativeReplyBridge {
  private static boolean enabled(Context context)throws Exception{
   return (Boolean)Class.forName("io.mesalabs.rezoss.ai.NativeNowNudgeRoute").getMethod("enabled",Context.class).invoke(null,context);
  }
+ // Busy group chats re-request on every message; each generation takes 10-20 s
+ // on the NPU, so results arrive for a notification that was already replaced
+ // and the queue starves everything else (1:1 chats, in-app replies). Generate
+ // at most once per conversation per window and let other chats through.
+ private static final long CONVERSATION_WINDOW_MS=20000;
+ private static final Map<Object,Boolean> approved=Collections.synchronizedMap(new WeakHashMap<Object,Boolean>());
+ private static final Map<String,Long> lastStart=new HashMap<>();
+ private static String conversationKey(Object param){
+  for(Method m:param.getClass().getMethods()){
+   if(m.getParameterTypes().length!=0||m.getReturnType()!=String.class)continue;
+   String n=m.getName().toLowerCase(Locale.ROOT);
+   if(!n.contains("key")&&!n.contains("conversationid")&&!n.contains("threadid"))continue;
+   try{Object v=m.invoke(param);if(v instanceof String&&!((String)v).isEmpty())return (String)v;}catch(Exception ignored){}
+  }
+  return null;
+ }
+ private static boolean throttled(Object param){
+  String key=conversationKey(param);long window=CONVERSATION_WINDOW_MS;
+  if(key==null){key="*";window=CONVERSATION_WINDOW_MS/4;}
+  long now=android.os.SystemClock.elapsedRealtime();
+  synchronized(lastStart){
+   Long last=lastStart.get(key);
+   if(last!=null&&now-last<window){Log.i("RezossNudgeClient","Skipped repeated reply request key#"+Integer.toHexString(key.hashCode())+" age="+(now-last));return true;}
+   lastStart.put(key,now);
+   if(lastStart.size()>64)lastStart.clear();
+  }
+  return false;
+ }
+ private static boolean eligible(Context context,Object param)throws Exception{
+  return enabled(context)&&(Boolean)get(param,"isOnSmartReply")&&!(Boolean)get(param,"isOnDisplayNudge")&&(Boolean)get(param,"hasCallback");
+ }
  public static boolean shouldGenerateNow(Context context,Object param){
-  try{return enabled(context)&&(Boolean)get(param,"isOnSmartReply")&&!(Boolean)get(param,"isOnDisplayNudge")&&(Boolean)get(param,"hasCallback");}
+  try{
+   if(approved.containsKey(param))return true;
+   if(!eligible(context,param)||throttled(param))return false;
+   approved.put(param,Boolean.TRUE);return true;
+  }
   catch(Exception e){Log.e("RezossNudgeClient","Notification profile rejected",e);return false;}
  }
  private static String clean(String value){
@@ -24,7 +59,7 @@ public final class NativeReplyBridge {
   return text;
  }
  public static void record(Context context,Object param,List<?> generated){
-  if(!shouldGenerateNow(context,param))return;
+  if(approved.remove(param)==null)return;
   List<String> replies=new ArrayList<>();for(Object value:generated){if(value instanceof String){String text=clean((String)value);if(!text.isEmpty()&&!replies.contains(text))replies.add(text);}if(replies.size()==3)break;}
   if(!replies.isEmpty())pending.put(param,replies);
  }
