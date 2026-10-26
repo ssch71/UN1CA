@@ -198,6 +198,22 @@ jobs:
             echo "SELinux policy compiles OK"
           else
             echo "::error::SELinux policy compile FAILED (this is what makes init reboot)"
+            # Collect every unresolvable statement in one run: comment out the
+            # failing line in a scratch copy and retry.
+            rm -rf /tmp/sepol && mkdir -p /tmp/sepol
+            COPY=()
+            for f in "${ARGS[@]}"; do
+              c="/tmp/sepol/$(echo "${f#"$WORK_DIR"/}" | tr '/' '_')"; cp "$f" "$c"; COPY+=("$c")
+            done
+            for i in $(seq 1 200); do
+              ERR="$(secilc -m -M true -G -N -c 31 "${COPY[@]}" -o /tmp/precompiled_sepolicy -f /dev/null 2>&1)" && { echo "== compiles after removing $((i - 1)) statement(s)"; break; }
+              LOC="$(grep -oE 'at /tmp/sepol/[^ :]+:[0-9]+' <<< "$ERR" | head -n 1 | sed 's/^at //')"
+              [ -n "$LOC" ] || { echo "$ERR"; break; }
+              FILE="${LOC%:*}"; LINE="${LOC##*:}"
+              echo "-- $(grep -m1 -E '^(Failed|Unknown|Bad|Invalid|No such)' <<< "$ERR" | head -c 120) | ${FILE##*/}:$LINE"
+              echo "   $(sed -n "${LINE}p" "$FILE" | head -c 400)"
+              sed -i "${LINE}s/^/;; /" "$FILE"
+            done
           fi
 
       - name: Collect patch debug files
