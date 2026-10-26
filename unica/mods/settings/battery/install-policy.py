@@ -27,6 +27,11 @@ for name, target in files:
     begin, end = f'{prefix} BEGIN UN1CA BATTERY SAVING', f'{prefix} END UN1CA BATTERY SAVING'
     old = target.read_text()
     payload = (source / name).read_text().rstrip()
+    if name == 'vendor.cil':
+        # Versioned platform attributes follow the vendor's sepolicy API
+        # (e.g. sysfs_30_0 on Android 11 vendors), not the 33.0 template.
+        ver = (vendor / 'plat_sepolicy_vers.txt').read_text().split()[0].replace('.', '_')
+        payload = payload.replace('_33_0', '_' + ver)
     if name == 'battery.cil':
         # Preserve the actual build's consumers of the three formerly generic
         # sysfs nodes. Never hard-code opaque base_typeattr numbers across ROMs.

@@ -412,6 +412,10 @@ _REZOSS_ENSURE_LOG_VIDEO_FILTER_SELINUX()
 {
     local FC_FILE="$WORK_DIR/vendor/etc/selinux/vendor_file_contexts"
     local CIL_FILE="$WORK_DIR/vendor/etc/selinux/vendor_sepolicy.cil"
+    # Versioned platform attributes follow the vendor sepolicy API (30_0 on z3q)
+    local VER_TAG="33_0"
+    [ -f "$WORK_DIR/vendor/etc/selinux/plat_sepolicy_vers.txt" ] && \
+        VER_TAG="$(head -n 1 "$WORK_DIR/vendor/etc/selinux/plat_sepolicy_vers.txt" | tr '.' '_')"
 
     if [ -f "$FC_FILE" ]; then
         if ! grep -q -F "/data/vendor/LogVideofilters" "$FC_FILE"; then
@@ -430,8 +434,8 @@ _REZOSS_ENSURE_LOG_VIDEO_FILTER_SELINUX()
         _REZOSS_APPEND_UNIQUE_LINE "$CIL_FILE" "(typeattributeset data_file_type (LogVideofilters_data_file))"
         _REZOSS_APPEND_UNIQUE_LINE "$CIL_FILE" "(allow hal_camera_default LogVideofilters_data_file (dir (ioctl read getattr lock open watch watch_reads search)))"
         _REZOSS_APPEND_UNIQUE_LINE "$CIL_FILE" "(allow hal_camera_default LogVideofilters_data_file (file (ioctl read getattr lock map open watch watch_reads)))"
-        _REZOSS_APPEND_UNIQUE_LINE "$CIL_FILE" "(allow platform_app_33_0 LogVideofilters_data_file (dir (ioctl read getattr lock open watch watch_reads search)))"
-        _REZOSS_APPEND_UNIQUE_LINE "$CIL_FILE" "(allow platform_app_33_0 LogVideofilters_data_file (file (ioctl read getattr lock map open watch watch_reads)))"
+        _REZOSS_APPEND_UNIQUE_LINE "$CIL_FILE" "(allow platform_app_${VER_TAG} LogVideofilters_data_file (dir (ioctl read getattr lock open watch watch_reads search)))"
+        _REZOSS_APPEND_UNIQUE_LINE "$CIL_FILE" "(allow platform_app_${VER_TAG} LogVideofilters_data_file (file (ioctl read getattr lock map open watch watch_reads)))"
     else
         LOGW "File not found: ${CIL_FILE//$WORK_DIR/}"
     fi
