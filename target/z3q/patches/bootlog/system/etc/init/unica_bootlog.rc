@@ -1,10 +1,15 @@
-# UN1CA z3q boot debugging: copy logcat into /dev/kmsg so recovery's
-# /proc/last_kmsg keeps it across the boot loop (no adb/pstore before boot).
+# UN1CA z3q boot debugging. init is stuck waiting on an exec in mount_all, so
+# action triggers never run; start with the early_hal class instead (the same
+# class keystore2 is launched from). Output goes to kmsg (/proc/last_kmsg) and
+# to /metadata, which recovery can mount without decrypting /data.
 service unica_bootlog /system/bin/logcat -b main -b system -b crash -v brief -f /dev/kmsg *:I
+    class early_hal
     user root
     group root log
     seclabel u:r:unica_bootlog:s0
-    disabled
 
-on property:init.svc.logd=running
-    start unica_bootlog
+service unica_bootlog_file /system/bin/logcat -b all -v threadtime -f /metadata/unica_boot.log -r 4096 -n 2
+    class early_hal
+    user root
+    group root log
+    seclabel u:r:unica_bootlog:s0
