@@ -3,7 +3,12 @@
 # Copyright (c) 2026 ssch71
 """Add the <hal> entries (matched by name and format) that the target's stock
 framework manifest declares but the source manifest lacks, so an older vendor
-still finds the system HALs it expects. Source entries are kept as is."""
+still finds the system HALs it expects. Source entries are kept as is.
+
+usage: vintf_merge.py <source manifest> <stock manifest> [other framework
+manifests...]. HALs that any of the other manifests (system_ext, product,
+manifest fragments) already declare are not added either: libvintf refuses
+the same instance from two framework manifests."""
 import sys
 import xml.etree.ElementTree as ET
 
@@ -12,7 +17,17 @@ src_tree = ET.parse(src_path)
 src = src_tree.getroot()
 tgt = ET.parse(tgt_path).getroot()
 
-have = {(h.findtext('name'), h.get('format', 'hidl')) for h in src.findall('hal')}
+
+def keys(root):
+    return {(h.findtext('name'), h.get('format', 'hidl')) for h in root.iter('hal')}
+
+
+have = keys(src)
+for other in sys.argv[3:]:
+    try:
+        have |= keys(ET.parse(other).getroot())
+    except (OSError, ET.ParseError) as e:
+        sys.stderr.write('Skipping %s: %s\n' % (other, e))
 added = []
 for hal in tgt.findall('hal'):
     key = (hal.findtext('name'), hal.get('format', 'hidl'))

@@ -23,7 +23,16 @@ LOG_STEP_IN "- Merging stock framework vintf HALs from $TARGET_CODENAME"
 SB_TARGET_MANIFEST="$FW_DIR/$(cut -d "/" -f 1 <<< "$TARGET_FIRMWARE")_$(cut -d "/" -f 2 <<< "$TARGET_FIRMWARE")/system/system/etc/vintf/manifest.xml"
 SB_SOURCE_MANIFEST="$WORK_DIR/system/system/etc/vintf/manifest.xml"
 if [ -f "$SB_TARGET_MANIFEST" ] && [ -f "$SB_SOURCE_MANIFEST" ]; then
-    SB_ADDED="$(python3 "$MODPATH/vintf_merge.py" "$SB_SOURCE_MANIFEST" "$SB_TARGET_MANIFEST")" || \
+    # HALs the source already declares in another framework manifest
+    # (system_ext, product, fragments) must not be added a second time
+    SB_OTHER=()
+    while IFS= read -r -d "" SB_XML; do
+        [[ "$SB_XML" == "$SB_SOURCE_MANIFEST" ]] || SB_OTHER+=("$SB_XML")
+    done < <(find "$WORK_DIR/system/system/etc/vintf" \
+        "$WORK_DIR/system/system/system_ext/etc/vintf" "$WORK_DIR/system_ext/etc/vintf" \
+        "$WORK_DIR/system/system/product/etc/vintf" "$WORK_DIR/product/etc/vintf" \
+        -name "*.xml" ! -name "compatibility_matrix*" -print0 2> /dev/null)
+    SB_ADDED="$(python3 "$MODPATH/vintf_merge.py" "$SB_SOURCE_MANIFEST" "$SB_TARGET_MANIFEST" "${SB_OTHER[@]}")" || \
         ABORT "Failed to merge the stock framework vintf manifest"
     while IFS= read -r SB_HAL; do
         [ -n "$SB_HAL" ] && LOG "- Added $SB_HAL"
@@ -31,7 +40,7 @@ if [ -f "$SB_TARGET_MANIFEST" ] && [ -f "$SB_SOURCE_MANIFEST" ]; then
 else
     LOGW "Stock or source framework vintf manifest not found, skipping merge"
 fi
-unset SB_TARGET_MANIFEST SB_SOURCE_MANIFEST SB_ADDED SB_HAL
+unset SB_TARGET_MANIFEST SB_SOURCE_MANIFEST SB_ADDED SB_HAL SB_OTHER SB_XML
 LOG_STEP_OUT
 
 LOG_STEP_IN "- Fixing vintf manifest"
