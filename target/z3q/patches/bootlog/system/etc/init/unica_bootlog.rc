@@ -1,15 +1,20 @@
-# UN1CA z3q boot debugging. init is stuck waiting on an exec in mount_all, so
-# action triggers never run; start with the early_hal class instead (the same
-# class keystore2 is launched from). Output goes to kmsg (/proc/last_kmsg) and
-# to /metadata, which recovery can mount without decrypting /data.
+# UN1CA z3q boot debugging. init blocks inside the fs stage (mount_all waits
+# for vold/keystore2), so later triggers and the early_hal class start never
+# run. Start the logcat mirrors explicitly in early-fs, before mount_all.
+# Output goes to kmsg (/proc/last_kmsg) and to /metadata (readable from
+# recovery without decrypting /data).
 service unica_bootlog /system/bin/logcat -b main -b system -b crash -v brief -f /dev/kmsg *:I
-    class early_hal
     user root
     group root log
     seclabel u:r:unica_bootlog:s0
+    disabled
 
 service unica_bootlog_file /system/bin/logcat -b all -v threadtime -f /metadata/unica_boot.log -r 4096 -n 2
-    class early_hal
     user root
     group root log
     seclabel u:r:unica_bootlog:s0
+    disabled
+
+on early-fs
+    start unica_bootlog
+    start unica_bootlog_file
