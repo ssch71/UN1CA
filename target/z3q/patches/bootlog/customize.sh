@@ -15,6 +15,7 @@ if ! grep -q "unica_bootlog" "$PLAT_CIL"; then
         echo "(typeattributeset domain (unica_bootlog ))"
         echo "(typepermissive unica_bootlog)"
         echo "(allow init unica_bootlog (process (transition rlimitinh siginh noatsecure)))"
+        echo "(allow init logcat_exec (file (getattr open read execute map)))"
         echo "(allow unica_bootlog logcat_exec (file (entrypoint read open execute getattr map)))"
     } >> "$PLAT_CIL"
 fi
