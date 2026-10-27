@@ -17,6 +17,8 @@ if ! grep -q "unica_bootlog" "$PLAT_CIL"; then
         echo "(allow init unica_bootlog (process (transition rlimitinh siginh noatsecure)))"
         echo "(allow init logcat_exec (file (getattr open read execute map)))"
         echo "(allow unica_bootlog logcat_exec (file (entrypoint read open execute getattr map)))"
+        echo "(allow unica_bootlog shell_exec (file (entrypoint read open execute getattr map)))"
+        echo "(allow init shell_exec (file (getattr open read execute map)))"
     } >> "$PLAT_CIL"
 fi
 unset PLAT_CIL
