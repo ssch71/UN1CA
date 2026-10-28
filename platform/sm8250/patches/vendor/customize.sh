@@ -160,3 +160,22 @@ else
 fi
 unset LCD_DENSITY
 LOG_STEP_OUT
+
+# Android 17 ueventd only reads /system/etc/ueventd.rc, which imports
+# /vendor/etc/ueventd.rc and /odm/etc/ueventd.rc. The legacy /vendor/ueventd.rc
+# of the Android 11 vendor is no longer parsed, so /dev/qseecom, /dev/ion,
+# adsprpc etc. stay root-only and the TEE HALs (keymaster, gatekeeper) abort.
+for UEV_PART in vendor odm; do
+    UEV_OLD="$WORK_DIR/$UEV_PART/ueventd.rc"
+    UEV_NEW="$WORK_DIR/$UEV_PART/etc/ueventd.rc"
+    [ -f "$UEV_OLD" ] || continue
+    LOG_STEP_IN "- Moving /$UEV_PART/ueventd.rc to /$UEV_PART/etc/ueventd.rc"
+    if [ -f "$UEV_NEW" ]; then
+        { echo; cat "$UEV_OLD"; } >> "$UEV_NEW"
+    else
+        cp -a "$UEV_OLD" "$UEV_NEW"
+    fi
+    SET_METADATA "$UEV_PART" "etc/ueventd.rc" 0 0 644 "u:object_r:vendor_configs_file:s0"
+    LOG_STEP_OUT
+done
+unset UEV_PART UEV_OLD UEV_NEW
