@@ -1,0 +1,785 @@
+From 1da02c17b7a8307689f0b3e56a688c1384e05aa0 Mon Sep 17 00:00:00 2001
+From: ssch71 <s01093450498@gmail.com>
+Date: Thu, 29 Oct 2026 00:10:00 +0900
+Subject: [PATCH] Restore DeX settings entries
+
+flip-qssi SecSettings hardcodes DexModePreferenceController as
+UNSUPPORTED_ON_DEVICE and strips the /sys/class/dp_sec/dex and desktop
+mode checks. Restore them from the S23 (qssi) build so the Samsung DeX
+entry and related DeX settings show up on b5q.
+---
+ .../desktop/DexModeSettingsFragment$2.smali   |  64 +++++--
+ .../desktop/ExternalDisplayUtils.smali        |  38 ++++-
+ ...evelMultiDevicesPreferenceController.smali |  60 +++++--
+ .../TabWith4FingersPreferenceController.smali |  21 ++-
+ .../dex/DexModePreferenceController.smali     |  44 ++++-
+ .../navigationbar/NavigationBarSettings.smali | 159 +++++++++---------
+ 6 files changed, 269 insertions(+), 117 deletions(-)
+
+diff --git a/smali_classes3/com/samsung/android/settings/desktop/DexModeSettingsFragment$2.smali b/smali_classes3/com/samsung/android/settings/desktop/DexModeSettingsFragment$2.smali
+index 3b17172..04a4b37 100644
+--- a/smali_classes3/com/samsung/android/settings/desktop/DexModeSettingsFragment$2.smali
++++ b/smali_classes3/com/samsung/android/settings/desktop/DexModeSettingsFragment$2.smali
+@@ -5,7 +5,7 @@
+ 
+ # virtual methods
+ .method public final getNonIndexableKeys(Landroid/content/Context;)Ljava/util/List;
+-    .registers 6
++    .registers 7
+ 
+     invoke-super {p0, p1}, Lcom/android/settings/search/BaseSearchIndexProvider;->getNonIndexableKeys(Landroid/content/Context;)Ljava/util/List;
+ 
+@@ -13,46 +13,74 @@
+ 
+     invoke-static {}, Lcom/samsung/android/settings/usefulfeature/UsefulfeatureUtils;->isMultiFoldModel()Z
+ 
+-    move-result p1
++    move-result v0
+ 
+-    if-nez p1, :cond_18
++    if-nez v0, :cond_18
+ 
+     invoke-static {}, Lcom/android/settings/Utils;->isTablet()Z
+ 
+-    move-result p1
++    move-result v0
+ 
+-    if-nez p1, :cond_18
++    if-nez v0, :cond_18
+ 
+-    const-string p1, "key_quick_panel_button"
++    const-string v0, "key_quick_panel_button"
+ 
+-    move-object v0, p0
++    move-object v1, p0
+ 
+-    check-cast v0, Ljava/util/ArrayList;
++    check-cast v1, Ljava/util/ArrayList;
+ 
+-    invoke-virtual {v0, p1}, Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z
++    invoke-virtual {v1, v0}, Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z
+ 
+     :cond_18
+-    sget-object p1, Lcom/samsung/android/settings/display/SecDisplayUtils;->SIGNATURES:[Landroid/content/pm/Signature;
++    sget-object v0, Lcom/samsung/android/settings/display/SecDisplayUtils;->SIGNATURES:[Landroid/content/pm/Signature;
++
++    invoke-static {p1}, Lcom/samsung/android/settings/desktop/ExternalDisplayUtils;->isDexConnected(Landroid/content/Context;)Z
++
++    move-result p1
++
++    const-string v0, "key_dex_mode_screen"
++
++    const-string v1, "key_dex_mode_spen_input"
++
++    if-eqz p1, :cond_37
++
++    invoke-static {}, Lcom/samsung/android/settings/Rune;->isSupportSpen()Z
++
++    move-result p1
++
++    if-nez p1, :cond_30
+ 
+     move-object p1, p0
+ 
+     check-cast p1, Ljava/util/ArrayList;
+ 
+-    const-string v0, "key_set_default_audio_output"
++    invoke-virtual {p1, v1}, Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z
+ 
+-    const-string v1, "key_mouse_and_trackpad"
++    :cond_30
++    move-object p1, p0
+ 
+-    const-string v2, "key_dex_keyboard"
++    check-cast p1, Ljava/util/ArrayList;
+ 
+-    const-string v3, "key_dex_mode_spen_input"
++    invoke-virtual {p1, v0}, Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z
+ 
+-    invoke-static {p1, v2, v3, v0, v1}, Lcom/android/settings/accessibility/AccessibilityScreen$$ExternalSyntheticOutline0;->m(Ljava/util/ArrayList;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
++    return-object p0
+ 
+-    const-string v0, "key_external_display"
++    :cond_37
++    move-object p1, p0
+ 
+-    invoke-virtual {p1, v0}, Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z
++    check-cast p1, Ljava/util/ArrayList;
+ 
+-    const-string v0, "key_dex_mode_screen"
++    const-string v2, "key_set_default_audio_output"
++
++    const-string v3, "key_mouse_and_trackpad"
++
++    const-string v4, "key_dex_keyboard"
++
++    invoke-static {p1, v4, v1, v2, v3}, Lcom/android/settings/accessibility/AccessibilityScreen$$ExternalSyntheticOutline0;->m(Ljava/util/ArrayList;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
++
++    const-string v1, "key_external_display"
++
++    invoke-virtual {p1, v1}, Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z
+ 
+     invoke-virtual {p1, v0}, Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z
+ 
+diff --git a/smali_classes3/com/samsung/android/settings/desktop/ExternalDisplayUtils.smali b/smali_classes3/com/samsung/android/settings/desktop/ExternalDisplayUtils.smali
+index 40e47cd..4d3c51b 100644
+--- a/smali_classes3/com/samsung/android/settings/desktop/ExternalDisplayUtils.smali
++++ b/smali_classes3/com/samsung/android/settings/desktop/ExternalDisplayUtils.smali
+@@ -467,7 +467,7 @@
+ .end method
+ 
+ .method public static isWirelessDexOnlyDevice(Landroid/content/Context;)Z
+-    .registers 2
++    .registers 3
+ 
+     invoke-virtual {p0}, Landroid/content/Context;->getApplicationContext()Landroid/content/Context;
+ 
+@@ -483,24 +483,46 @@
+ 
+     move-result p0
+ 
+-    const/4 v0, 0x0
++    const/4 v1, 0x0
+ 
+-    if-eqz p0, :cond_16
++    if-eqz p0, :cond_1c
+ 
+     sget-object p0, Lcom/samsung/android/settings/display/SecDisplayUtils;->SIGNATURES:[Landroid/content/pm/Signature;
+ 
+-    return v0
++    invoke-virtual {v0, v1}, Lcom/android/wm/shell/shared/desktopmode/DesktopStateImpl;->isDesktopModeSupportedOnDisplay(I)Z
++
++    move-result p0
++
++    if-nez p0, :cond_30
++
++    goto :goto_31
+ 
+-    :cond_16
++    :cond_1c
+     sget-boolean p0, Lcom/samsung/android/settings/desktop/ExternalDisplayUtils;->WIRELESS_DESKTOP_SUPPORTED_ONLY:Z
+ 
+-    if-nez p0, :cond_1d
++    if-nez p0, :cond_31
+ 
+     sget-object p0, Lcom/samsung/android/settings/display/SecDisplayUtils;->SIGNATURES:[Landroid/content/pm/Signature;
+ 
+-    return v0
++    new-instance p0, Ljava/io/File;
+ 
+-    :cond_1d
++    const-string v0, "/sys/class/dp_sec/dex"
++
++    invoke-direct {p0, v0}, Ljava/io/File;-><init>(Ljava/lang/String;)V
++
++    invoke-virtual {p0}, Ljava/io/File;->exists()Z
++
++    move-result p0
++
++    if-nez p0, :cond_30
++
++    goto :goto_31
++
++    :cond_30
++    return v1
++
++    :cond_31
++    :goto_31
+     const/4 p0, 0x1
+ 
+     return p0
+diff --git a/smali_classes3/com/samsung/android/settings/homepage/TopLevelMultiDevicesPreferenceController.smali b/smali_classes3/com/samsung/android/settings/homepage/TopLevelMultiDevicesPreferenceController.smali
+index 4ecc794..06b5360 100644
+--- a/smali_classes3/com/samsung/android/settings/homepage/TopLevelMultiDevicesPreferenceController.smali
++++ b/smali_classes3/com/samsung/android/settings/homepage/TopLevelMultiDevicesPreferenceController.smali
+@@ -200,6 +200,40 @@
+     :goto_4d
+     sget-object v1, Lcom/samsung/android/settings/display/SecDisplayUtils;->SIGNATURES:[Landroid/content/pm/Signature;
+ 
++    sget-boolean v1, Lcom/samsung/android/settings/desktop/ExternalDisplayUtils;->WIRELESS_DESKTOP_SUPPORTED_ONLY:Z
++
++    new-instance v1, Ljava/io/File;
++
++    const-string v2, "/sys/class/dp_sec/dex"
++
++    invoke-direct {v1, v2}, Ljava/io/File;-><init>(Ljava/lang/String;)V
++
++    invoke-virtual {v1}, Ljava/io/File;->exists()Z
++
++    move-result v1
++
++    if-nez v1, :cond_66
++
++    iget-object v1, p0, Lcom/android/settingslib/core/AbstractPreferenceController;->mContext:Landroid/content/Context;
++
++    invoke-static {v1}, Lcom/samsung/android/settings/desktop/ExternalDisplayUtils;->isWirelessDexOnlyDevice(Landroid/content/Context;)Z
++
++    move-result v1
++
++    if-eqz v1, :cond_72
++
++    :cond_66
++    iget-object v1, p0, Lcom/android/settingslib/core/AbstractPreferenceController;->mContext:Landroid/content/Context;
++
++    const v2, 0x7f152653
++
++    invoke-virtual {v1, v2}, Landroid/content/Context;->getString(I)Ljava/lang/String;
++
++    move-result-object v1
++
++    invoke-virtual {v0, v1}, Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z
++
++    :cond_72
+     iget-object v1, p0, Lcom/android/settingslib/core/AbstractPreferenceController;->mContext:Landroid/content/Context;
+ 
+     const-string v2, "com.google.android.projection.gearhead"
+@@ -208,27 +242,27 @@
+ 
+     move-result-object v1
+ 
+-    :try_start_57
++    :try_start_7a
+     invoke-virtual {v1, v2}, Landroid/content/pm/PackageManager;->getApplicationEnabledSetting(Ljava/lang/String;)I
+ 
+     move-result v4
+ 
+     invoke-virtual {v1, v2, v3}, Landroid/content/pm/PackageManager;->getPackageInfo(Ljava/lang/String;I)Landroid/content/pm/PackageInfo;
+-    :try_end_5e
+-    .catch Landroid/content/pm/PackageManager$NameNotFoundException; {:try_start_57 .. :try_end_5e} :catch_71
+-    .catch Ljava/lang/IllegalArgumentException; {:try_start_57 .. :try_end_5e} :catch_71
++    :try_end_81
++    .catch Landroid/content/pm/PackageManager$NameNotFoundException; {:try_start_7a .. :try_end_81} :catch_94
++    .catch Ljava/lang/IllegalArgumentException; {:try_start_7a .. :try_end_81} :catch_94
+ 
+     const/4 v1, 0x2
+ 
+-    if-eq v4, v1, :cond_71
++    if-eq v4, v1, :cond_94
+ 
+     const/4 v1, 0x3
+ 
+-    if-ne v4, v1, :cond_65
++    if-ne v4, v1, :cond_88
+ 
+-    goto :goto_71
++    goto :goto_94
+ 
+-    :cond_65
++    :cond_88
+     iget-object v1, p0, Lcom/android/settingslib/core/AbstractPreferenceController;->mContext:Landroid/content/Context;
+ 
+     const v2, 0x7f15044f
+@@ -239,14 +273,14 @@
+ 
+     invoke-virtual {v0, v1}, Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z
+ 
+-    :catch_71
+-    :cond_71
+-    :goto_71
++    :catch_94
++    :cond_94
++    :goto_94
+     invoke-virtual {v0}, Ljava/util/ArrayList;->size()I
+ 
+     move-result v1
+ 
+-    if-nez v1, :cond_83
++    if-nez v1, :cond_a6
+ 
+     iget-object v1, p0, Lcom/android/settingslib/core/AbstractPreferenceController;->mContext:Landroid/content/Context;
+ 
+@@ -258,7 +292,7 @@
+ 
+     invoke-virtual {v0, v1}, Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z
+ 
+-    :cond_83
++    :cond_a6
+     invoke-virtual {v0}, Ljava/util/ArrayList;->size()I
+ 
+     move-result v1
+diff --git a/smali_classes3/com/samsung/android/settings/inputmethod/TabWith4FingersPreferenceController.smali b/smali_classes3/com/samsung/android/settings/inputmethod/TabWith4FingersPreferenceController.smali
+index 4e415e4..4aa842f 100644
+--- a/smali_classes3/com/samsung/android/settings/inputmethod/TabWith4FingersPreferenceController.smali
++++ b/smali_classes3/com/samsung/android/settings/inputmethod/TabWith4FingersPreferenceController.smali
+@@ -27,13 +27,32 @@
+ .end method
+ 
+ .method public getAvailabilityStatus()I
+-    .registers 1
++    .registers 2
+ 
+     sget-object p0, Lcom/samsung/android/settings/display/SecDisplayUtils;->SIGNATURES:[Landroid/content/pm/Signature;
+ 
++    sget-boolean p0, Lcom/samsung/android/settings/desktop/ExternalDisplayUtils;->WIRELESS_DESKTOP_SUPPORTED_ONLY:Z
++
++    new-instance p0, Ljava/io/File;
++
++    const-string v0, "/sys/class/dp_sec/dex"
++
++    invoke-direct {p0, v0}, Ljava/io/File;-><init>(Ljava/lang/String;)V
++
++    invoke-virtual {p0}, Ljava/io/File;->exists()Z
++
++    move-result p0
++
++    if-nez p0, :cond_13
++
+     const/4 p0, 0x3
+ 
+     return p0
++
++    :cond_13
++    const/4 p0, 0x0
++
++    return p0
+ .end method
+ 
+ .method public bridge synthetic getBackgroundWorkerClass()Ljava/lang/Class;
+diff --git a/smali_classes3/com/samsung/android/settings/multidevices/dex/DexModePreferenceController.smali b/smali_classes3/com/samsung/android/settings/multidevices/dex/DexModePreferenceController.smali
+index d4ed7ca..08d6d16 100644
+--- a/smali_classes3/com/samsung/android/settings/multidevices/dex/DexModePreferenceController.smali
++++ b/smali_classes3/com/samsung/android/settings/multidevices/dex/DexModePreferenceController.smali
+@@ -191,13 +191,53 @@
+ .end method
+ 
+ .method public getAvailabilityStatus()I
+-    .registers 1
++    .registers 3
++
++    sget-object v0, Lcom/samsung/android/settings/display/SecDisplayUtils;->SIGNATURES:[Landroid/content/pm/Signature;
++
++    iget-object v0, p0, Lcom/android/settingslib/core/AbstractPreferenceController;->mContext:Landroid/content/Context;
++
++    invoke-static {v0}, Lcom/samsung/android/settings/desktop/ExternalDisplayUtils;->isWirelessDexOnlyDevice(Landroid/content/Context;)Z
++
++    move-result v0
++
++    if-eqz v0, :cond_b
++
++    goto :goto_22
++
++    :cond_b
++    new-instance v0, Ljava/io/File;
+ 
+-    sget-object p0, Lcom/samsung/android/settings/display/SecDisplayUtils;->SIGNATURES:[Landroid/content/pm/Signature;
++    const-string v1, "/sys/class/dp_sec/dex"
++
++    invoke-direct {v0, v1}, Ljava/io/File;-><init>(Ljava/lang/String;)V
++
++    invoke-virtual {v0}, Ljava/io/File;->exists()Z
++
++    move-result v0
++
++    if-nez v0, :cond_1a
+ 
+     const/4 p0, 0x3
+ 
+     return p0
++
++    :cond_1a
++    invoke-direct {p0}, Lcom/samsung/android/settings/multidevices/dex/DexModePreferenceController;->isSafeModeOn()Z
++
++    move-result p0
++
++    if-eqz p0, :cond_22
++
++    const/4 p0, 0x4
++
++    return p0
++
++    :cond_22
++    :goto_22
++    const/4 p0, 0x0
++
++    return p0
+ .end method
+ 
+ .method public bridge synthetic getBackgroundWorkerClass()Ljava/lang/Class;
+diff --git a/smali_classes3/com/samsung/android/settings/navigationbar/NavigationBarSettings.smali b/smali_classes3/com/samsung/android/settings/navigationbar/NavigationBarSettings.smali
+index b75edc1..0ff83c0 100644
+--- a/smali_classes3/com/samsung/android/settings/navigationbar/NavigationBarSettings.smali
++++ b/smali_classes3/com/samsung/android/settings/navigationbar/NavigationBarSettings.smali
+@@ -1186,7 +1186,7 @@
+ 
+     const/4 v9, 0x0
+ 
+-    if-eqz v3, :cond_ab
++    if-eqz v3, :cond_b2
+ 
+     invoke-static {v1}, Lcom/samsung/android/settings/taskbar/TaskBarUtils;->isInternalDex(Landroid/content/Context;)Z
+ 
+@@ -1198,7 +1198,7 @@
+ 
+     invoke-static {v8, v3}, Landroid/util/Log;->d(Ljava/lang/String;Ljava/lang/String;)I
+ 
+-    goto/16 :goto_ab
++    goto/16 :goto_b2
+ 
+     :cond_33
+     invoke-virtual {v1}, Landroid/content/Context;->getResources()Landroid/content/res/Resources;
+@@ -1299,29 +1299,38 @@
+     :goto_7e
+     if-nez v3, :cond_82
+ 
+-    if-eqz v10, :cond_ab
++    if-eqz v10, :cond_b2
+ 
+     :cond_82
+-    if-eqz v11, :cond_ab
++    if-eqz v11, :cond_b2
+ 
+-    if-nez v12, :cond_ab
++    if-nez v12, :cond_b2
+ 
+-    if-nez v13, :cond_ab
++    if-nez v13, :cond_b2
+ 
+     invoke-static {v1}, Lcom/samsung/android/settings/taskbar/TaskBarUtils;->isSamsungLauncher(Landroid/content/Context;)Z
+ 
+     move-result v3
+ 
+-    if-eqz v3, :cond_ab
++    if-eqz v3, :cond_b2
+ 
+     invoke-static {v1}, Lcom/android/settings/Utils;->isNewDexMode(Landroid/content/Context;)Z
+ 
+     move-result v3
+ 
+-    if-nez v3, :cond_ab
++    if-nez v3, :cond_b2
+ 
+     sget-object v3, Lcom/samsung/android/settings/display/SecDisplayUtils;->SIGNATURES:[Landroid/content/pm/Signature;
+ 
++    invoke-static {v1}, Lcom/samsung/android/settings/desktop/ExternalDisplayUtils;->isDexConnected(Landroid/content/Context;)Z
++
++    move-result v3
++
++    if-eqz v3, :cond_9d
++
++    goto :goto_b2
++
++    :cond_9d
+     new-instance v3, Lcom/samsung/android/settings/SettingsPreferenceFragmentLinkData;
+ 
+     invoke-direct {v3}, Lcom/samsung/android/settings/SettingsPreferenceFragmentLinkData;-><init>()V
+@@ -1340,34 +1349,34 @@
+ 
+     iput-object v10, v3, Lcom/samsung/android/settings/SettingsPreferenceFragmentLinkData;->intent:Landroid/content/Intent;
+ 
+-    goto :goto_ac
++    goto :goto_b3
+ 
+-    :cond_ab
+-    :goto_ab
++    :cond_b2
++    :goto_b2
+     move-object v3, v9
+ 
+-    :goto_ac
++    :goto_b3
+     invoke-static {}, Lcom/samsung/android/settings/Rune;->supportRelativeLink()Z
+ 
+     move-result v10
+ 
+-    if-nez v10, :cond_b4
++    if-nez v10, :cond_bb
+ 
+-    :goto_b2
++    :goto_b9
+     move-object v10, v9
+ 
+-    goto :goto_d7
++    goto :goto_de
+ 
+-    :cond_b4
++    :cond_bb
+     invoke-static {v1}, Lcom/samsung/android/settings/asbase/utils/VibUtils;->hasSystemVibrationMenu(Landroid/content/Context;)Z
+ 
+     move-result v10
+ 
+-    if-nez v10, :cond_bb
++    if-nez v10, :cond_c2
+ 
+-    goto :goto_b2
++    goto :goto_b9
+ 
+-    :cond_bb
++    :cond_c2
+     new-instance v10, Lcom/samsung/android/settings/SettingsPreferenceFragmentLinkData;
+ 
+     invoke-direct {v10}, Lcom/samsung/android/settings/SettingsPreferenceFragmentLinkData;-><init>()V
+@@ -1394,7 +1403,7 @@
+ 
+     iput-object v6, v10, Lcom/samsung/android/settings/SettingsPreferenceFragmentLinkData;->intent:Landroid/content/Intent;
+ 
+-    :goto_d7
++    :goto_de
+     const-string v6, "value"
+ 
+     const-string v11, "GET_global"
+@@ -1405,23 +1414,23 @@
+ 
+     move-result v13
+ 
+-    if-eqz v13, :cond_e5
++    if-eqz v13, :cond_ec
+ 
+-    if-eq v2, v7, :cond_e9
++    if-eq v2, v7, :cond_f0
+ 
+-    :cond_e5
++    :cond_ec
+     move/from16 v16, v4
+ 
+-    goto/16 :goto_1ad
++    goto/16 :goto_1b4
+ 
+-    :cond_e9
++    :cond_f0
+     new-instance v2, Lcom/samsung/android/settings/SettingsPreferenceFragmentLinkData;
+ 
+     invoke-direct {v2}, Lcom/samsung/android/settings/SettingsPreferenceFragmentLinkData;-><init>()V
+ 
+     const v13, 0x7f151e8a
+ 
+-    :try_start_f1
++    :try_start_f8
+     invoke-virtual {v1}, Landroid/content/Context;->getContentResolver()Landroid/content/ContentResolver;
+ 
+     move-result-object v14
+@@ -1429,13 +1438,13 @@
+     invoke-static {v12}, Landroid/net/Uri;->parse(Ljava/lang/String;)Landroid/net/Uri;
+ 
+     move-result-object v15
+-    :try_end_f9
+-    .catch Ljava/lang/IllegalArgumentException; {:try_start_f1 .. :try_end_f9} :catch_12a
+-    .catch Ljava/lang/NullPointerException; {:try_start_f1 .. :try_end_f9} :catch_12a
++    :try_end_100
++    .catch Ljava/lang/IllegalArgumentException; {:try_start_f8 .. :try_end_100} :catch_131
++    .catch Ljava/lang/NullPointerException; {:try_start_f8 .. :try_end_100} :catch_131
+ 
+     move/from16 v16, v4
+ 
+-    :try_start_fb
++    :try_start_102
+     const-string v4, "samsungwallet_open_quickaccess"
+ 
+     invoke-virtual {v14, v15, v11, v4, v9}, Landroid/content/ContentResolver;->call(Landroid/net/Uri;Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
+@@ -1452,16 +1461,16 @@
+ 
+     move-result v14
+ 
+-    if-lt v14, v7, :cond_10f
++    if-lt v14, v7, :cond_116
+ 
+     move v14, v7
+ 
+-    goto :goto_111
++    goto :goto_118
+ 
+-    :cond_10f
++    :cond_116
+     move/from16 v14, v16
+ 
+-    :goto_111
++    :goto_118
+     sput-boolean v14, Lcom/samsung/android/settings/navigationbar/NavigationBarSettingsUtil;->sIsWalletApp:Z
+ 
+     invoke-virtual {v4, v6}, Landroid/os/Bundle;->getString(Ljava/lang/String;)Ljava/lang/String;
+@@ -1471,41 +1480,41 @@
+     invoke-static {v4}, Ljava/lang/Integer;->parseInt(Ljava/lang/String;)I
+ 
+     move-result v4
+-    :try_end_11b
+-    .catch Ljava/lang/IllegalArgumentException; {:try_start_fb .. :try_end_11b} :catch_12c
+-    .catch Ljava/lang/NullPointerException; {:try_start_fb .. :try_end_11b} :catch_12c
++    :try_end_122
++    .catch Ljava/lang/IllegalArgumentException; {:try_start_102 .. :try_end_122} :catch_133
++    .catch Ljava/lang/NullPointerException; {:try_start_102 .. :try_end_122} :catch_133
+ 
+-    if-ne v4, v7, :cond_133
++    if-ne v4, v7, :cond_13a
+ 
+     sget-boolean v4, Lcom/samsung/android/settings/navigationbar/NavigationBarSettingsUtil;->sIsWalletApp:Z
+ 
+-    if-eqz v4, :cond_127
++    if-eqz v4, :cond_12e
+ 
+     const v4, 0x7f151e8b
+ 
+     iput v4, v2, Lcom/samsung/android/settings/SettingsPreferenceFragmentLinkData;->titleRes:I
+ 
+-    goto :goto_186
++    goto :goto_18d
+ 
+-    :cond_127
++    :cond_12e
+     iput v13, v2, Lcom/samsung/android/settings/SettingsPreferenceFragmentLinkData;->titleRes:I
+ 
+-    goto :goto_186
++    goto :goto_18d
+ 
+-    :catch_12a
++    :catch_131
+     move/from16 v16, v4
+ 
+-    :catch_12c
++    :catch_133
+     sput-boolean v16, Lcom/samsung/android/settings/navigationbar/NavigationBarSettingsUtil;->sIsWalletApp:Z
+ 
+     const-string v4, "Samsung wallet is not provisioned."
+ 
+     invoke-static {v8, v4}, Landroid/util/Log;->e(Ljava/lang/String;Ljava/lang/String;)I
+ 
+-    :cond_133
++    :cond_13a
+     const-string v4, "isProvisioned : "
+ 
+-    :try_start_135
++    :try_start_13c
+     invoke-static {v12}, Landroid/net/Uri;->parse(Ljava/lang/String;)Landroid/net/Uri;
+ 
+     move-result-object v12
+@@ -1528,16 +1537,16 @@
+ 
+     move-result v14
+ 
+-    if-ne v14, v7, :cond_14f
++    if-ne v14, v7, :cond_156
+ 
+     move v14, v7
+ 
+-    goto :goto_151
++    goto :goto_158
+ 
+-    :cond_14f
++    :cond_156
+     move/from16 v14, v16
+ 
+-    :goto_151
++    :goto_158
+     invoke-virtual {v1}, Landroid/content/Context;->getContentResolver()Landroid/content/ContentResolver;
+ 
+     move-result-object v15
+@@ -1556,16 +1565,16 @@
+ 
+     move-result v5
+ 
+-    if-ne v5, v7, :cond_167
++    if-ne v5, v7, :cond_16e
+ 
+     move v5, v7
+ 
+-    goto :goto_169
++    goto :goto_170
+ 
+-    :cond_167
++    :cond_16e
+     move/from16 v5, v16
+ 
+-    :goto_169
++    :goto_170
+     new-instance v6, Ljava/lang/StringBuilder;
+ 
+     invoke-direct {v6, v4}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
+@@ -1583,17 +1592,17 @@
+     move-result-object v4
+ 
+     invoke-static {v8, v4}, Landroid/util/Log;->d(Ljava/lang/String;Ljava/lang/String;)I
+-    :try_end_180
+-    .catch Ljava/lang/IllegalArgumentException; {:try_start_135 .. :try_end_180} :catch_1a8
+-    .catch Ljava/lang/NullPointerException; {:try_start_135 .. :try_end_180} :catch_1a8
++    :try_end_187
++    .catch Ljava/lang/IllegalArgumentException; {:try_start_13c .. :try_end_187} :catch_1af
++    .catch Ljava/lang/NullPointerException; {:try_start_13c .. :try_end_187} :catch_1af
+ 
+-    if-eqz v14, :cond_1ad
++    if-eqz v14, :cond_1b4
+ 
+-    if-eqz v5, :cond_1ad
++    if-eqz v5, :cond_1b4
+ 
+     iput v13, v2, Lcom/samsung/android/settings/SettingsPreferenceFragmentLinkData;->titleRes:I
+ 
+-    :goto_186
++    :goto_18d
+     const-string v4, "747002"
+ 
+     iput-object v4, v2, Lcom/samsung/android/settings/SettingsPreferenceFragmentLinkData;->flowId:Ljava/lang/String;
+@@ -1624,31 +1633,31 @@
+ 
+     iput-object v5, v2, Lcom/samsung/android/settings/SettingsPreferenceFragmentLinkData;->intent:Landroid/content/Intent;
+ 
+-    goto :goto_1ae
++    goto :goto_1b5
+ 
+-    :catch_1a8
++    :catch_1af
+     const-string v2, "Spay is not provisioned."
+ 
+     invoke-static {v8, v2}, Landroid/util/Log;->e(Ljava/lang/String;Ljava/lang/String;)I
+ 
+-    :cond_1ad
+-    :goto_1ad
++    :cond_1b4
++    :goto_1b4
+     move-object v2, v9
+ 
+-    :goto_1ae
++    :goto_1b5
+     invoke-static {}, Lcom/samsung/android/settings/Rune;->supportRelativeLink()Z
+ 
+     move-result v4
+ 
+-    if-eqz v4, :cond_1ec
++    if-eqz v4, :cond_1f3
+ 
+     sget-boolean v4, Lcom/samsung/android/settings/Rune;->FEATURE_SIDE_BUTTON_SUPPORT_AI_AGENT_APP:Z
+ 
+-    if-eqz v4, :cond_1b9
++    if-eqz v4, :cond_1c0
+ 
+-    goto :goto_1ec
++    goto :goto_1f3
+ 
+-    :cond_1b9
++    :cond_1c0
+     new-instance v9, Lcom/samsung/android/settings/SettingsPreferenceFragmentLinkData;
+ 
+     invoke-direct {v9}, Lcom/samsung/android/settings/SettingsPreferenceFragmentLinkData;-><init>()V
+@@ -1697,8 +1706,8 @@
+ 
+     iput-object v1, v9, Lcom/samsung/android/settings/SettingsPreferenceFragmentLinkData;->intent:Landroid/content/Intent;
+ 
+-    :cond_1ec
+-    :goto_1ec
++    :cond_1f3
++    :goto_1f3
+     filled-new-array {v3, v10, v2, v9}, [Lcom/samsung/android/settings/SettingsPreferenceFragmentLinkData;
+ 
+     move-result-object v1
+@@ -1707,8 +1716,8 @@
+ 
+     move/from16 v4, v16
+ 
+-    :goto_1f3
+-    if-ge v4, v2, :cond_1ff
++    :goto_1fa
++    if-ge v4, v2, :cond_206
+ 
+     aget-object v3, v1, v4
+ 
+@@ -1718,8 +1727,8 @@
+ 
+     add-int/lit8 v4, v4, 0x1
+ 
+-    goto :goto_1f3
++    goto :goto_1fa
+ 
+-    :cond_1ff
++    :cond_206
+     return-void
+ .end method
+-- 
+2.43.0
+
