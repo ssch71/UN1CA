@@ -5,6 +5,7 @@ if [ -f "$MODPATH/disable" ]; then
 fi
 
 ADD_TO_WORK_DIR "$MODPATH" "system" "system/etc/init/unica_bootlog.rc" 0 0 644 "u:object_r:system_file:s0"
+ADD_TO_WORK_DIR "$MODPATH" "system" "system/etc/unica_bootlog.sh" 0 0 644 "u:object_r:system_file:s0"
 
 PLAT_CIL="$WORK_DIR/system/system/etc/selinux/plat_sepolicy.cil"
 if ! grep -q "unica_bootlog" "$PLAT_CIL"; then
