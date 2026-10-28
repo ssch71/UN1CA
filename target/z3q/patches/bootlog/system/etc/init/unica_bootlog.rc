@@ -3,19 +3,28 @@
 # recovery without decrypting /data).
 # init fails to stat /system/bin/logcat directly ("Cannot find ...:
 # Permission denied"), so go through sh, which init starts fine elsewhere.
-# logcat is restarted if it exits (e.g. logd not up yet).
-service unica_bootlog /system/bin/sh -c "echo 'unica_bootlog: started' > /dev/kmsg; while true; do /system/bin/logcat -b main -b system -b crash -v brief -f /dev/kmsg *:I; sleep 1; done"
+# "logcat -f /dev/kmsg" exits right away, so feed kmsg one line per write
+# (kmsg rejects long writes) and send logcat's own errors there too.
+# init expands ${...} in service args, so shell variables are written $$.
+service unica_bootlog /system/bin/sh -c "echo 'unica_bootlog: started' > /dev/kmsg; while true; do /system/bin/logcat -b main -b system -b crash -v brief '*:I' 2>&1 | while IFS= read -r l; do echo \"L $${l:0:900}\" > /dev/kmsg; done; echo 'unica_bootlog: logcat exited' > /dev/kmsg; sleep 1; done"
     user root
     group root log
     seclabel u:r:unica_bootlog:s0
     disabled
 
-service unica_bootlog_file /system/bin/sh -c "while true; do /system/bin/logcat -b all -v threadtime -f /metadata/unica_boot.log -r 4096 -n 2; sleep 1; done"
+service unica_bootlog_file /system/bin/sh -c "echo started > /metadata/unica_boot.marker; sync; while true; do /system/bin/logcat -b all -v threadtime >> /metadata/unica_boot.log 2>&1; echo 'unica_bootlog_file: logcat exited' > /dev/kmsg; sleep 1; done"
     user root
     group root log
+    seclabel u:r:unica_bootlog:s0
+    disabled
+
+service unica_bootlog_sync /system/bin/sh -c "while true; do sleep 5; sync; done"
+    user root
+    group root
     seclabel u:r:unica_bootlog:s0
     disabled
 
 on early-fs
     start unica_bootlog
     start unica_bootlog_file
+    start unica_bootlog_sync
