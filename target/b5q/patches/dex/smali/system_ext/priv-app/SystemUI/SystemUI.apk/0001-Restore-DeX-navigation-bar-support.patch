@@ -1,0 +1,4954 @@
+From fc7699bf21e2b5d5b48cab6a9dcd1f2feeed60c0 Mon Sep 17 00:00:00 2001
+From: ssch71 <s01093450498@gmail.com>
+Date: Thu, 29 Oct 2026 00:00:00 +0900
+Subject: [PATCH] Restore DeX navigation bar support
+
+flip-qssi SystemUI is built with NAVBAR_DESKTOP folded to false, so R8
+stripped the desktop navbar/taskbar paths and left a null-throw stub in
+NavigationBarControllerImpl$2.onDisplayAddSystemDecorations, crashing
+SystemUI as soon as a DeX display is added. Port the desktop paths back
+from the S23 (qssi) build.
+---
+ smali/com/android/systemui/BasicRune.smali    |   4 +
+ .../systemui/LauncherProxyService.smali       |  35 +
+ .../NavigationBarControllerImpl$1.smali       | 163 +++-
+ .../NavigationBarControllerImpl$2.smali       | 126 ++-
+ ...llerImpl$AutoHideUiElementPerDisplay.smali | 109 +++
+ .../NavigationBarControllerImpl.smali         | 510 +++++++++++-
+ .../navigationbar/TaskbarDelegate.smali       | 513 +++++++++++-
+ .../DesktopModeInteractor$addCallback$2.smali |  95 +++
+ .../DesktopModeInteractor$addCallback$4.smali |  66 ++
+ .../interactor/DesktopModeInteractor.smali    |  97 ++-
+ .../store/NavBarStateManagerImpl.smali        | 586 +++++++------
+ .../NavBarStoreImpl$initInteractor$21.smali   |  44 +
+ .../navigationbar/store/NavBarStoreImpl.smali | 772 +++++++++---------
+ .../statusbar/phone/CentralSurfacesImpl.smali |  87 ++
+ 14 files changed, 2503 insertions(+), 704 deletions(-)
+ create mode 100644 smali_classes2/com/android/systemui/navigationbar/NavigationBarControllerImpl$AutoHideUiElementPerDisplay.smali
+ create mode 100644 smali_classes2/com/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$2.smali
+ create mode 100644 smali_classes2/com/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$4.smali
+ create mode 100644 smali_classes2/com/android/systemui/navigationbar/store/NavBarStoreImpl$initInteractor$21.smali
+
+diff --git a/smali/com/android/systemui/BasicRune.smali b/smali/com/android/systemui/BasicRune.smali
+index 5eb258b..7902acb 100644
+--- a/smali/com/android/systemui/BasicRune.smali
++++ b/smali/com/android/systemui/BasicRune.smali
+@@ -50,6 +50,8 @@
+ 
+ .field public static final NAVBAR_DC_MOTOR_HAPTIC_FEEDBACK:Z
+ 
++.field public static final NAVBAR_DESKTOP:Z
++
+ .field public static final NAVBAR_ENABLED:Z
+ 
+ .field public static final NAVBAR_ENABLED_HARD_KEY:Z
+@@ -982,6 +984,8 @@
+     :goto_2a8
+     sput-boolean v14, Lcom/android/systemui/BasicRune;->NAVBAR_MOVABLE_POSITION:Z
+ 
++    sput-boolean v12, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
++
+     sput-boolean v12, Lcom/android/systemui/BasicRune;->NAVBAR_OPEN_THEME:Z
+ 
+     if-nez v11, :cond_2b4
+diff --git a/smali/com/android/systemui/LauncherProxyService.smali b/smali/com/android/systemui/LauncherProxyService.smali
+index 018f4db..1c1e457 100644
+--- a/smali/com/android/systemui/LauncherProxyService.smali
++++ b/smali/com/android/systemui/LauncherProxyService.smali
+@@ -1733,3 +1733,38 @@
+ 
+     return-void
+ .end method
++
++.method public final onSystemBarAttributesChanged(II)V
++    .registers 4
++
++    const-string v0, "LauncherProxyService"
++
++    :try_start_2
++    iget-object p0, p0, Lcom/android/systemui/LauncherProxyService;->mLauncherProxy:Lcom/android/systemui/shared/recents/ILauncherProxy;
++
++    if-eqz p0, :cond_c
++
++    check-cast p0, Lcom/android/systemui/shared/recents/ILauncherProxy$Stub$Proxy;
++
++    invoke-virtual {p0, p1, p2}, Lcom/android/systemui/shared/recents/ILauncherProxy$Stub$Proxy;->onSystemBarAttributesChanged(II)V
++
++    return-void
++
++    :cond_c
++    const-string p0, "Failed to get launcher proxy for system bar attr change."
++
++    invoke-static {v0, p0}, Landroid/util/Log;->e(Ljava/lang/String;Ljava/lang/String;)I
++    :try_end_11
++    .catch Landroid/os/RemoteException; {:try_start_2 .. :try_end_11} :catch_12
++
++    return-void
++
++    :catch_12
++    move-exception p0
++
++    const-string p1, "Failed to call onSystemBarAttributesChanged()"
++
++    invoke-static {v0, p1, p0}, Landroid/util/Log;->e(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
++
++    return-void
++.end method
+diff --git a/smali_classes2/com/android/systemui/navigationbar/NavigationBarControllerImpl$1.smali b/smali_classes2/com/android/systemui/navigationbar/NavigationBarControllerImpl$1.smali
+index 764e537..091ccc5 100644
+--- a/smali_classes2/com/android/systemui/navigationbar/NavigationBarControllerImpl$1.smali
++++ b/smali_classes2/com/android/systemui/navigationbar/NavigationBarControllerImpl$1.smali
+@@ -24,10 +24,53 @@
+ 
+ # virtual methods
+ .method public final abortTransient(II)V
+-    .registers 3
++    .registers 6
++
++    sget-boolean v0, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
++
++    if-eqz v0, :cond_29
++
++    iget-object p0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl$1;->this$0:Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;
++
++    iget-object v1, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mDesktopDisplayIds:Ljava/util/ArrayList;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object v2
++
++    invoke-virtual {v1, v2}, Ljava/util/ArrayList;->contains(Ljava/lang/Object;)Z
++
++    move-result v1
++
++    if-eqz v1, :cond_29
++
++    invoke-static {}, Landroid/view/WindowInsets$Type;->navigationBars()I
++
++    move-result v1
++
++    and-int/2addr p2, v1
++
++    if-nez p2, :cond_1a
++
++    goto :goto_29
++
++    :cond_1a
++    if-eqz v0, :cond_29
++
++    invoke-virtual {p0, p1}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->isTransientShowingForDisplay(I)Z
++
++    move-result p2
+ 
+-    sget-boolean p0, Lcom/android/systemui/BasicRune;->ONE_UI_8_5:Z
++    if-eqz p2, :cond_29
+ 
++    const/4 p2, 0x0
++
++    invoke-virtual {p0, p1, p2}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->setTransientShowingForDisplay(IZ)V
++
++    invoke-virtual {p0, p1}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->onTransientStateChangedForDisplay(I)V
++
++    :cond_29
++    :goto_29
+     return-void
+ .end method
+ 
+@@ -104,8 +147,77 @@
+ .method public final onSystemBarAttributesChanged(II[Lcom/android/internal/view/AppearanceRegion;ZIILjava/lang/String;[Lcom/android/internal/statusbar/LetterboxDetails;)V
+     .registers 9
+ 
+-    sget-boolean p0, Lcom/android/systemui/BasicRune;->ONE_UI_8_5:Z
++    sget-boolean p3, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
++
++    if-eqz p3, :cond_44
++
++    iget-object p0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl$1;->this$0:Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;
++
++    iget-object p3, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mDesktopDisplayIds:Ljava/util/ArrayList;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object p6
++
++    invoke-virtual {p3, p6}, Ljava/util/ArrayList;->contains(Ljava/lang/Object;)Z
++
++    move-result p3
++
++    if-eqz p3, :cond_44
++
++    iget-object p3, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mLauncherProxyService:Lcom/android/systemui/LauncherProxyService;
++
++    invoke-virtual {p3, p1, p5}, Lcom/android/systemui/LauncherProxyService;->onSystemBarAttributesChanged(II)V
++
++    iget-object p0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mTaskbarDelegate:Lcom/android/systemui/navigationbar/TaskbarDelegate;
++
++    invoke-virtual {p0}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
++
++    new-instance p3, Lcom/android/systemui/shared/navigationbar/NavBarEvents;
++
++    invoke-direct {p3}, Lcom/android/systemui/shared/navigationbar/NavBarEvents;-><init>()V
++
++    sget-object p5, Lcom/android/systemui/shared/navigationbar/NavBarEvents$EventType;->ON_APPEARANCE_CHANGED:Lcom/android/systemui/shared/navigationbar/NavBarEvents$EventType;
+ 
++    iput-object p5, p3, Lcom/android/systemui/shared/navigationbar/NavBarEvents;->eventType:Lcom/android/systemui/shared/navigationbar/NavBarEvents$EventType;
++
++    const p5, -0x200001
++
++    and-int/2addr p5, p2
++
++    iput p5, p3, Lcom/android/systemui/shared/navigationbar/NavBarEvents;->appearance:I
++
++    iput p1, p3, Lcom/android/systemui/shared/navigationbar/NavBarEvents;->displayId:I
++
++    :try_start_2d
++    iget-object p0, p0, Lcom/android/systemui/navigationbar/TaskbarDelegate;->mLauncherProxyService:Lcom/android/systemui/LauncherProxyService;
++
++    iget-object p0, p0, Lcom/android/systemui/LauncherProxyService;->mLauncherProxy:Lcom/android/systemui/shared/recents/ILauncherProxy;
++
++    if-eqz p0, :cond_41
++
++    check-cast p0, Lcom/android/systemui/shared/recents/ILauncherProxy$Stub$Proxy;
++
++    invoke-virtual {p0, p3}, Lcom/android/systemui/shared/recents/ILauncherProxy$Stub$Proxy;->handleNavigationBarEvent(Lcom/android/systemui/shared/navigationbar/NavBarEvents;)V
++    :try_end_38
++    .catch Landroid/os/RemoteException; {:try_start_2d .. :try_end_38} :catch_39
++
++    goto :goto_41
++
++    :catch_39
++    move-exception p0
++
++    const-string p3, "TaskbarDelegate"
++
++    const-string p5, "Failed to call handleNavigationBarEvent()"
++
++    invoke-static {p3, p5, p0}, Landroid/util/Log;->e(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
++
++    :cond_41
++    :goto_41
++    invoke-static {p7, p2, p1, p4}, Lcom/android/systemui/navigationbar/TaskbarDelegate;->loggingAttributesChanged(Ljava/lang/String;IIZ)V
++
++    :cond_44
+     return-void
+ .end method
+ 
+@@ -451,9 +563,50 @@
+ .end method
+ 
+ .method public final showTransient(IIZ)V
+-    .registers 4
++    .registers 5
++
++    sget-boolean p3, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
++
++    if-eqz p3, :cond_27
++
++    iget-object p0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl$1;->this$0:Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;
++
++    iget-object p3, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mDesktopDisplayIds:Ljava/util/ArrayList;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object v0
++
++    invoke-virtual {p3, v0}, Ljava/util/ArrayList;->contains(Ljava/lang/Object;)Z
++
++    move-result p3
++
++    if-eqz p3, :cond_27
++
++    invoke-static {}, Landroid/view/WindowInsets$Type;->navigationBars()I
++
++    move-result p3
++
++    and-int/2addr p2, p3
++
++    if-nez p2, :cond_1a
++
++    goto :goto_27
++
++    :cond_1a
++    invoke-virtual {p0, p1}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->isTransientShowingForDisplay(I)Z
++
++    move-result p2
++
++    if-nez p2, :cond_27
++
++    const/4 p2, 0x1
++
++    invoke-virtual {p0, p1, p2}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->setTransientShowingForDisplay(IZ)V
+ 
+-    sget-boolean p0, Lcom/android/systemui/BasicRune;->ONE_UI_8_5:Z
++    invoke-virtual {p0, p1}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->onTransientStateChangedForDisplay(I)V
+ 
++    :cond_27
++    :goto_27
+     return-void
+ .end method
+diff --git a/smali_classes2/com/android/systemui/navigationbar/NavigationBarControllerImpl$2.smali b/smali_classes2/com/android/systemui/navigationbar/NavigationBarControllerImpl$2.smali
+index 6116f50..04b4a24 100644
+--- a/smali_classes2/com/android/systemui/navigationbar/NavigationBarControllerImpl$2.smali
++++ b/smali_classes2/com/android/systemui/navigationbar/NavigationBarControllerImpl$2.smali
+@@ -95,18 +95,18 @@
+ 
+     move-result-object v2
+ 
+-    const/4 v3, 0x0
+-
+     if-nez v2, :cond_46
+ 
+-    invoke-virtual {p0, v0, v3, v3}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->createNavigationBar(Landroid/view/Display;Landroid/os/Bundle;Lcom/android/internal/statusbar/RegisterStatusBarResult;)V
++    const/4 v2, 0x0
++
++    invoke-virtual {p0, v0, v2, v2}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->createNavigationBar(Landroid/view/Display;Landroid/os/Bundle;Lcom/android/internal/statusbar/RegisterStatusBarResult;)V
+ 
+     :cond_46
+-    sget-boolean v2, Lcom/android/systemui/BasicRune;->NAVBAR_ENABLED:Z
++    sget-boolean v2, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
+ 
+-    if-eqz v2, :cond_83
++    if-eqz v2, :cond_bf
+ 
+-    if-eqz v0, :cond_83
++    if-eqz v0, :cond_bf
+ 
+     new-instance v2, Landroid/view/DisplayInfo;
+ 
+@@ -116,58 +116,118 @@
+ 
+     iget v2, v2, Landroid/view/DisplayInfo;->flags:I
+ 
+-    const/high16 v4, 0x20000
++    const/high16 v3, 0x20000
++
++    and-int/2addr v2, v3
++
++    if-eqz v2, :cond_a7
++
++    iget-object v2, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mDesktopDisplayIds:Ljava/util/ArrayList;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object v3
++
++    invoke-virtual {v2, v3}, Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z
++
++    iget-object v2, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mContext:Landroid/content/Context;
++
++    invoke-virtual {v2, v0}, Landroid/content/Context;->createDisplayContext(Landroid/view/Display;)Landroid/content/Context;
++
++    move-result-object v0
++
++    iget-object v2, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mAutoHideControllerFactory:Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl$Factory;
++
++    new-instance v3, Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl;
++
++    iget-object v4, v2, Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl$Factory;->mHandler:Landroid/os/Handler;
++
++    iget-object v2, v2, Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl$Factory;->mIWindowManager:Landroid/view/IWindowManager;
++
++    invoke-direct {v3, v0, v4, v2}, Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl;-><init>(Landroid/content/Context;Landroid/os/Handler;Landroid/view/IWindowManager;)V
++
++    new-instance v0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl$AutoHideUiElementPerDisplay;
++
++    invoke-direct {v0, p0, p1}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl$AutoHideUiElementPerDisplay;-><init>(Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;I)V
++
++    sget-boolean v2, Lcom/android/systemui/BasicRune;->NAVBAR_POLICY_VISIBILITY:Z
++
++    if-eqz v2, :cond_7e
++
++    invoke-virtual {v3, v0}, Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl;->registerElementToObserver(Lcom/android/systemui/statusbar/AutoHideUiElement;)V
++
++    goto :goto_80
++
++    :cond_7e
++    iput-object v0, v3, Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl;->mNavigationBar:Lcom/android/systemui/statusbar/AutoHideUiElement;
++
++    :goto_80
++    iget-object v2, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mAutoHideUiElements:Ljava/util/Map;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object v4
+ 
+-    and-int/2addr v2, v4
++    check-cast v2, Ljava/util/HashMap;
++
++    invoke-virtual {v2, v4, v0}, Ljava/util/HashMap;->put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
++
++    iget-object v0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mAutoHideControllers:Ljava/util/Map;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object v2
++
++    check-cast v0, Ljava/util/HashMap;
++
++    invoke-virtual {v0, v2, v3}, Ljava/util/HashMap;->put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
++
++    iget-object v0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mTransientShowing:Ljava/util/Map;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object v2
+ 
+-    if-nez v2, :cond_74
++    sget-object v3, Ljava/lang/Boolean;->FALSE:Ljava/lang/Boolean;
+ 
++    invoke-static {v3}, Ljava/util/Optional;->of(Ljava/lang/Object;)Ljava/util/Optional;
++
++    move-result-object v3
++
++    check-cast v0, Ljava/util/HashMap;
++
++    invoke-virtual {v0, v2, v3}, Ljava/util/HashMap;->put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
++
++    :cond_a7
+     iget-object v0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mTaskbarDelegate:Lcom/android/systemui/navigationbar/TaskbarDelegate;
+ 
+     iget-boolean v0, v0, Lcom/android/systemui/navigationbar/TaskbarDelegate;->mInitialized:Z
+ 
+-    if-nez v0, :cond_83
++    if-nez v0, :cond_bf
+ 
+-    :try_start_61
++    :try_start_ad
+     iget-object p0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mLauncherProxyService:Lcom/android/systemui/LauncherProxyService;
+ 
+     iget-object p0, p0, Lcom/android/systemui/LauncherProxyService;->mLauncherProxy:Lcom/android/systemui/shared/recents/ILauncherProxy;
+ 
+-    if-eqz p0, :cond_83
++    if-eqz p0, :cond_bf
+ 
+     check-cast p0, Lcom/android/systemui/shared/recents/ILauncherProxy$Stub$Proxy;
+ 
+     invoke-virtual {p0, p1}, Lcom/android/systemui/shared/recents/ILauncherProxy$Stub$Proxy;->onDisplayAddSystemDecorations(I)V
+-    :try_end_6c
+-    .catch Landroid/os/RemoteException; {:try_start_61 .. :try_end_6c} :catch_6d
++    :try_end_b8
++    .catch Landroid/os/RemoteException; {:try_start_ad .. :try_end_b8} :catch_b9
+ 
+     return-void
+ 
+-    :catch_6d
++    :catch_b9
+     move-exception p0
+ 
+     const-string p1, "onDisplayAddSystemDecorations() failed"
+ 
+     invoke-static {v1, p1, p0}, Landroid/util/Log;->e(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
+ 
+-    return-void
+-
+-    :cond_74
+-    iget-object v1, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mDesktopDisplayIds:Ljava/util/ArrayList;
+-
+-    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
+-
+-    move-result-object p1
+-
+-    invoke-virtual {v1, p1}, Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z
+-
+-    iget-object p0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mContext:Landroid/content/Context;
+-
+-    invoke-virtual {p0, v0}, Landroid/content/Context;->createDisplayContext(Landroid/view/Display;)Landroid/content/Context;
+-
+-    throw v3
+-
+-    :cond_83
++    :cond_bf
+     return-void
+ .end method
+ 
+diff --git a/smali_classes2/com/android/systemui/navigationbar/NavigationBarControllerImpl$AutoHideUiElementPerDisplay.smali b/smali_classes2/com/android/systemui/navigationbar/NavigationBarControllerImpl$AutoHideUiElementPerDisplay.smali
+new file mode 100644
+index 0000000..1a52036
+--- /dev/null
++++ b/smali_classes2/com/android/systemui/navigationbar/NavigationBarControllerImpl$AutoHideUiElementPerDisplay.smali
+@@ -0,0 +1,109 @@
++.class public Lcom/android/systemui/navigationbar/NavigationBarControllerImpl$AutoHideUiElementPerDisplay;
++.super Ljava/lang/Object;
++.source "qb/115377634 67532c40eb579d358d88853dc981ad7d4d1481b384c76a688c5b519328094be8"
++
++# interfaces
++.implements Lcom/android/systemui/statusbar/AutoHideUiElement;
++
++
++# instance fields
++.field public final displayId:I
++
++.field public final synthetic this$0:Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;
++
++
++# direct methods
++.method public constructor <init>(Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;I)V
++    .registers 3
++
++    iput-object p1, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl$AutoHideUiElementPerDisplay;->this$0:Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;
++
++    invoke-direct {p0}, Ljava/lang/Object;-><init>()V
++
++    iput p2, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl$AutoHideUiElementPerDisplay;->displayId:I
++
++    return-void
++.end method
++
++
++# virtual methods
++.method public final hide()V
++    .registers 3
++
++    iget-object v0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl$AutoHideUiElementPerDisplay;->this$0:Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;
++
++    invoke-virtual {v0}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
++
++    sget-boolean v1, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
++
++    if-eqz v1, :cond_18
++
++    iget p0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl$AutoHideUiElementPerDisplay;->displayId:I
++
++    invoke-virtual {v0, p0}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->isTransientShowingForDisplay(I)Z
++
++    move-result v1
++
++    if-eqz v1, :cond_18
++
++    const/4 v1, 0x0
++
++    invoke-virtual {v0, p0, v1}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->setTransientShowingForDisplay(IZ)V
++
++    invoke-virtual {v0, p0}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->onTransientStateChangedForDisplay(I)V
++
++    :cond_18
++    return-void
++.end method
++
++.method public final isVisible()Z
++    .registers 2
++
++    iget-object v0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl$AutoHideUiElementPerDisplay;->this$0:Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;
++
++    iget p0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl$AutoHideUiElementPerDisplay;->displayId:I
++
++    invoke-virtual {v0, p0}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->isTransientShowingForDisplay(I)Z
++
++    move-result p0
++
++    return p0
++.end method
++
++.method public final synchronizeState()V
++    .registers 5
++
++    iget-object p0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl$AutoHideUiElementPerDisplay;->this$0:Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;
++
++    iget-object v0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mDisplayTracker:Lcom/android/systemui/settings/DisplayTracker;
++
++    check-cast v0, Lcom/android/systemui/settings/DisplayTrackerImpl;
++
++    iget-object v0, v0, Lcom/android/systemui/settings/DisplayTrackerImpl;->displayManager:Landroid/hardware/display/DisplayManager;
++
++    invoke-virtual {v0}, Landroid/hardware/display/DisplayManager;->getDisplays()[Landroid/view/Display;
++
++    move-result-object v0
++
++    array-length v1, v0
++
++    const/4 v2, 0x0
++
++    :goto_e
++    if-ge v2, v1, :cond_1c
++
++    aget-object v3, v0, v2
++
++    invoke-virtual {v3}, Landroid/view/Display;->getDisplayId()I
++
++    move-result v3
++
++    invoke-virtual {p0, v3}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->checkNavBarModes(I)V
++
++    add-int/lit8 v2, v2, 0x1
++
++    goto :goto_e
++
++    :cond_1c
++    return-void
++.end method
+diff --git a/smali_classes2/com/android/systemui/navigationbar/NavigationBarControllerImpl.smali b/smali_classes2/com/android/systemui/navigationbar/NavigationBarControllerImpl.smali
+index 0fd0b4a..65d744e 100644
+--- a/smali_classes2/com/android/systemui/navigationbar/NavigationBarControllerImpl.smali
++++ b/smali_classes2/com/android/systemui/navigationbar/NavigationBarControllerImpl.smali
+@@ -15,6 +15,8 @@
+ 
+ .field public isMultiModalChecked:Z
+ 
++.field public final mAutoHideControllerFactory:Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl$Factory;
++
+ .field public final mAutoHideControllers:Ljava/util/Map;
+ 
+ .field public final mAutoHideUiElements:Ljava/util/Map;
+@@ -385,9 +387,22 @@
+     iput-object p2, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mLauncherProxyService:Lcom/android/systemui/LauncherProxyService;
+ 
+     :cond_11e
++    sget-boolean v0, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
++
++    if-eqz v0, :cond_12b
++
++    move-object/from16 v0, p13
++
++    iput-object v0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mAutoHideControllerFactory:Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl$Factory;
++
++    iget-object v0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mLauncherProxyService:Lcom/android/systemui/LauncherProxyService;
++
++    invoke-virtual {v0, p0}, Lcom/android/systemui/LauncherProxyService;->addCallback(Lcom/android/systemui/LauncherProxyService$LauncherProxyListener;)V
++
++    :cond_12b
+     sget-boolean v0, Lcom/android/systemui/BasicRune;->NAVBAR_ENABLED_HARD_KEY:Z
+ 
+-    if-eqz v0, :cond_129
++    if-eqz v0, :cond_136
+ 
+     new-instance v0, Lcom/android/systemui/navigationbar/ScreenPinningNotify;
+ 
+@@ -395,7 +410,7 @@
+ 
+     iput-object v0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mScreenPinningNotify:Lcom/android/systemui/navigationbar/ScreenPinningNotify;
+ 
+-    :cond_129
++    :cond_136
+     return-void
+ .end method
+ 
+@@ -1687,18 +1702,159 @@
+ .end method
+ 
+ .method public final onConnectionChanged(Z)V
+-    .registers 2
++    .registers 8
++
++    sget-boolean p1, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
++
++    if-eqz p1, :cond_58
++
++    iget-object v0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mDisplayManager:Landroid/hardware/display/DisplayManager;
++
++    if-nez v0, :cond_9
++
++    goto :goto_58
++
++    :cond_9
++    const/4 v0, 0x0
++
++    if-eqz p1, :cond_32
++
++    iget-object p1, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mDesktopDisplayIds:Ljava/util/ArrayList;
++
++    invoke-virtual {p1}, Ljava/util/ArrayList;->isEmpty()Z
+ 
+-    sget-boolean p0, Lcom/android/systemui/BasicRune;->ONE_UI_8_5:Z
++    move-result p1
++
++    if-nez p1, :cond_32
++
++    iget-object p1, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mDesktopDisplayIds:Ljava/util/ArrayList;
++
++    invoke-virtual {p1}, Ljava/util/ArrayList;->size()I
++
++    move-result v1
++
++    move v2, v0
++
++    :goto_1b
++    if-ge v2, v1, :cond_2d
++
++    invoke-virtual {p1, v2}, Ljava/util/ArrayList;->get(I)Ljava/lang/Object;
+ 
++    move-result-object v3
++
++    add-int/lit8 v2, v2, 0x1
++
++    check-cast v3, Ljava/lang/Integer;
++
++    invoke-virtual {v3}, Ljava/lang/Integer;->intValue()I
++
++    move-result v3
++
++    invoke-virtual {p0, v3}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->removeAutoHideControllerForDisplay(I)V
++
++    goto :goto_1b
++
++    :cond_2d
++    iget-object p1, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mDesktopDisplayIds:Ljava/util/ArrayList;
++
++    invoke-virtual {p1}, Ljava/util/ArrayList;->clear()V
++
++    :cond_32
++    iget-object p1, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mDisplayManager:Landroid/hardware/display/DisplayManager;
++
++    invoke-virtual {p1}, Landroid/hardware/display/DisplayManager;->getDisplays()[Landroid/view/Display;
++
++    move-result-object p1
++
++    new-instance v1, Landroid/view/DisplayInfo;
++
++    invoke-direct {v1}, Landroid/view/DisplayInfo;-><init>()V
++
++    array-length v2, p1
++
++    :goto_3e
++    if-ge v0, v2, :cond_58
++
++    aget-object v3, p1, v0
++
++    invoke-virtual {v3, v1}, Landroid/view/Display;->getDisplayInfo(Landroid/view/DisplayInfo;)Z
++
++    iget v4, v1, Landroid/view/DisplayInfo;->flags:I
++
++    const/high16 v5, 0x20000
++
++    and-int/2addr v4, v5
++
++    if-eqz v4, :cond_55
++
++    iget-object v4, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mDisplayDecorationListener:Lcom/android/systemui/navigationbar/NavigationBarControllerImpl$2;
++
++    invoke-virtual {v3}, Landroid/view/Display;->getDisplayId()I
++
++    move-result v3
++
++    invoke-virtual {v4, v3}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl$2;->onDisplayAddSystemDecorations(I)V
++
++    :cond_55
++    add-int/lit8 v0, v0, 0x1
++
++    goto :goto_3e
++
++    :cond_58
++    :goto_58
+     return-void
+ .end method
+ 
+ .method public final onInitializedTaskbarNavigationBar()V
+-    .registers 1
++    .registers 3
++
++    sget-boolean v0, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
++
++    if-eqz v0, :cond_2a
++
++    iget-object v0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mDesktopDisplayIds:Ljava/util/ArrayList;
++
++    invoke-virtual {v0}, Ljava/util/ArrayList;->isEmpty()Z
++
++    move-result v0
++
++    if-nez v0, :cond_2a
++
++    iget-object v0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mTaskbarDelegate:Lcom/android/systemui/navigationbar/TaskbarDelegate;
++
++    iget-boolean v1, v0, Lcom/android/systemui/navigationbar/TaskbarDelegate;->mInitialized:Z
++
++    if-nez v1, :cond_2a
++
++    invoke-virtual {v0}, Lcom/android/systemui/navigationbar/TaskbarDelegate;->updateTaskbarButtonIconsAndHints()Lcom/android/systemui/shared/navigationbar/NavBarEvents;
++
++    move-result-object v0
++
++    :try_start_16
++    iget-object p0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mLauncherProxyService:Lcom/android/systemui/LauncherProxyService;
++
++    iget-object p0, p0, Lcom/android/systemui/LauncherProxyService;->mLauncherProxy:Lcom/android/systemui/shared/recents/ILauncherProxy;
++
++    if-eqz p0, :cond_2a
++
++    check-cast p0, Lcom/android/systemui/shared/recents/ILauncherProxy$Stub$Proxy;
++
++    invoke-virtual {p0, v0}, Lcom/android/systemui/shared/recents/ILauncherProxy$Stub$Proxy;->handleNavigationBarEvent(Lcom/android/systemui/shared/navigationbar/NavBarEvents;)V
++    :try_end_21
++    .catch Landroid/os/RemoteException; {:try_start_16 .. :try_end_21} :catch_22
++
++    return-void
++
++    :catch_22
++    move-exception p0
++
++    const-string v0, "NavigationBarControllerImpl"
++
++    const-string v1, "Failed to call sendNavBarEvent()"
+ 
+-    sget-boolean p0, Lcom/android/systemui/BasicRune;->ONE_UI_8_5:Z
++    invoke-static {v0, v1, p0}, Landroid/util/Log;->e(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
+ 
++    :cond_2a
+     return-void
+ .end method
+ 
+@@ -1732,33 +1888,77 @@
+ .end method
+ 
+ .method public final onTaskbarAutohideSuspendForDisplay(IZ)V
+-    .registers 4
++    .registers 5
+ 
+-    new-instance p0, Ljava/lang/StringBuilder;
++    new-instance v0, Ljava/lang/StringBuilder;
+ 
+-    const-string v0, "onTaskbarAutohideSuspendForDisplay suspend="
++    const-string v1, "onTaskbarAutohideSuspendForDisplay suspend="
+ 
+-    invoke-direct {p0, v0}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
++    invoke-direct {v0, v1}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
+ 
+-    invoke-virtual {p0, p2}, Ljava/lang/StringBuilder;->append(Z)Ljava/lang/StringBuilder;
++    invoke-virtual {v0, p2}, Ljava/lang/StringBuilder;->append(Z)Ljava/lang/StringBuilder;
+ 
+-    const-string p2, " displayId="
++    const-string v1, " displayId="
+ 
+-    invoke-virtual {p0, p2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++    invoke-virtual {v0, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+ 
+-    invoke-virtual {p0, p1}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
++    invoke-virtual {v0, p1}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
+ 
+-    invoke-virtual {p0}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
++    invoke-virtual {v0}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
++
++    move-result-object v0
++
++    const-string v1, "NavigationBarControllerImpl"
++
++    invoke-static {v1, v0}, Landroid/util/Log;->d(Ljava/lang/String;Ljava/lang/String;)I
++
++    sget-boolean v0, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
++
++    if-eqz v0, :cond_48
++
++    iget-object v0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mDesktopDisplayIds:Ljava/util/ArrayList;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object v1
++
++    invoke-virtual {v0, v1}, Ljava/util/ArrayList;->contains(Ljava/lang/Object;)Z
++
++    move-result v0
++
++    if-eqz v0, :cond_48
++
++    iget-object p0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mAutoHideControllers:Ljava/util/Map;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object p1
++
++    check-cast p0, Ljava/util/HashMap;
++
++    invoke-virtual {p0, p1}, Ljava/util/HashMap;->get(Ljava/lang/Object;)Ljava/lang/Object;
+ 
+     move-result-object p0
+ 
+-    const-string p1, "NavigationBarControllerImpl"
++    check-cast p0, Lcom/android/systemui/statusbar/phone/AutoHideController;
+ 
+-    invoke-static {p1, p0}, Landroid/util/Log;->d(Ljava/lang/String;Ljava/lang/String;)I
++    if-eqz p0, :cond_48
++
++    check-cast p0, Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl;
++
++    iput-boolean p2, p0, Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl;->mTaskBarSuspend:Z
++
++    if-eqz p2, :cond_45
+ 
+-    sget-boolean p0, Lcom/android/systemui/BasicRune;->ONE_UI_8_5:Z
++    invoke-virtual {p0}, Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl;->suspendAutoHide()V
+ 
+     return-void
++
++    :cond_45
++    invoke-virtual {p0}, Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl;->resumeSuspendedAutoHideImmediately()V
++
++    :cond_48
++    return-void
+ .end method
+ 
+ .method public final removeNavigationBar(I)V
+@@ -2138,3 +2338,277 @@
+     :cond_48
+     return v0
+ .end method
++
++.method public final isTransientShowingForDisplay(I)Z
++    .registers 5
++
++    sget-boolean v0, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
++
++    const/4 v1, 0x0
++
++    if-eqz v0, :cond_2c
++
++    iget-object v0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mTransientShowing:Ljava/util/Map;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object v2
++
++    invoke-interface {v0, v2}, Ljava/util/Map;->containsKey(Ljava/lang/Object;)Z
++
++    move-result v0
++
++    if-eqz v0, :cond_2c
++
++    iget-object p0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mTransientShowing:Ljava/util/Map;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object p1
++
++    invoke-interface {p0, p1}, Ljava/util/Map;->get(Ljava/lang/Object;)Ljava/lang/Object;
++
++    move-result-object p0
++
++    check-cast p0, Ljava/util/Optional;
++
++    if-eqz p0, :cond_2c
++
++    sget-object p1, Ljava/lang/Boolean;->FALSE:Ljava/lang/Boolean;
++
++    invoke-virtual {p0, p1}, Ljava/util/Optional;->orElse(Ljava/lang/Object;)Ljava/lang/Object;
++
++    move-result-object p0
++
++    check-cast p0, Ljava/lang/Boolean;
++
++    invoke-virtual {p0}, Ljava/lang/Boolean;->booleanValue()Z
++
++    move-result p0
++
++    return p0
++
++    :cond_2c
++    return v1
++.end method
++
++.method public final onTransientStateChangedForDisplay(I)V
++    .registers 5
++
++    sget-boolean v0, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
++
++    if-eqz v0, :cond_40
++
++    invoke-virtual {p0, p1}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->isTransientShowingForDisplay(I)Z
++
++    move-result v0
++
++    iget-object v1, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mAutoHideControllers:Ljava/util/Map;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object v2
++
++    check-cast v1, Ljava/util/HashMap;
++
++    invoke-virtual {v1, v2}, Ljava/util/HashMap;->get(Ljava/lang/Object;)Ljava/lang/Object;
++
++    move-result-object v1
++
++    check-cast v1, Lcom/android/systemui/statusbar/phone/AutoHideController;
++
++    if-eqz v0, :cond_1f
++
++    if-eqz v1, :cond_1f
++
++    check-cast v1, Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl;
++
++    invoke-virtual {v1}, Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl;->touchAutoHide()V
++
++    :cond_1f
++    new-instance v1, Lcom/android/systemui/shared/navigationbar/NavBarEvents;
++
++    invoke-direct {v1}, Lcom/android/systemui/shared/navigationbar/NavBarEvents;-><init>()V
++
++    sget-object v2, Lcom/android/systemui/shared/navigationbar/NavBarEvents$EventType;->ON_TRANSIENT_SHOWING_CHANGED:Lcom/android/systemui/shared/navigationbar/NavBarEvents$EventType;
++
++    iput-object v2, v1, Lcom/android/systemui/shared/navigationbar/NavBarEvents;->eventType:Lcom/android/systemui/shared/navigationbar/NavBarEvents$EventType;
++
++    iput-boolean v0, v1, Lcom/android/systemui/shared/navigationbar/NavBarEvents;->transientShowing:Z
++
++    iput p1, v1, Lcom/android/systemui/shared/navigationbar/NavBarEvents;->displayId:I
++
++    :try_start_2c
++    iget-object p0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mLauncherProxyService:Lcom/android/systemui/LauncherProxyService;
++
++    iget-object p0, p0, Lcom/android/systemui/LauncherProxyService;->mLauncherProxy:Lcom/android/systemui/shared/recents/ILauncherProxy;
++
++    if-eqz p0, :cond_40
++
++    check-cast p0, Lcom/android/systemui/shared/recents/ILauncherProxy$Stub$Proxy;
++
++    invoke-virtual {p0, v1}, Lcom/android/systemui/shared/recents/ILauncherProxy$Stub$Proxy;->handleNavigationBarEvent(Lcom/android/systemui/shared/navigationbar/NavBarEvents;)V
++    :try_end_37
++    .catch Landroid/os/RemoteException; {:try_start_2c .. :try_end_37} :catch_38
++
++    return-void
++
++    :catch_38
++    move-exception p0
++
++    const-string p1, "NavigationBarControllerImpl"
++
++    const-string v0, "Failed to call sendNavBarEvent()"
++
++    invoke-static {p1, v0, p0}, Landroid/util/Log;->e(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
++
++    :cond_40
++    return-void
++.end method
++
++.method public final setTransientShowingForDisplay(IZ)V
++    .registers 6
++
++    sget-boolean v0, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
++
++    if-eqz v0, :cond_2f
++
++    iget-object v0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mTransientShowing:Ljava/util/Map;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object v1
++
++    check-cast v0, Ljava/util/HashMap;
++
++    invoke-virtual {v0, v1}, Ljava/util/HashMap;->containsKey(Ljava/lang/Object;)Z
++
++    move-result v0
++
++    if-eqz v0, :cond_2f
++
++    const-string/jumbo v0, "setTransientShowingForDisplay:"
++
++    const-string v1, " : "
++
++    const-string v2, "NavigationBarControllerImpl"
++
++    invoke-static {v0, p1, v1, p2, v2}, Lcom/android/keyguard/EmergencyButton$$ExternalSyntheticOutline0;->m(Ljava/lang/String;ILjava/lang/String;ZLjava/lang/String;)V
++
++    iget-object p0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mTransientShowing:Ljava/util/Map;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object p1
++
++    invoke-static {p2}, Ljava/lang/Boolean;->valueOf(Z)Ljava/lang/Boolean;
++
++    move-result-object p2
++
++    invoke-static {p2}, Ljava/util/Optional;->of(Ljava/lang/Object;)Ljava/util/Optional;
++
++    move-result-object p2
++
++    check-cast p0, Ljava/util/HashMap;
++
++    invoke-virtual {p0, p1, p2}, Ljava/util/HashMap;->put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
++
++    :cond_2f
++    return-void
++.end method
++
++.method public final removeAutoHideControllerForDisplay(I)V
++    .registers 5
++
++    iget-object v0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mAutoHideControllers:Ljava/util/Map;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object v1
++
++    check-cast v0, Ljava/util/HashMap;
++
++    invoke-virtual {v0, v1}, Ljava/util/HashMap;->get(Ljava/lang/Object;)Ljava/lang/Object;
++
++    move-result-object v0
++
++    check-cast v0, Lcom/android/systemui/statusbar/phone/AutoHideController;
++
++    if-eqz v0, :cond_59
++
++    iget-object v1, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mAutoHideUiElements:Ljava/util/Map;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object v2
++
++    check-cast v1, Ljava/util/HashMap;
++
++    invoke-virtual {v1, v2}, Ljava/util/HashMap;->get(Ljava/lang/Object;)Ljava/lang/Object;
++
++    move-result-object v1
++
++    check-cast v1, Lcom/android/systemui/statusbar/AutoHideUiElement;
++
++    if-eqz v1, :cond_38
++
++    sget-boolean v2, Lcom/android/systemui/BasicRune;->NAVBAR_POLICY_VISIBILITY:Z
++
++    if-eqz v2, :cond_33
++
++    check-cast v0, Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl;
++
++    iget-object v0, v0, Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl;->mObserver:Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl$AutoHideUiElementObserver;
++
++    invoke-virtual {v0}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
++
++    iget-object v0, v0, Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl$AutoHideUiElementObserver;->mList:Ljava/util/List;
++
++    check-cast v0, Ljava/util/ArrayList;
++
++    invoke-virtual {v0, v1}, Ljava/util/ArrayList;->remove(Ljava/lang/Object;)Z
++
++    goto :goto_38
++
++    :cond_33
++    const/4 v1, 0x0
++
++    check-cast v0, Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl;
++
++    iput-object v1, v0, Lcom/android/systemui/statusbar/phone/AutoHideControllerImpl;->mNavigationBar:Lcom/android/systemui/statusbar/AutoHideUiElement;
++
++    :cond_38
++    :goto_38
++    iget-object v0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mAutoHideUiElements:Ljava/util/Map;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object v1
++
++    check-cast v0, Ljava/util/HashMap;
++
++    invoke-virtual {v0, v1}, Ljava/util/HashMap;->remove(Ljava/lang/Object;)Ljava/lang/Object;
++
++    iget-object v0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mAutoHideControllers:Ljava/util/Map;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object v1
++
++    check-cast v0, Ljava/util/HashMap;
++
++    invoke-virtual {v0, v1}, Ljava/util/HashMap;->remove(Ljava/lang/Object;)Ljava/lang/Object;
++
++    iget-object p0, p0, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->mTransientShowing:Ljava/util/Map;
++
++    invoke-static {p1}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
++
++    move-result-object p1
++
++    check-cast p0, Ljava/util/HashMap;
++
++    invoke-virtual {p0, p1}, Ljava/util/HashMap;->remove(Ljava/lang/Object;)Ljava/lang/Object;
++
++    :cond_59
++    return-void
++.end method
+diff --git a/smali_classes2/com/android/systemui/navigationbar/TaskbarDelegate.smali b/smali_classes2/com/android/systemui/navigationbar/TaskbarDelegate.smali
+index 7e57065..4275537 100644
+--- a/smali_classes2/com/android/systemui/navigationbar/TaskbarDelegate.smali
++++ b/smali_classes2/com/android/systemui/navigationbar/TaskbarDelegate.smali
+@@ -182,18 +182,26 @@
+     :cond_56
+     sget-boolean p2, Lcom/android/systemui/BasicRune;->NAVBAR_TASKBAR:Z
+ 
+-    if-nez p2, :cond_5b
++    if-nez p2, :cond_60
+ 
++    sget-boolean p2, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
++
++    if-eqz p2, :cond_5f
++
++    goto :goto_60
++
++    :cond_5f
+     return-void
+ 
+-    :cond_5b
++    :cond_60
++    :goto_60
+     sget-object p2, Lcom/android/systemui/navigationbar/views/NavBarButtonDrawableProvider;->Companion:Lcom/android/systemui/navigationbar/views/NavBarButtonDrawableProvider$Companion;
+ 
+     invoke-virtual {p2}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
+ 
+     sget-object p2, Lcom/android/systemui/navigationbar/views/NavBarButtonDrawableProvider;->INSTANCE:Lcom/android/systemui/navigationbar/views/NavBarButtonDrawableProvider;
+ 
+-    if-nez p2, :cond_6b
++    if-nez p2, :cond_70
+ 
+     new-instance p2, Lcom/android/systemui/navigationbar/views/NavBarButtonDrawableProvider;
+ 
+@@ -201,7 +209,7 @@
+ 
+     sput-object p2, Lcom/android/systemui/navigationbar/views/NavBarButtonDrawableProvider;->INSTANCE:Lcom/android/systemui/navigationbar/views/NavBarButtonDrawableProvider;
+ 
+-    :cond_6b
++    :cond_70
+     iget-object p3, p0, Lcom/android/systemui/navigationbar/TaskbarDelegate;->mNavBarStore:Lcom/android/systemui/navigationbar/store/NavBarStore;
+ 
+     sget-object p4, Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;->Companion:Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper$Companion;
+@@ -212,11 +220,11 @@
+ 
+     move-result p4
+ 
+-    if-nez p4, :cond_84
++    if-nez p4, :cond_89
+ 
+     sget-object p4, Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;->INSTANCE:Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;
+ 
+-    if-nez p4, :cond_89
++    if-nez p4, :cond_8e
+ 
+     new-instance p4, Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;
+ 
+@@ -224,15 +232,15 @@
+ 
+     sput-object p4, Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;->INSTANCE:Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;
+ 
+-    goto :goto_89
++    goto :goto_8e
+ 
+-    :cond_84
++    :cond_89
+     new-instance p4, Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;
+ 
+     invoke-direct {p4, p2, p3, p1}, Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;-><init>(Lcom/android/systemui/navigationbar/views/buttons/KeyButtonDrawableProvider;Lcom/android/systemui/navigationbar/store/NavBarStore;Landroid/content/Context;)V
+ 
+-    :cond_89
+-    :goto_89
++    :cond_8e
++    :goto_8e
+     iput-object p4, p0, Lcom/android/systemui/navigationbar/TaskbarDelegate;->mIconResourceMapper:Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;
+ 
+     new-instance p2, Lcom/android/systemui/navigationbar/plugin/SamsungPluginTaskBar;
+@@ -3166,3 +3174,488 @@
+ 
+     return p0
+ .end method
++
++.method public static loggingAttributesChanged(Ljava/lang/String;IIZ)V
++    .registers 6
++
++    new-instance v0, Ljava/lang/StringBuilder;
++
++    const-string v1, "onSystemBarAttributesChanged() - displayId:"
++
++    invoke-direct {v0, v1}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
++
++    invoke-virtual {v0, p2}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
++
++    const-string p2, ", appearance:"
++
++    invoke-virtual {v0, p2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v0, p1}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
++
++    if-eqz p1, :cond_57
++
++    const-string p2, " ("
++
++    invoke-virtual {v0, p2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    and-int/lit8 p2, p1, 0x10
++
++    const-string v1, ""
++
++    if-eqz p2, :cond_22
++
++    const-string p2, "LIGHT_NAVIGATION_BARS "
++
++    goto :goto_23
++
++    :cond_22
++    move-object p2, v1
++
++    :goto_23
++    invoke-virtual {v0, p2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    and-int/lit8 p2, p1, 0x2
++
++    if-eqz p2, :cond_2d
++
++    const-string p2, "OPAQUE_NAVIGATION_BARS "
++
++    goto :goto_2e
++
++    :cond_2d
++    move-object p2, v1
++
++    :goto_2e
++    invoke-virtual {v0, p2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    and-int/lit8 p2, p1, 0x40
++
++    if-eqz p2, :cond_38
++
++    const-string p2, "SEMI_TRANSPARENT_NAVIGATION_BARS "
++
++    goto :goto_39
++
++    :cond_38
++    move-object p2, v1
++
++    :goto_39
++    invoke-virtual {v0, p2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    const/high16 p2, 0x100000
++
++    and-int/2addr p2, p1
++
++    if-eqz p2, :cond_44
++
++    const-string p2, "LIGHT_SEMI_TRANSPARENT_NAVIGATION_BARS "
++
++    goto :goto_45
++
++    :cond_44
++    move-object p2, v1
++
++    :goto_45
++    invoke-virtual {v0, p2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    const/high16 p2, 0x400000
++
++    and-int/2addr p1, p2
++
++    if-eqz p1, :cond_4f
++
++    const-string v1, "DESKTOP_TRANSPARENT_NAVIGATION_BARS"
++
++    :cond_4f
++    invoke-virtual {v0, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    const-string p1, ")"
++
++    invoke-virtual {v0, p1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    :cond_57
++    const-string p1, ", navbarColorManagedByIme: "
++
++    invoke-virtual {v0, p1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v0, p3}, Ljava/lang/StringBuilder;->append(Z)Ljava/lang/StringBuilder;
++
++    const-string p1, "com.att"
++
++    invoke-virtual {p0, p1}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
++
++    move-result p1
++
++    if-nez p1, :cond_6f
++
++    const-string p1, ", packageName: "
++
++    invoke-virtual {v0, p1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v0, p0}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    :cond_6f
++    const-string p0, "TaskbarDelegate"
++
++    invoke-virtual {v0}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
++
++    move-result-object p1
++
++    invoke-static {p0, p1}, Landroid/util/Log;->d(Ljava/lang/String;Ljava/lang/String;)I
++
++    return-void
++.end method
++
++.method public final updateTaskbarButtonIconsAndHints()Lcom/android/systemui/shared/navigationbar/NavBarEvents;
++    .registers 12
++
++    iget-object v0, p0, Lcom/android/systemui/navigationbar/TaskbarDelegate;->mContext:Landroid/content/Context;
++
++    invoke-static {v0}, Landroidx/appcompat/widget/TooltipPopup$$ExternalSyntheticOutline0;->m(Landroid/content/Context;)I
++
++    move-result v0
++
++    const/4 v1, 0x0
++
++    const/4 v2, 0x1
++
++    if-ne v0, v2, :cond_c
++
++    move v0, v2
++
++    goto :goto_d
++
++    :cond_c
++    move v0, v1
++
++    :goto_d
++    iget-object v3, p0, Lcom/android/systemui/navigationbar/TaskbarDelegate;->mIconResourceMapper:Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;
++
++    iput-boolean v0, v3, Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;->isRTL:Z
++
++    iget-object v0, v3, Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;->buttonDrawableProvider:Lcom/android/systemui/navigationbar/views/buttons/KeyButtonDrawableProvider;
++
++    new-instance v4, Landroid/os/Bundle;
++
++    invoke-direct {v4}, Landroid/os/Bundle;-><init>()V
++
++    iget-boolean v5, v3, Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;->themeIcon:Z
++
++    xor-int/2addr v5, v2
++
++    const-string v6, "defaultIcon"
++
++    invoke-virtual {v4, v6, v5}, Landroid/os/Bundle;->putBoolean(Ljava/lang/String;Z)V
++
++    sget-object v5, Lcom/samsung/systemui/splugins/navigationbar/IconType;->TYPE_RECENT:Lcom/samsung/systemui/splugins/navigationbar/IconType;
++
++    invoke-virtual {p0, v5, v4}, Lcom/android/systemui/navigationbar/TaskbarDelegate;->putButtonBitmapsToBundle(Lcom/samsung/systemui/splugins/navigationbar/IconType;Landroid/os/Bundle;)V
++
++    sget-object v5, Lcom/samsung/systemui/splugins/navigationbar/IconType;->TYPE_HOME:Lcom/samsung/systemui/splugins/navigationbar/IconType;
++
++    invoke-virtual {p0, v5, v4}, Lcom/android/systemui/navigationbar/TaskbarDelegate;->putButtonBitmapsToBundle(Lcom/samsung/systemui/splugins/navigationbar/IconType;Landroid/os/Bundle;)V
++
++    sget-object v5, Lcom/samsung/systemui/splugins/navigationbar/IconType;->TYPE_BACK:Lcom/samsung/systemui/splugins/navigationbar/IconType;
++
++    invoke-virtual {p0, v5, v4}, Lcom/android/systemui/navigationbar/TaskbarDelegate;->putButtonBitmapsToBundle(Lcom/samsung/systemui/splugins/navigationbar/IconType;Landroid/os/Bundle;)V
++
++    sget-object v5, Lcom/samsung/systemui/splugins/navigationbar/IconType;->TYPE_BACK_ALT:Lcom/samsung/systemui/splugins/navigationbar/IconType;
++
++    invoke-virtual {p0, v5, v4}, Lcom/android/systemui/navigationbar/TaskbarDelegate;->putButtonBitmapsToBundle(Lcom/samsung/systemui/splugins/navigationbar/IconType;Landroid/os/Bundle;)V
++
++    iget-object v5, p0, Lcom/android/systemui/navigationbar/TaskbarDelegate;->mContext:Landroid/content/Context;
++
++    sget-object v6, Lcom/samsung/systemui/splugins/navigationbar/IconType;->TYPE_GESTURE_HANDLE_HINT:Lcom/samsung/systemui/splugins/navigationbar/IconType;
++
++    iget-object v7, v3, Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;->context:Landroid/content/Context;
++
++    invoke-virtual {v3, v6}, Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;->getIconResource(Lcom/samsung/systemui/splugins/navigationbar/IconType;)Lcom/samsung/systemui/splugins/navigationbar/IconResource;
++
++    move-result-object v8
++
++    move-object v9, v0
++
++    check-cast v9, Lcom/android/systemui/navigationbar/views/NavBarButtonDrawableProvider;
++
++    invoke-virtual {v9, v7, v8, v1}, Lcom/android/systemui/navigationbar/views/NavBarButtonDrawableProvider;->getGestureHintDrawable(Landroid/content/Context;Lcom/samsung/systemui/splugins/navigationbar/IconResource;I)Lcom/android/systemui/navigationbar/gestural/GestureHintDrawable;
++
++    move-result-object v7
++
++    invoke-static {v5, v7}, Lcom/android/systemui/navigationbar/util/IconDrawableUtil;->getBitmapFromDrawable(Landroid/content/Context;Lcom/android/systemui/navigationbar/gestural/GestureHintDrawable;)[Landroid/graphics/Bitmap;
++
++    move-result-object v5
++
++    iget-object v7, p0, Lcom/android/systemui/navigationbar/TaskbarDelegate;->mContext:Landroid/content/Context;
++
++    iget-object v8, v3, Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;->context:Landroid/content/Context;
++
++    invoke-virtual {v3, v6}, Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;->getIconResource(Lcom/samsung/systemui/splugins/navigationbar/IconType;)Lcom/samsung/systemui/splugins/navigationbar/IconResource;
++
++    move-result-object v9
++
++    move-object v10, v0
++
++    check-cast v10, Lcom/android/systemui/navigationbar/views/NavBarButtonDrawableProvider;
++
++    invoke-virtual {v10, v8, v9, v1}, Lcom/android/systemui/navigationbar/views/NavBarButtonDrawableProvider;->getGestureHintDrawable(Landroid/content/Context;Lcom/samsung/systemui/splugins/navigationbar/IconResource;I)Lcom/android/systemui/navigationbar/gestural/GestureHintDrawable;
++
++    move-result-object v8
++
++    invoke-static {v7, v8}, Lcom/android/systemui/navigationbar/util/IconDrawableUtil;->getBitmapFromDrawable(Landroid/content/Context;Lcom/android/systemui/navigationbar/gestural/GestureHintDrawable;)[Landroid/graphics/Bitmap;
++
++    move-result-object v7
++
++    iget-object v8, p0, Lcom/android/systemui/navigationbar/TaskbarDelegate;->mContext:Landroid/content/Context;
++
++    iget-object v9, v3, Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;->context:Landroid/content/Context;
++
++    invoke-virtual {v3, v6}, Lcom/android/systemui/navigationbar/icon/NavBarIconResourceMapper;->getIconResource(Lcom/samsung/systemui/splugins/navigationbar/IconType;)Lcom/samsung/systemui/splugins/navigationbar/IconResource;
++
++    move-result-object v3
++
++    check-cast v0, Lcom/android/systemui/navigationbar/views/NavBarButtonDrawableProvider;
++
++    invoke-virtual {v0, v9, v3, v1}, Lcom/android/systemui/navigationbar/views/NavBarButtonDrawableProvider;->getGestureHintDrawable(Landroid/content/Context;Lcom/samsung/systemui/splugins/navigationbar/IconResource;I)Lcom/android/systemui/navigationbar/gestural/GestureHintDrawable;
++
++    move-result-object v0
++
++    invoke-static {v8, v0}, Lcom/android/systemui/navigationbar/util/IconDrawableUtil;->getBitmapFromDrawable(Landroid/content/Context;Lcom/android/systemui/navigationbar/gestural/GestureHintDrawable;)[Landroid/graphics/Bitmap;
++
++    move-result-object v0
++
++    new-instance v3, Ljava/lang/StringBuilder;
++
++    invoke-direct {v3}, Ljava/lang/StringBuilder;-><init>()V
++
++    sget-object v6, Lcom/android/systemui/shared/navigationbar/NavBarEvents$IconType;->TYPE_GESTURE_HANDLE_HINT:Lcom/android/systemui/shared/navigationbar/NavBarEvents$IconType;
++
++    invoke-virtual {v6}, Ljava/lang/Enum;->name()Ljava/lang/String;
++
++    move-result-object v8
++
++    invoke-virtual {v3, v8}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    const-string v8, "_LIGHT"
++
++    invoke-virtual {v3, v8}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v3}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
++
++    move-result-object v3
++
++    aget-object v9, v5, v1
++
++    invoke-virtual {v4, v3, v9}, Landroid/os/Bundle;->putParcelable(Ljava/lang/String;Landroid/os/Parcelable;)V
++
++    new-instance v3, Ljava/lang/StringBuilder;
++
++    invoke-direct {v3}, Ljava/lang/StringBuilder;-><init>()V
++
++    invoke-virtual {v6}, Ljava/lang/Enum;->name()Ljava/lang/String;
++
++    move-result-object v6
++
++    invoke-virtual {v3, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    const-string v6, "_DARK"
++
++    invoke-virtual {v3, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v3}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
++
++    move-result-object v3
++
++    aget-object v5, v5, v2
++
++    invoke-virtual {v4, v3, v5}, Landroid/os/Bundle;->putParcelable(Ljava/lang/String;Landroid/os/Parcelable;)V
++
++    new-instance v3, Ljava/lang/StringBuilder;
++
++    invoke-direct {v3}, Ljava/lang/StringBuilder;-><init>()V
++
++    sget-object v5, Lcom/android/systemui/shared/navigationbar/NavBarEvents$IconType;->TYPE_GESTURE_HINT:Lcom/android/systemui/shared/navigationbar/NavBarEvents$IconType;
++
++    invoke-virtual {v5}, Ljava/lang/Enum;->name()Ljava/lang/String;
++
++    move-result-object v9
++
++    invoke-virtual {v3, v9}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v3, v8}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v3}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
++
++    move-result-object v3
++
++    aget-object v9, v7, v1
++
++    invoke-virtual {v4, v3, v9}, Landroid/os/Bundle;->putParcelable(Ljava/lang/String;Landroid/os/Parcelable;)V
++
++    new-instance v3, Ljava/lang/StringBuilder;
++
++    invoke-direct {v3}, Ljava/lang/StringBuilder;-><init>()V
++
++    invoke-virtual {v5}, Ljava/lang/Enum;->name()Ljava/lang/String;
++
++    move-result-object v5
++
++    invoke-virtual {v3, v5}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v3, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v3}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
++
++    move-result-object v3
++
++    aget-object v5, v7, v2
++
++    invoke-virtual {v4, v3, v5}, Landroid/os/Bundle;->putParcelable(Ljava/lang/String;Landroid/os/Parcelable;)V
++
++    new-instance v3, Ljava/lang/StringBuilder;
++
++    invoke-direct {v3}, Ljava/lang/StringBuilder;-><init>()V
++
++    sget-object v5, Lcom/android/systemui/shared/navigationbar/NavBarEvents$IconType;->TYPE_GESTURE_HINT_VI:Lcom/android/systemui/shared/navigationbar/NavBarEvents$IconType;
++
++    invoke-virtual {v5}, Ljava/lang/Enum;->name()Ljava/lang/String;
++
++    move-result-object v7
++
++    invoke-virtual {v3, v7}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v3, v8}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v3}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
++
++    move-result-object v3
++
++    aget-object v1, v0, v1
++
++    invoke-virtual {v4, v3, v1}, Landroid/os/Bundle;->putParcelable(Ljava/lang/String;Landroid/os/Parcelable;)V
++
++    new-instance v1, Ljava/lang/StringBuilder;
++
++    invoke-direct {v1}, Ljava/lang/StringBuilder;-><init>()V
++
++    invoke-virtual {v5}, Ljava/lang/Enum;->name()Ljava/lang/String;
++
++    move-result-object v3
++
++    invoke-virtual {v1, v3}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v1, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v1}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
++
++    move-result-object v1
++
++    aget-object v0, v0, v2
++
++    invoke-virtual {v4, v1, v0}, Landroid/os/Bundle;->putParcelable(Ljava/lang/String;Landroid/os/Parcelable;)V
++
++    :goto_108
++    const/4 v0, 0x6
++
++    iget-object v1, p0, Lcom/android/systemui/navigationbar/TaskbarDelegate;->mPluginTaskbar:Lcom/android/systemui/navigationbar/plugin/SamsungPluginTaskBar;
++
++    if-ge v2, v0, :cond_168
++
++    iget-object v0, v1, Lcom/android/systemui/navigationbar/plugin/SamsungPluginTaskBar;->pluginBundle:Landroid/os/Bundle;
++
++    new-instance v3, Ljava/lang/StringBuilder;
++
++    const-string v5, "extra"
++
++    invoke-direct {v3, v5}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
++
++    invoke-virtual {v3, v2}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v3, v8}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v3}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
++
++    move-result-object v3
++
++    invoke-virtual {v0, v3}, Landroid/os/Bundle;->getParcelable(Ljava/lang/String;)Landroid/os/Parcelable;
++
++    move-result-object v0
++
++    check-cast v0, Landroid/graphics/Bitmap;
++
++    if-eqz v0, :cond_13a
++
++    new-instance v3, Ljava/lang/StringBuilder;
++
++    invoke-direct {v3, v5}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
++
++    invoke-virtual {v3, v2}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v3, v8}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v3}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
++
++    move-result-object v3
++
++    invoke-virtual {v4, v3, v0}, Landroid/os/Bundle;->putParcelable(Ljava/lang/String;Landroid/os/Parcelable;)V
++
++    :cond_13a
++    iget-object v0, v1, Lcom/android/systemui/navigationbar/plugin/SamsungPluginTaskBar;->pluginBundle:Landroid/os/Bundle;
++
++    new-instance v1, Ljava/lang/StringBuilder;
++
++    invoke-direct {v1, v5}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
++
++    invoke-virtual {v1, v2}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v1, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v1}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
++
++    move-result-object v1
++
++    invoke-virtual {v0, v1}, Landroid/os/Bundle;->getParcelable(Ljava/lang/String;)Landroid/os/Parcelable;
++
++    move-result-object v0
++
++    check-cast v0, Landroid/graphics/Bitmap;
++
++    if-eqz v0, :cond_165
++
++    new-instance v1, Ljava/lang/StringBuilder;
++
++    invoke-direct {v1, v5}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
++
++    invoke-virtual {v1, v2}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v1, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v1}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
++
++    move-result-object v1
++
++    invoke-virtual {v4, v1, v0}, Landroid/os/Bundle;->putParcelable(Ljava/lang/String;Landroid/os/Parcelable;)V
++
++    :cond_165
++    add-int/lit8 v2, v2, 0x1
++
++    goto :goto_108
++
++    :cond_168
++    invoke-virtual {v1}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
++
++    invoke-virtual {v1}, Lcom/android/systemui/navigationbar/plugin/SamsungPluginTaskBar;->parseAndUpdateBundle()V
++
++    new-instance v0, Lcom/android/systemui/shared/navigationbar/NavBarEvents;
++
++    invoke-direct {v0}, Lcom/android/systemui/shared/navigationbar/NavBarEvents;-><init>()V
++
++    sget-object v1, Lcom/android/systemui/shared/navigationbar/NavBarEvents$EventType;->ON_UPDATE_ICON_BITMAP:Lcom/android/systemui/shared/navigationbar/NavBarEvents$EventType;
++
++    iput-object v1, v0, Lcom/android/systemui/shared/navigationbar/NavBarEvents;->eventType:Lcom/android/systemui/shared/navigationbar/NavBarEvents$EventType;
++
++    iput-object v4, v0, Lcom/android/systemui/shared/navigationbar/NavBarEvents;->iconBitmapBundle:Landroid/os/Bundle;
++
++    invoke-virtual {p0, v0}, Lcom/android/systemui/navigationbar/TaskbarDelegate;->sendNavbarEvent(Lcom/android/systemui/shared/navigationbar/NavBarEvents;)V
++
++    return-object v0
++.end method
+diff --git a/smali_classes2/com/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$2.smali b/smali_classes2/com/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$2.smali
+new file mode 100644
+index 0000000..72e242b
+--- /dev/null
++++ b/smali_classes2/com/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$2.smali
+@@ -0,0 +1,95 @@
++.class public final Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$2;
++.super Landroid/content/BroadcastReceiver;
++.source "qb/115377634 67532c40eb579d358d88853dc981ad7d4d1481b384c76a688c5b519328094be8"
++
++
++# instance fields
++.field public final synthetic $action:Ljava/util/function/Consumer;
++
++.field public final synthetic this$0:Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;
++
++
++# direct methods
++.method public constructor <init>(Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;Ljava/util/function/Consumer;)V
++    .registers 3
++    .annotation system Ldalvik/annotation/Signature;
++        value = {
++            "(",
++            "Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;",
++            "Ljava/util/function/Consumer<",
++            "Ljava/lang/Object;",
++            ">;)V"
++        }
++    .end annotation
++
++    iput-object p1, p0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$2;->this$0:Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;
++
++    iput-object p2, p0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$2;->$action:Ljava/util/function/Consumer;
++
++    invoke-direct {p0}, Landroid/content/BroadcastReceiver;-><init>()V
++
++    return-void
++.end method
++
++
++# virtual methods
++.method public final onReceive(Landroid/content/Context;Landroid/content/Intent;)V
++    .registers 4
++
++    if-eqz p2, :cond_7
++
++    invoke-virtual {p2}, Landroid/content/Intent;->getAction()Ljava/lang/String;
++
++    move-result-object p1
++
++    goto :goto_8
++
++    :cond_7
++    const/4 p1, 0x0
++
++    :goto_8
++    if-eqz p1, :cond_31
++
++    invoke-virtual {p1}, Ljava/lang/String;->hashCode()I
++
++    move-result p2
++
++    const v0, 0x31af1c32
++
++    if-eq p2, v0, :cond_14
++
++    goto :goto_31
++
++    :cond_14
++    const-string p2, "android.intent.action.USER_UNLOCKED"
++
++    invoke-virtual {p1, p2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
++
++    move-result p1
++
++    if-eqz p1, :cond_31
++
++    iget-object p1, p0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$2;->this$0:Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;
++
++    sget-object p2, Ljava/lang/Boolean;->TRUE:Ljava/lang/Boolean;
++
++    iput-object p2, p1, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->userUnlocked:Ljava/lang/Boolean;
++
++    iget-object p0, p0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$2;->$action:Ljava/util/function/Consumer;
++
++    if-eqz p0, :cond_31
++
++    invoke-virtual {p1}, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->isEnabled()Z
++
++    move-result p1
++
++    invoke-static {p1}, Ljava/lang/Boolean;->valueOf(Z)Ljava/lang/Boolean;
++
++    move-result-object p1
++
++    invoke-interface {p0, p1}, Ljava/util/function/Consumer;->accept(Ljava/lang/Object;)V
++
++    :cond_31
++    :goto_31
++    return-void
++.end method
+diff --git a/smali_classes2/com/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$4.smali b/smali_classes2/com/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$4.smali
+new file mode 100644
+index 0000000..030c77b
+--- /dev/null
++++ b/smali_classes2/com/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$4.smali
+@@ -0,0 +1,66 @@
++.class public final Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$4;
++.super Ljava/lang/Object;
++.source "qb/115377634 67532c40eb579d358d88853dc981ad7d4d1481b384c76a688c5b519328094be8"
++
++# interfaces
++.implements Lcom/android/wm/shell/desktopmode/DesktopTasksController$DefaultDisplayDesktopModeChangeListener;
++
++
++# instance fields
++.field public final synthetic $action:Ljava/util/function/Consumer;
++
++.field public final synthetic this$0:Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;
++
++
++# direct methods
++.method public constructor <init>(Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;Ljava/util/function/Consumer;)V
++    .registers 3
++    .annotation system Ldalvik/annotation/Signature;
++        value = {
++            "(",
++            "Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;",
++            "Ljava/util/function/Consumer<",
++            "Ljava/lang/Object;",
++            ">;)V"
++        }
++    .end annotation
++
++    iput-object p1, p0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$4;->this$0:Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;
++
++    iput-object p2, p0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$4;->$action:Ljava/util/function/Consumer;
++
++    invoke-direct {p0}, Ljava/lang/Object;-><init>()V
++
++    return-void
++.end method
++
++
++# virtual methods
++.method public final onDefaultDisplayDesktopModeChanged(Z)V
++    .registers 4
++
++    iget-object v0, p0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$4;->this$0:Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;
++
++    iget-boolean v1, v0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->isDefaultDisplayDesktopMode:Z
++
++    if-eq v1, p1, :cond_17
++
++    iput-boolean p1, v0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->isDefaultDisplayDesktopMode:Z
++
++    iget-object p0, p0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$4;->$action:Ljava/util/function/Consumer;
++
++    if-eqz p0, :cond_17
++
++    invoke-virtual {v0}, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->isEnabled()Z
++
++    move-result p1
++
++    invoke-static {p1}, Ljava/lang/Boolean;->valueOf(Z)Ljava/lang/Boolean;
++
++    move-result-object p1
++
++    invoke-interface {p0, p1}, Ljava/util/function/Consumer;->accept(Ljava/lang/Object;)V
++
++    :cond_17
++    return-void
++.end method
+diff --git a/smali_classes2/com/android/systemui/navigationbar/interactor/DesktopModeInteractor.smali b/smali_classes2/com/android/systemui/navigationbar/interactor/DesktopModeInteractor.smali
+index aed5918..0ecf87b 100644
+--- a/smali_classes2/com/android/systemui/navigationbar/interactor/DesktopModeInteractor.smali
++++ b/smali_classes2/com/android/systemui/navigationbar/interactor/DesktopModeInteractor.smali
+@@ -1,12 +1,24 @@
+ .class public final Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;
+ .super Ljava/lang/Object;
+-.source "qb/115382841 f377a533225c203df7d5d01eb2a8bbcff4878bc0bf71638761f414a236237c53"
++.source "qb/115377634 67532c40eb579d358d88853dc981ad7d4d1481b384c76a688c5b519328094be8"
+ 
+ 
+ # instance fields
++.field public final bgHandler:Landroid/os/Handler;
++
++.field public final broadcastDispatcher:Lcom/android/systemui/broadcast/BroadcastDispatcher;
++
++.field public broadcastReceiver:Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$2;
++
++.field public final desktopMode:Lcom/android/wm/shell/desktopmode/api/DesktopMode;
++
++.field public final intentFilter:Landroid/content/IntentFilter;
++
++.field public isDefaultDisplayDesktopMode:Z
++
+ .field public final mainExecutor:Ljava/util/concurrent/Executor;
+ 
+-.field public final userUnlocked:Ljava/lang/Boolean;
++.field public userUnlocked:Ljava/lang/Boolean;
+ 
+ 
+ # direct methods
+@@ -15,12 +27,18 @@
+ 
+     invoke-direct {p0}, Ljava/lang/Object;-><init>()V
+ 
++    iput-object p2, p0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->broadcastDispatcher:Lcom/android/systemui/broadcast/BroadcastDispatcher;
++
+     iput-object p3, p0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->mainExecutor:Ljava/util/concurrent/Executor;
+ 
++    iput-object p4, p0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->bgHandler:Landroid/os/Handler;
++
+     new-instance p2, Landroid/content/IntentFilter;
+ 
+     invoke-direct {p2}, Landroid/content/IntentFilter;-><init>()V
+ 
++    iput-object p2, p0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->intentFilter:Landroid/content/IntentFilter;
++
+     const-class p3, Landroid/os/UserManager;
+ 
+     invoke-virtual {p1, p3}, Landroid/content/Context;->getSystemService(Ljava/lang/Class;)Ljava/lang/Object;
+@@ -31,7 +49,7 @@
+ 
+     const/4 p3, 0x0
+ 
+-    if-eqz p1, :cond_22
++    if-eqz p1, :cond_28
+ 
+     invoke-static {}, Landroid/app/ActivityManager;->getCurrentUser()I
+ 
+@@ -45,44 +63,83 @@
+ 
+     move-result-object p1
+ 
+-    goto :goto_23
++    goto :goto_29
+ 
+-    :cond_22
++    :cond_28
+     move-object p1, p3
+ 
+-    :goto_23
++    :goto_29
+     iput-object p1, p0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->userUnlocked:Ljava/lang/Boolean;
+ 
+-    sget-object p0, Lcom/android/systemui/SystemUIAppComponentFactoryBase;->Companion:Lcom/android/systemui/SystemUIAppComponentFactoryBase$Companion;
++    sget-object p1, Lcom/android/systemui/SystemUIAppComponentFactoryBase;->Companion:Lcom/android/systemui/SystemUIAppComponentFactoryBase$Companion;
+ 
+-    invoke-virtual {p0}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
++    invoke-virtual {p1}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
+ 
+-    sget-object p0, Lcom/android/systemui/SystemUIAppComponentFactoryBase;->systemUIInitializer:Lcom/android/systemui/SystemUIInitializer;
++    sget-object p1, Lcom/android/systemui/SystemUIAppComponentFactoryBase;->systemUIInitializer:Lcom/android/systemui/SystemUIInitializer;
+ 
+-    if-eqz p0, :cond_40
++    if-eqz p1, :cond_47
+ 
+-    invoke-virtual {p0}, Lcom/android/systemui/SystemUIInitializer;->getWMComponent()Lcom/android/wm/shell/dagger/WMComponent;
++    invoke-virtual {p1}, Lcom/android/systemui/SystemUIInitializer;->getWMComponent()Lcom/android/wm/shell/dagger/WMComponent;
+ 
+-    move-result-object p0
++    move-result-object p1
+ 
+-    if-eqz p0, :cond_40
++    if-eqz p1, :cond_47
+ 
+-    invoke-interface {p0}, Lcom/android/wm/shell/dagger/WMComponent;->getDesktopMode()Ljava/util/Optional;
++    invoke-interface {p1}, Lcom/android/wm/shell/dagger/WMComponent;->getDesktopMode()Ljava/util/Optional;
+ 
+-    move-result-object p0
++    move-result-object p1
+ 
+-    if-eqz p0, :cond_40
++    if-eqz p1, :cond_47
+ 
+-    invoke-virtual {p0, p3}, Ljava/util/Optional;->orElse(Ljava/lang/Object;)Ljava/lang/Object;
++    invoke-virtual {p1, p3}, Ljava/util/Optional;->orElse(Ljava/lang/Object;)Ljava/lang/Object;
+ 
+-    move-result-object p0
++    move-result-object p1
+ 
+-    check-cast p0, Lcom/android/wm/shell/desktopmode/api/DesktopMode;
++    move-object p3, p1
++
++    check-cast p3, Lcom/android/wm/shell/desktopmode/api/DesktopMode;
++
++    :cond_47
++    iput-object p3, p0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->desktopMode:Lcom/android/wm/shell/desktopmode/api/DesktopMode;
+ 
+-    :cond_40
+     const-string p0, "android.intent.action.USER_UNLOCKED"
+ 
+     invoke-virtual {p2, p0}, Landroid/content/IntentFilter;->addAction(Ljava/lang/String;)V
+ 
+     return-void
+ .end method
++
++
++# virtual methods
++.method public final isEnabled()Z
++    .registers 3
++
++    iget-boolean v0, p0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->isDefaultDisplayDesktopMode:Z
++
++    const/4 v1, 0x0
++
++    if-eqz v0, :cond_13
++
++    iget-object p0, p0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->userUnlocked:Ljava/lang/Boolean;
++
++    if-eqz p0, :cond_e
++
++    invoke-virtual {p0}, Ljava/lang/Boolean;->booleanValue()Z
++
++    move-result p0
++
++    goto :goto_f
++
++    :cond_e
++    move p0, v1
++
++    :goto_f
++    if-eqz p0, :cond_13
++
++    const/4 p0, 0x1
++
++    return p0
++
++    :cond_13
++    return v1
++.end method
+diff --git a/smali_classes2/com/android/systemui/navigationbar/store/NavBarStateManagerImpl.smali b/smali_classes2/com/android/systemui/navigationbar/store/NavBarStateManagerImpl.smali
+index 2d47b5e..0d74206 100644
+--- a/smali_classes2/com/android/systemui/navigationbar/store/NavBarStateManagerImpl.smali
++++ b/smali_classes2/com/android/systemui/navigationbar/store/NavBarStateManagerImpl.smali
+@@ -868,7 +868,7 @@
+ .end method
+ 
+ .method public final getTaskBarState(Z)I
+-    .registers 23
++    .registers 25
+ 
+     move-object/from16 v0, p0
+ 
+@@ -888,7 +888,7 @@
+ 
+     iget v2, v2, Landroid/content/res/Configuration;->semDisplayDeviceType:I
+ 
+-    const/4 v3, 0x1
++    const/4 v4, 0x1
+ 
+     if-nez v2, :cond_16
+ 
+@@ -902,7 +902,7 @@
+     if-eqz v2, :cond_1e
+ 
+     :goto_1c
+-    move v2, v3
++    move v2, v4
+ 
+     goto :goto_1f
+ 
+@@ -952,9 +952,9 @@
+ 
+     iget-boolean v10, v10, Lcom/android/systemui/navigationbar/interactor/TaskBarInteractor;->isDefaultHome:Z
+ 
+-    if-ne v10, v3, :cond_49
++    if-ne v10, v4, :cond_49
+ 
+-    move v10, v3
++    move v10, v4
+ 
+     goto :goto_4a
+ 
+@@ -972,155 +972,193 @@
+ 
+     move-result v11
+ 
+-    sget-boolean v12, Lcom/android/systemui/BasicRune;->ONE_UI_8_5:Z
++    sget-boolean v12, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
+ 
+-    const-string v12, "S"
++    if-eqz v12, :cond_6a
+ 
+-    const-string/jumbo v13, "s"
++    const-class v12, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;
+ 
+-    const-string v14, "d"
++    invoke-virtual {v5, v12}, Lcom/android/systemui/navigationbar/interactor/InteractorFactory;->get(Ljava/lang/Class;)Ljava/lang/Object;
+ 
+-    const-string v15, "U"
++    move-result-object v12
+ 
+-    const-string/jumbo v16, "u"
++    check-cast v12, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;
+ 
+-    const-string v17, "F"
++    if-eqz v12, :cond_6a
+ 
+-    const-string v18, "f"
++    invoke-virtual {v12}, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->isEnabled()Z
+ 
+-    if-eqz p1, :cond_b6
++    move-result v12
+ 
+-    if-eqz v1, :cond_6d
++    if-ne v12, v4, :cond_6a
+ 
+-    move-object/from16 v4, v18
++    move v12, v4
+ 
+-    goto :goto_6f
++    goto :goto_6b
+ 
+-    :cond_6d
+-    move-object/from16 v4, v17
++    :cond_6a
++    const/4 v12, 0x0
++
++    :goto_6b
++    const-string v13, "S"
++
++    const-string/jumbo v14, "s"
++
++    const-string v15, "D"
++
++    const-string v16, "d"
+ 
+-    :goto_6f
+-    if-nez v2, :cond_76
++    const-string v17, "U"
+ 
+-    const-string v20, "l"
++    const-string/jumbo v18, "u"
++
++    const-string v19, "F"
++
++    const-string v20, "f"
++
++    if-eqz p1, :cond_d4
++
++    if-eqz v1, :cond_84
+ 
+-    :goto_73
+     move-object/from16 v3, v20
+ 
+-    goto :goto_79
++    goto :goto_86
++
++    :cond_84
++    move-object/from16 v3, v19
++
++    :goto_86
++    if-nez v2, :cond_8d
+ 
+-    :cond_76
+-    const-string v20, "L"
++    const-string v22, "l"
+ 
+-    goto :goto_73
++    :goto_8a
++    move-object/from16 v4, v22
+ 
+-    :goto_79
+-    invoke-virtual {v4, v3}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
++    goto :goto_90
++
++    :cond_8d
++    const-string v22, "L"
++
++    goto :goto_8a
++
++    :goto_90
++    invoke-virtual {v3, v4}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
+ 
+     move-result-object v3
+ 
+-    if-nez v7, :cond_82
++    if-nez v7, :cond_99
+ 
+-    move-object/from16 v4, v16
++    move-object/from16 v4, v18
+ 
+-    goto :goto_83
++    goto :goto_9b
+ 
+-    :cond_82
+-    move-object v4, v15
++    :cond_99
++    move-object/from16 v4, v17
+ 
+-    :goto_83
++    :goto_9b
+     invoke-virtual {v3, v4}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
+ 
+     move-result-object v3
+ 
+-    if-nez v9, :cond_8c
++    if-nez v9, :cond_a4
+ 
+     const-string v4, "p"
+ 
+-    goto :goto_8e
++    goto :goto_a6
+ 
+-    :cond_8c
++    :cond_a4
+     const-string v4, "P"
+ 
+-    :goto_8e
++    :goto_a6
+     invoke-virtual {v3, v4}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
+ 
+     move-result-object v3
+ 
+-    if-nez v8, :cond_97
++    if-nez v8, :cond_af
+ 
+     const-string v4, "c"
+ 
+-    goto :goto_99
++    goto :goto_b1
+ 
+-    :cond_97
++    :cond_af
+     const-string v4, "C"
+ 
+-    :goto_99
++    :goto_b1
+     invoke-virtual {v3, v4}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
+ 
+     move-result-object v3
+ 
+-    invoke-virtual {v3, v14}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
++    if-nez v12, :cond_ba
++
++    move-object/from16 v4, v16
++
++    goto :goto_bb
++
++    :cond_ba
++    move-object v4, v15
++
++    :goto_bb
++    invoke-virtual {v3, v4}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
+ 
+     move-result-object v3
+ 
+-    if-nez v10, :cond_a6
++    if-nez v10, :cond_c4
+ 
+     const-string v4, "h"
+ 
+-    goto :goto_a8
++    goto :goto_c6
+ 
+-    :cond_a6
++    :cond_c4
+     const-string v4, "H"
+ 
+-    :goto_a8
++    :goto_c6
+     invoke-virtual {v3, v4}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
+ 
+     move-result-object v3
+ 
+-    if-nez v11, :cond_b0
++    if-nez v11, :cond_ce
+ 
+-    move-object v4, v13
++    move-object v4, v14
+ 
+-    goto :goto_b1
++    goto :goto_cf
+ 
+-    :cond_b0
+-    move-object v4, v12
++    :cond_ce
++    move-object v4, v13
+ 
+-    :goto_b1
++    :goto_cf
+     invoke-virtual {v3, v4}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
+ 
+     move-result-object v3
+ 
+-    goto :goto_b8
++    goto :goto_d6
+ 
+-    :cond_b6
++    :cond_d4
+     const-string v3, ""
+ 
+-    :goto_b8
++    :goto_d6
+     const/4 v4, 0x2
+ 
+-    if-nez v1, :cond_144
++    if-nez v1, :cond_16c
+ 
+-    if-eqz v2, :cond_144
++    if-eqz v2, :cond_16c
+ 
+-    if-eqz v7, :cond_144
++    if-eqz v7, :cond_16c
+ 
+-    if-eqz v9, :cond_144
++    if-eqz v9, :cond_16c
+ 
+-    if-eqz v8, :cond_144
++    if-eqz v8, :cond_16c
+ 
+-    if-nez v10, :cond_c7
++    if-nez v10, :cond_e5
+ 
+-    goto/16 :goto_144
++    if-eqz v12, :cond_16c
+ 
+-    :cond_c7
+-    if-nez v11, :cond_cb
++    :cond_e5
++    if-nez v11, :cond_e9
+ 
+-    goto/16 :goto_144
++    goto/16 :goto_16c
+ 
+-    :cond_cb
++    :cond_e9
+     iget-object v1, v0, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->settingsHelper:Lcom/android/systemui/util/SettingsHelper;
+ 
+     invoke-virtual {v1}, Lcom/android/systemui/util/SettingsHelper;->isTaskBarEnabled()Z
+@@ -1147,27 +1185,27 @@
+ 
+     check-cast v5, Lcom/android/systemui/navigationbar/interactor/TaskBarInteractor;
+ 
+-    if-eqz v5, :cond_f0
++    if-eqz v5, :cond_10e
+ 
+     iget-boolean v5, v5, Lcom/android/systemui/navigationbar/interactor/TaskBarInteractor;->fitToActiveDisplay:Z
+ 
+     const/4 v6, 0x1
+ 
+-    if-ne v5, v6, :cond_f0
++    if-ne v5, v6, :cond_10e
+ 
+-    const/16 v19, 0x1
++    const/16 v21, 0x1
+ 
+-    goto :goto_f2
++    goto :goto_110
+ 
+-    :cond_f0
+-    const/16 v19, 0x0
++    :cond_10e
++    const/16 v21, 0x0
+ 
+-    :goto_f2
++    :goto_110
+     invoke-static {}, Lcom/android/systemui/util/SafeUIState;->isSysUiSafeModeEnabled()Z
+ 
+     move-result v5
+ 
+-    if-eqz p1, :cond_135
++    if-eqz p1, :cond_15a
+ 
+     const-string v6, "_"
+ 
+@@ -1175,106 +1213,121 @@
+ 
+     move-result-object v3
+ 
+-    if-eqz v1, :cond_103
++    if-eqz v1, :cond_121
+ 
+     const-string v6, "T"
+ 
+-    goto :goto_106
++    goto :goto_124
+ 
+-    :cond_103
++    :cond_121
+     const-string/jumbo v6, "t"
+ 
+-    :goto_106
++    :goto_124
+     invoke-virtual {v3, v6}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
+ 
+     move-result-object v3
+ 
+-    if-eqz v2, :cond_10f
++    if-eqz v2, :cond_12d
+ 
+     const-string v6, "K"
+ 
+-    goto :goto_111
++    goto :goto_12f
+ 
+-    :cond_10f
++    :cond_12d
+     const-string v6, "k"
+ 
+-    :goto_111
++    :goto_12f
+     invoke-virtual {v3, v6}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
+ 
+     move-result-object v3
+ 
+-    if-eqz v7, :cond_118
++    if-eqz v7, :cond_138
+ 
+-    goto :goto_11a
++    move-object/from16 v6, v17
+ 
+-    :cond_118
+-    move-object/from16 v15, v16
++    goto :goto_13a
+ 
+-    :goto_11a
+-    invoke-virtual {v3, v15}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
++    :cond_138
++    move-object/from16 v6, v18
++
++    :goto_13a
++    invoke-virtual {v3, v6}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
+ 
+     move-result-object v3
+ 
+-    invoke-virtual {v3, v14}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
++    if-eqz v12, :cond_141
++
++    goto :goto_143
++
++    :cond_141
++    move-object/from16 v15, v16
++
++    :goto_143
++    invoke-virtual {v3, v15}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
+ 
+     move-result-object v3
+ 
+-    if-eqz v19, :cond_127
++    if-eqz v21, :cond_14c
+ 
+-    move-object/from16 v6, v17
++    move-object/from16 v6, v19
+ 
+-    goto :goto_129
++    goto :goto_14e
+ 
+-    :cond_127
+-    move-object/from16 v6, v18
++    :cond_14c
++    move-object/from16 v6, v20
+ 
+-    :goto_129
++    :goto_14e
+     invoke-virtual {v3, v6}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
+ 
+     move-result-object v3
+ 
+-    if-eqz v5, :cond_130
++    if-eqz v5, :cond_155
+ 
+-    goto :goto_131
++    goto :goto_156
+ 
+-    :cond_130
+-    move-object v12, v13
++    :cond_155
++    move-object v13, v14
+ 
+-    :goto_131
+-    invoke-virtual {v3, v12}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
++    :goto_156
++    invoke-virtual {v3, v13}, Ljava/lang/String;->concat(Ljava/lang/String;)Ljava/lang/String;
+ 
+     move-result-object v3
+ 
+-    :cond_135
+-    if-nez v1, :cond_138
++    :cond_15a
++    if-nez v1, :cond_15e
+ 
+-    goto :goto_140
++    if-eqz v12, :cond_166
+ 
+-    :cond_138
+-    if-eqz v1, :cond_142
++    :cond_15e
++    if-eqz v1, :cond_169
+ 
+-    if-nez v2, :cond_140
++    if-nez v2, :cond_166
+ 
+-    if-nez v7, :cond_140
++    if-nez v7, :cond_166
+ 
+-    if-eqz v19, :cond_142
++    if-eqz v21, :cond_169
+ 
+-    :cond_140
+-    :goto_140
+-    move v1, v4
++    :cond_166
++    move-object v1, v3
+ 
+-    goto :goto_145
++    move v3, v4
+ 
+-    :cond_142
+-    const/4 v1, 0x1
++    goto :goto_16e
+ 
+-    goto :goto_145
++    :cond_169
++    move-object v1, v3
+ 
+-    :cond_144
+-    :goto_144
+-    const/4 v1, 0x0
++    const/4 v3, 0x1
+ 
+-    :goto_145
++    goto :goto_16e
++
++    :cond_16c
++    :goto_16c
++    move-object v1, v3
++
++    const/4 v3, 0x0
++
++    :goto_16e
+     iget-object v2, v0, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->context:Landroid/content/Context;
+ 
+     invoke-virtual {v2}, Landroid/content/Context;->getContentResolver()Landroid/content/ContentResolver;
+@@ -1283,48 +1336,48 @@
+ 
+     const-string/jumbo v5, "sem_task_bar_available"
+ 
+-    invoke-static {v2, v5, v1}, Landroid/provider/Settings$Global;->putInt(Landroid/content/ContentResolver;Ljava/lang/String;I)Z
++    invoke-static {v2, v5, v3}, Landroid/provider/Settings$Global;->putInt(Landroid/content/ContentResolver;Ljava/lang/String;I)Z
+ 
+-    if-eqz p1, :cond_170
++    if-eqz p1, :cond_199
+ 
+     const-string v2, "getTaskBarState("
+ 
+     const-string v5, ")"
+ 
+-    invoke-static {v2, v3, v5}, Landroidx/compose/foundation/gestures/MouseWheelScrollingLogic$$ExternalSyntheticOutline0;->m(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
++    invoke-static {v2, v1, v5}, Landroidx/compose/foundation/gestures/MouseWheelScrollingLogic$$ExternalSyntheticOutline0;->m(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+ 
+-    move-result-object v2
++    move-result-object v1
+ 
+-    if-eqz v1, :cond_16b
++    if-eqz v3, :cond_194
+ 
+     const/4 v6, 0x1
+ 
+-    if-eq v1, v6, :cond_168
++    if-eq v3, v6, :cond_191
+ 
+-    if-eq v1, v4, :cond_165
++    if-eq v3, v4, :cond_18e
+ 
+-    const-string v3, "Unknown"
++    const-string v2, "Unknown"
+ 
+-    goto :goto_16d
++    goto :goto_196
+ 
+-    :cond_165
+-    const-string v3, "Semi"
++    :cond_18e
++    const-string v2, "Semi"
+ 
+-    goto :goto_16d
++    goto :goto_196
+ 
+-    :cond_168
+-    const-string v3, "Full"
++    :cond_191
++    const-string v2, "Full"
+ 
+-    goto :goto_16d
++    goto :goto_196
+ 
+-    :cond_16b
+-    const-string v3, "None"
++    :cond_194
++    const-string v2, "None"
+ 
+-    :goto_16d
+-    invoke-virtual {v0, v3, v2}, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->logNavBarStates(Ljava/lang/Object;Ljava/lang/String;)V
++    :goto_196
++    invoke-virtual {v0, v2, v1}, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->logNavBarStates(Ljava/lang/Object;Ljava/lang/String;)V
+ 
+-    :cond_170
+-    return v1
++    :cond_199
++    return v3
+ .end method
+ 
+ .method public final isBottomGestureMode(Z)Z
+@@ -1785,214 +1838,249 @@
+ .end method
+ 
+ .method public final isTaskBarEnabled()Z
+-    .registers 16
++    .registers 17
+ 
+-    sget v0, Landroid/os/Build$VERSION;->SEM_PLATFORM_INT:I
++    move-object/from16 v0, p0
+ 
+-    const v1, 0x2bf20
++    sget v1, Landroid/os/Build$VERSION;->SEM_PLATFORM_INT:I
+ 
+-    const/4 v2, 0x0
++    const v2, 0x2bf20
+ 
+-    const/4 v3, 0x1
++    const/4 v3, 0x0
+ 
+-    if-lt v0, v1, :cond_11
++    const/4 v4, 0x1
+ 
+-    invoke-virtual {p0, v2}, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->getTaskBarState(Z)I
++    if-lt v1, v2, :cond_13
+ 
+-    move-result p0
++    invoke-virtual {v0, v3}, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->getTaskBarState(Z)I
+ 
+-    if-eqz p0, :cond_10
++    move-result v0
+ 
+-    return v3
++    if-eqz v0, :cond_12
+ 
+-    :cond_10
+-    return v2
++    return v4
+ 
+-    :cond_11
+-    iget-object v0, p0, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->settingsHelper:Lcom/android/systemui/util/SettingsHelper;
++    :cond_12
++    return v3
+ 
+-    invoke-virtual {v0}, Lcom/android/systemui/util/SettingsHelper;->isTaskBarEnabled()Z
++    :cond_13
++    iget-object v1, v0, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->settingsHelper:Lcom/android/systemui/util/SettingsHelper;
+ 
+-    move-result v0
++    invoke-virtual {v1}, Lcom/android/systemui/util/SettingsHelper;->isTaskBarEnabled()Z
++
++    move-result v1
+ 
+     invoke-static {}, Lcom/android/systemui/util/DeviceType;->isFactoryBinary()Z
+ 
+-    move-result v1
++    move-result v2
+ 
+-    iget-object v4, p0, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->interactorFactory:Lcom/android/systemui/navigationbar/interactor/InteractorFactory;
++    iget-object v5, v0, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->interactorFactory:Lcom/android/systemui/navigationbar/interactor/InteractorFactory;
+ 
+-    const-class v5, Lcom/android/systemui/navigationbar/interactor/TaskBarInteractor;
++    const-class v6, Lcom/android/systemui/navigationbar/interactor/TaskBarInteractor;
+ 
+-    invoke-virtual {v4, v5}, Lcom/android/systemui/navigationbar/interactor/InteractorFactory;->get(Ljava/lang/Class;)Ljava/lang/Object;
++    invoke-virtual {v5, v6}, Lcom/android/systemui/navigationbar/interactor/InteractorFactory;->get(Ljava/lang/Class;)Ljava/lang/Object;
+ 
+-    move-result-object v6
++    move-result-object v7
+ 
+-    check-cast v6, Lcom/android/systemui/navigationbar/interactor/TaskBarInteractor;
++    check-cast v7, Lcom/android/systemui/navigationbar/interactor/TaskBarInteractor;
+ 
+-    if-eqz v6, :cond_30
++    if-eqz v7, :cond_32
+ 
+-    iget-object v6, v6, Lcom/android/systemui/navigationbar/interactor/TaskBarInteractor;->userUnlocked:Ljava/lang/Boolean;
++    iget-object v7, v7, Lcom/android/systemui/navigationbar/interactor/TaskBarInteractor;->userUnlocked:Ljava/lang/Boolean;
+ 
+-    if-eqz v6, :cond_30
++    if-eqz v7, :cond_32
+ 
+-    invoke-virtual {v6}, Ljava/lang/Boolean;->booleanValue()Z
++    invoke-virtual {v7}, Ljava/lang/Boolean;->booleanValue()Z
+ 
+-    move-result v6
++    move-result v7
+ 
+-    goto :goto_31
++    goto :goto_33
+ 
+-    :cond_30
+-    move v6, v2
++    :cond_32
++    move v7, v3
+ 
+-    :goto_31
+-    iget-object v7, p0, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->states:Lcom/android/systemui/navigationbar/model/NavBarStates;
++    :goto_33
++    iget-object v8, v0, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->states:Lcom/android/systemui/navigationbar/model/NavBarStates;
+ 
+-    iget-boolean v8, v7, Lcom/android/systemui/navigationbar/model/NavBarStates;->deviceProvisioned:Z
++    iget-boolean v9, v8, Lcom/android/systemui/navigationbar/model/NavBarStates;->deviceProvisioned:Z
+ 
+-    iget-object v9, p0, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->settingsHelper:Lcom/android/systemui/util/SettingsHelper;
++    iget-object v10, v0, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->settingsHelper:Lcom/android/systemui/util/SettingsHelper;
+ 
+-    invoke-virtual {v9}, Lcom/android/systemui/util/SettingsHelper;->isEasyModeOn()Z
++    invoke-virtual {v10}, Lcom/android/systemui/util/SettingsHelper;->isEasyModeOn()Z
+ 
+-    move-result v9
++    move-result v10
+ 
+-    iget-object v10, p0, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->settingsHelper:Lcom/android/systemui/util/SettingsHelper;
++    iget-object v11, v0, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->settingsHelper:Lcom/android/systemui/util/SettingsHelper;
+ 
+-    invoke-virtual {v10}, Lcom/android/systemui/util/SettingsHelper;->isUltraPowerSavingMode()Z
++    invoke-virtual {v11}, Lcom/android/systemui/util/SettingsHelper;->isUltraPowerSavingMode()Z
+ 
+-    move-result v10
++    move-result v11
+ 
+-    sget-object v11, Lcom/android/systemui/shared/system/ActivityManagerWrapper;->sInstance:Lcom/android/systemui/shared/system/ActivityManagerWrapper;
++    sget-object v12, Lcom/android/systemui/shared/system/ActivityManagerWrapper;->sInstance:Lcom/android/systemui/shared/system/ActivityManagerWrapper;
+ 
+-    invoke-virtual {v11}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
++    invoke-virtual {v12}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
+ 
+     invoke-static {}, Lcom/android/systemui/shared/system/ActivityManagerWrapper;->isLockTaskKioskModeActive()Z
+ 
+-    move-result v11
++    move-result v12
+ 
+-    invoke-virtual {v4, v5}, Lcom/android/systemui/navigationbar/interactor/InteractorFactory;->get(Ljava/lang/Class;)Ljava/lang/Object;
++    invoke-virtual {v5, v6}, Lcom/android/systemui/navigationbar/interactor/InteractorFactory;->get(Ljava/lang/Class;)Ljava/lang/Object;
+ 
+-    move-result-object v12
++    move-result-object v13
+ 
+-    check-cast v12, Lcom/android/systemui/navigationbar/interactor/TaskBarInteractor;
++    check-cast v13, Lcom/android/systemui/navigationbar/interactor/TaskBarInteractor;
+ 
+-    if-eqz v12, :cond_58
++    if-eqz v13, :cond_5a
+ 
+-    iget-boolean v12, v12, Lcom/android/systemui/navigationbar/interactor/TaskBarInteractor;->isDefaultHome:Z
++    iget-boolean v13, v13, Lcom/android/systemui/navigationbar/interactor/TaskBarInteractor;->isDefaultHome:Z
+ 
+-    if-ne v12, v3, :cond_58
++    if-ne v13, v4, :cond_5a
+ 
+-    move v12, v3
++    move v13, v4
+ 
+-    goto :goto_59
++    goto :goto_5b
+ 
+-    :cond_58
+-    move v12, v2
++    :cond_5a
++    move v13, v3
+ 
+-    :goto_59
+-    iget-boolean v7, v7, Lcom/android/systemui/navigationbar/model/NavBarStates;->userSetupCompleteForCurrentUser:Z
++    :goto_5b
++    iget-boolean v8, v8, Lcom/android/systemui/navigationbar/model/NavBarStates;->userSetupCompleteForCurrentUser:Z
+ 
+-    sget-boolean v13, Lcom/android/systemui/BasicRune;->ONE_UI_8_5:Z
++    sget-boolean v14, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
+ 
+-    invoke-virtual {v4, v5}, Lcom/android/systemui/navigationbar/interactor/InteractorFactory;->get(Ljava/lang/Class;)Ljava/lang/Object;
++    if-eqz v14, :cond_73
+ 
+-    move-result-object v4
++    const-class v14, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;
+ 
+-    check-cast v4, Lcom/android/systemui/navigationbar/interactor/TaskBarInteractor;
++    invoke-virtual {v5, v14}, Lcom/android/systemui/navigationbar/interactor/InteractorFactory;->get(Ljava/lang/Class;)Ljava/lang/Object;
+ 
+-    if-eqz v4, :cond_6b
++    move-result-object v14
+ 
+-    iget-boolean v4, v4, Lcom/android/systemui/navigationbar/interactor/TaskBarInteractor;->fitToActiveDisplay:Z
++    check-cast v14, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;
+ 
+-    if-ne v4, v3, :cond_6b
++    if-eqz v14, :cond_73
+ 
+-    move v4, v3
++    invoke-virtual {v14}, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->isEnabled()Z
+ 
+-    goto :goto_6c
++    move-result v14
+ 
+-    :cond_6b
+-    move v4, v2
++    if-ne v14, v4, :cond_73
++
++    move v14, v4
+ 
+-    :goto_6c
++    goto :goto_74
++
++    :cond_73
++    move v14, v3
++
++    :goto_74
++    invoke-virtual {v5, v6}, Lcom/android/systemui/navigationbar/interactor/InteractorFactory;->get(Ljava/lang/Class;)Ljava/lang/Object;
++
++    move-result-object v5
++
++    check-cast v5, Lcom/android/systemui/navigationbar/interactor/TaskBarInteractor;
++
++    if-eqz v5, :cond_82
++
++    iget-boolean v5, v5, Lcom/android/systemui/navigationbar/interactor/TaskBarInteractor;->fitToActiveDisplay:Z
++
++    if-ne v5, v4, :cond_82
++
++    move v5, v4
++
++    goto :goto_83
++
++    :cond_82
++    move v5, v3
++
++    :goto_83
+     invoke-static {}, Lcom/android/systemui/util/SafeUIState;->isSysUiSafeModeEnabled()Z
+ 
+-    move-result v5
++    move-result v6
+ 
+     invoke-static {}, Landroid/os/Process;->myUserHandle()Landroid/os/UserHandle;
+ 
+-    move-result-object v13
++    move-result-object v15
+ 
+-    sget-object v14, Landroid/os/UserHandle;->SYSTEM:Landroid/os/UserHandle;
++    sget-object v3, Landroid/os/UserHandle;->SYSTEM:Landroid/os/UserHandle;
+ 
+-    invoke-static {v13, v14}, Lkotlin/jvm/internal/Intrinsics;->areEqual(Ljava/lang/Object;Ljava/lang/Object;)Z
++    invoke-static {v15, v3}, Lkotlin/jvm/internal/Intrinsics;->areEqual(Ljava/lang/Object;Ljava/lang/Object;)Z
+ 
+-    move-result v13
++    move-result v3
+ 
+-    if-eqz v13, :cond_a9
++    if-eqz v3, :cond_c4
+ 
+-    if-eqz v0, :cond_a9
++    if-eqz v1, :cond_be
+ 
+-    if-nez v1, :cond_a9
++    if-nez v2, :cond_be
+ 
+-    if-eqz v6, :cond_a9
++    if-eqz v7, :cond_be
+ 
+-    iget-object v0, p0, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->context:Landroid/content/Context;
++    iget-object v1, v0, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->context:Landroid/content/Context;
+ 
+-    invoke-virtual {v0}, Landroid/content/Context;->getResources()Landroid/content/res/Resources;
++    invoke-virtual {v1}, Landroid/content/Context;->getResources()Landroid/content/res/Resources;
+ 
+-    move-result-object v0
++    move-result-object v1
+ 
+-    invoke-virtual {v0}, Landroid/content/res/Resources;->getConfiguration()Landroid/content/res/Configuration;
++    invoke-virtual {v1}, Landroid/content/res/Resources;->getConfiguration()Landroid/content/res/Configuration;
+ 
+-    move-result-object v0
++    move-result-object v1
+ 
+-    iget v0, v0, Landroid/content/res/Configuration;->semDisplayDeviceType:I
++    iget v1, v1, Landroid/content/res/Configuration;->semDisplayDeviceType:I
+ 
+-    if-nez v0, :cond_91
++    if-nez v1, :cond_a8
+ 
+-    goto :goto_97
++    goto :goto_ae
+ 
+-    :cond_91
++    :cond_a8
+     invoke-static {}, Lcom/android/systemui/util/DeviceType;->isTablet()Z
+ 
+-    move-result v0
++    move-result v1
+ 
+-    if-eqz v0, :cond_a9
++    if-eqz v1, :cond_be
+ 
+-    :goto_97
+-    if-nez v4, :cond_a9
++    :goto_ae
++    if-nez v5, :cond_be
+ 
+-    if-eqz v8, :cond_a9
++    if-eqz v9, :cond_be
+ 
+-    if-nez v9, :cond_a9
++    if-nez v10, :cond_be
+ 
+-    if-nez v10, :cond_a9
++    if-nez v11, :cond_be
+ 
+-    if-nez v11, :cond_a9
++    if-nez v12, :cond_be
+ 
+-    if-eqz v12, :cond_a9
++    if-eqz v13, :cond_be
+ 
+-    if-eqz v7, :cond_a9
++    if-eqz v8, :cond_be
+ 
+-    if-eqz v5, :cond_a8
++    if-eqz v6, :cond_c2
+ 
+-    goto :goto_a9
++    :cond_be
++    if-eqz v14, :cond_c4
+ 
+-    :cond_a8
+-    move v2, v3
++    if-eqz v7, :cond_c4
+ 
+-    :cond_a9
+-    :goto_a9
+-    iget-object p0, p0, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->context:Landroid/content/Context;
++    :cond_c2
++    move v3, v4
+ 
+-    invoke-virtual {p0}, Landroid/content/Context;->getContentResolver()Landroid/content/ContentResolver;
++    goto :goto_c5
+ 
+-    move-result-object p0
++    :cond_c4
++    const/4 v3, 0x0
++
++    :goto_c5
++    iget-object v0, v0, Lcom/android/systemui/navigationbar/store/NavBarStateManagerImpl;->context:Landroid/content/Context;
+ 
+-    const-string/jumbo v0, "sem_task_bar_available"
++    invoke-virtual {v0}, Landroid/content/Context;->getContentResolver()Landroid/content/ContentResolver;
++
++    move-result-object v0
+ 
+-    invoke-static {p0, v0, v2}, Landroid/provider/Settings$Global;->putInt(Landroid/content/ContentResolver;Ljava/lang/String;I)Z
++    const-string/jumbo v1, "sem_task_bar_available"
+ 
+-    return v2
++    invoke-static {v0, v1, v3}, Landroid/provider/Settings$Global;->putInt(Landroid/content/ContentResolver;Ljava/lang/String;I)Z
++
++    return v3
+ .end method
+ 
+ .method public final logNavBarStates(Ljava/lang/Object;Ljava/lang/String;)V
+diff --git a/smali_classes2/com/android/systemui/navigationbar/store/NavBarStoreImpl$initInteractor$21.smali b/smali_classes2/com/android/systemui/navigationbar/store/NavBarStoreImpl$initInteractor$21.smali
+new file mode 100644
+index 0000000..281317c
+--- /dev/null
++++ b/smali_classes2/com/android/systemui/navigationbar/store/NavBarStoreImpl$initInteractor$21.smali
+@@ -0,0 +1,44 @@
++.class public final Lcom/android/systemui/navigationbar/store/NavBarStoreImpl$initInteractor$21;
++.super Ljava/lang/Object;
++.source "qb/115377634 67532c40eb579d358d88853dc981ad7d4d1481b384c76a688c5b519328094be8"
++
++# interfaces
++.implements Ljava/util/function/Consumer;
++
++
++# instance fields
++.field public final synthetic this$0:Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;
++
++
++# direct methods
++.method public constructor <init>(Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;)V
++    .registers 2
++
++    iput-object p1, p0, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl$initInteractor$21;->this$0:Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;
++
++    invoke-direct {p0}, Ljava/lang/Object;-><init>()V
++
++    return-void
++.end method
++
++
++# virtual methods
++.method public final accept(Ljava/lang/Object;)V
++    .registers 5
++
++    iget-object p0, p0, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl$initInteractor$21;->this$0:Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;
++
++    new-instance p1, Lcom/android/systemui/navigationbar/store/EventTypeFactory$EventType$OnUpdateTaskbarAvailable;
++
++    const/4 v0, 0x1
++
++    const/4 v1, 0x0
++
++    const/4 v2, 0x0
++
++    invoke-direct {p1, v2, v0, v1}, Lcom/android/systemui/navigationbar/store/EventTypeFactory$EventType$OnUpdateTaskbarAvailable;-><init>(ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
++
++    invoke-virtual {p0, p0, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->handleEvent(Ljava/lang/Object;Lcom/android/systemui/navigationbar/store/EventTypeFactory$EventType;)V
++
++    return-void
++.end method
+diff --git a/smali_classes2/com/android/systemui/navigationbar/store/NavBarStoreImpl.smali b/smali_classes2/com/android/systemui/navigationbar/store/NavBarStoreImpl.smali
+index 6aa017f..7f5206d 100644
+--- a/smali_classes2/com/android/systemui/navigationbar/store/NavBarStoreImpl.smali
++++ b/smali_classes2/com/android/systemui/navigationbar/store/NavBarStoreImpl.smali
+@@ -157,7 +157,7 @@
+ 
+ # virtual methods
+ .method public final apply(Lcom/android/systemui/navigationbar/bandaid/Band$Kit;Lcom/android/systemui/navigationbar/store/NavBarStoreAction;)Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;
+-    .registers 13
++    .registers 14
+ 
+     iget-boolean v0, p0, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->handleEventLoggingEnabled:Z
+ 
+@@ -190,7 +190,9 @@
+     :cond_1d
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateNavBarIconAndHints;
+ 
+-    if-eqz v0, :cond_31
++    const-class v2, Lcom/android/systemui/navigationbar/NavigationBarController;
++
++    if-eqz v0, :cond_42
+ 
+     const-class p2, Lcom/android/systemui/navigationbar/views/NavigationBarView;
+ 
+@@ -204,20 +206,34 @@
+ 
+     invoke-virtual {p1}, Lcom/android/systemui/navigationbar/views/NavigationBarView;->updateIconsAndHints()V
+ 
+-    sget-boolean p1, Lcom/android/systemui/BasicRune;->ONE_UI_8_5:Z
++    sget-boolean p1, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
++
++    if-eqz p1, :cond_73d
++
++    sget-object p1, Lcom/android/systemui/Dependency;->sDependency:Lcom/android/systemui/Dependency;
++
++    invoke-virtual {p1, v2}, Lcom/android/systemui/Dependency;->getDependencyInner(Ljava/lang/Object;)Ljava/lang/Object;
++
++    move-result-object p1
++
++    check-cast p1, Lcom/android/systemui/navigationbar/NavigationBarController;
++
++    check-cast p1, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;
++
++    invoke-virtual {p1}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->onInitializedTaskbarNavigationBar()V
+ 
+     return-object p0
+ 
+-    :cond_31
++    :cond_42
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$ReevaluateNavBar;
+ 
+-    const-class v2, Lcom/android/systemui/statusbar/phone/LightBarController;
++    const-class v3, Lcom/android/systemui/statusbar/phone/LightBarController;
+ 
+-    if-eqz v0, :cond_45
++    if-eqz v0, :cond_56
+ 
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+-    invoke-virtual {p0, v2, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v3, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+@@ -229,10 +245,10 @@
+ 
+     return-object p0
+ 
+-    :cond_45
++    :cond_56
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateNavBarOpaqueColor;
+ 
+-    if-eqz v0, :cond_68
++    if-eqz v0, :cond_79
+ 
+     const-class p2, Lcom/android/systemui/navigationbar/views/NavigationBarTransitions;
+ 
+@@ -264,10 +280,10 @@
+ 
+     return-object p0
+ 
+-    :cond_68
++    :cond_79
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$ReinflateNavBar;
+ 
+-    if-eqz v0, :cond_7a
++    if-eqz v0, :cond_8b
+ 
+     const-class p2, Lcom/android/systemui/navigationbar/views/NavigationBarView;
+ 
+@@ -283,10 +299,10 @@
+ 
+     return-object p0
+ 
+-    :cond_7a
++    :cond_8b
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$NavBarIconMarquee;
+ 
+-    if-eqz v0, :cond_94
++    if-eqz v0, :cond_a5
+ 
+     iget-object p2, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->states:Lcom/android/systemui/navigationbar/model/NavBarStates;
+ 
+@@ -310,10 +326,10 @@
+ 
+     return-object p0
+ 
+-    :cond_94
++    :cond_a5
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$InvalidateRemoteView;
+ 
+-    if-eqz v0, :cond_a6
++    if-eqz v0, :cond_b7
+ 
+     const-class p2, Lcom/android/systemui/navigationbar/views/NavigationBarView;
+ 
+@@ -329,18 +345,18 @@
+ 
+     return-object p0
+ 
+-    :cond_a6
++    :cond_b7
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateRemoteViewContainer;
+ 
+-    const-class v3, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;
++    const-class v4, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;
+ 
+-    const/4 v4, 0x4
++    const/4 v5, 0x4
+ 
+-    const/4 v5, 0x1
++    const/4 v6, 0x1
+ 
+-    const/4 v6, 0x0
++    const/4 v7, 0x0
+ 
+-    if-eqz v0, :cond_f5
++    if-eqz v0, :cond_106
+ 
+     check-cast p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateRemoteViewContainer;
+ 
+@@ -348,7 +364,7 @@
+ 
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+-    invoke-virtual {p0, v3, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v4, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object v0
+ 
+@@ -366,16 +382,16 @@
+ 
+     iget p2, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$Action;->rotation:I
+ 
+-    if-eqz v1, :cond_719
++    if-eqz v1, :cond_73d
+ 
+     iget-object v1, v0, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->navBarStore:Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;
+ 
+-    if-eqz v1, :cond_cf
++    if-eqz v1, :cond_e0
+ 
+-    move-object v6, v1
++    move-object v7, v1
+ 
+-    :cond_cf
+-    invoke-virtual {v6, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getNavStateManager(I)Lcom/android/systemui/navigationbar/store/NavBarStateManager;
++    :cond_e0
++    invoke-virtual {v7, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getNavStateManager(I)Lcom/android/systemui/navigationbar/store/NavBarStateManager;
+ 
+     move-result-object p1
+ 
+@@ -385,44 +401,44 @@
+ 
+     iget-boolean p1, p1, Lcom/android/systemui/navigationbar/model/NavBarStates;->canMove:Z
+ 
+-    if-nez p1, :cond_e3
++    if-nez p1, :cond_f4
+ 
+     iget-object p1, v0, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->rightContainer:Landroid/widget/LinearLayout;
+ 
+-    if-eqz p1, :cond_719
++    if-eqz p1, :cond_73d
+ 
+-    invoke-virtual {p1, v4}, Landroid/widget/LinearLayout;->setVisibility(I)V
++    invoke-virtual {p1, v5}, Landroid/widget/LinearLayout;->setVisibility(I)V
+ 
+     return-object p0
+ 
+-    :cond_e3
+-    if-ne p2, v5, :cond_ed
++    :cond_f4
++    if-ne p2, v6, :cond_fe
+ 
+     iget-object p1, v0, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->leftContainer:Landroid/widget/LinearLayout;
+ 
+-    if-eqz p1, :cond_719
++    if-eqz p1, :cond_73d
+ 
+-    invoke-virtual {p1, v4}, Landroid/widget/LinearLayout;->setVisibility(I)V
++    invoke-virtual {p1, v5}, Landroid/widget/LinearLayout;->setVisibility(I)V
+ 
+     return-object p0
+ 
+-    :cond_ed
++    :cond_fe
+     iget-object p1, v0, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->rightContainer:Landroid/widget/LinearLayout;
+ 
+-    if-eqz p1, :cond_719
++    if-eqz p1, :cond_73d
+ 
+-    invoke-virtual {p1, v4}, Landroid/widget/LinearLayout;->setVisibility(I)V
++    invoke-virtual {p1, v5}, Landroid/widget/LinearLayout;->setVisibility(I)V
+ 
+     return-object p0
+ 
+-    :cond_f5
++    :cond_106
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateRemoteViewDarkIntensity;
+ 
+-    if-eqz v0, :cond_141
++    if-eqz v0, :cond_152
+ 
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+-    invoke-virtual {p0, v3, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v4, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+@@ -438,11 +454,11 @@
+ 
+     cmpg-float v0, v0, p2
+ 
+-    if-nez v0, :cond_10f
++    if-nez v0, :cond_120
+ 
+-    goto/16 :goto_719
++    goto/16 :goto_73d
+ 
+-    :cond_10f
++    :cond_120
+     iput p2, p1, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->darkIntensity:F
+ 
+     iget-object p2, p1, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->leftViewList:Ljava/util/PriorityQueue;
+@@ -451,12 +467,12 @@
+ 
+     move-result-object p2
+ 
+-    :goto_117
++    :goto_128
+     invoke-interface {p2}, Ljava/util/Iterator;->hasNext()Z
+ 
+     move-result v0
+ 
+-    if-eqz v0, :cond_129
++    if-eqz v0, :cond_13a
+ 
+     invoke-interface {p2}, Ljava/util/Iterator;->next()Ljava/lang/Object;
+ 
+@@ -468,21 +484,21 @@
+ 
+     invoke-virtual {p1, v0}, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->applyTint(Landroid/view/View;)V
+ 
+-    goto :goto_117
++    goto :goto_128
+ 
+-    :cond_129
++    :cond_13a
+     iget-object p2, p1, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->rightViewList:Ljava/util/PriorityQueue;
+ 
+     invoke-virtual {p2}, Ljava/util/PriorityQueue;->iterator()Ljava/util/Iterator;
+ 
+     move-result-object p2
+ 
+-    :goto_12f
++    :goto_140
+     invoke-interface {p2}, Ljava/util/Iterator;->hasNext()Z
+ 
+     move-result v0
+ 
+-    if-eqz v0, :cond_719
++    if-eqz v0, :cond_73d
+ 
+     invoke-interface {p2}, Ljava/util/Iterator;->next()Ljava/lang/Object;
+ 
+@@ -494,18 +510,18 @@
+ 
+     invoke-virtual {p1, v0}, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->applyTint(Landroid/view/View;)V
+ 
+-    goto :goto_12f
++    goto :goto_140
+ 
+-    :cond_141
++    :cond_152
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateRemoteViewShortcut;
+ 
+-    const/4 v7, 0x0
++    const/4 v8, 0x0
+ 
+-    if-eqz v0, :cond_1bd
++    if-eqz v0, :cond_1ce
+ 
+     iget v0, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+-    invoke-virtual {p0, v3, v0}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v4, v0}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object v0
+ 
+@@ -529,120 +545,120 @@
+ 
+     iget-object v4, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$RemoteViewShortcut;->requestClass:Ljava/lang/String;
+ 
+-    if-eqz v1, :cond_1b9
++    if-eqz v1, :cond_1ca
+ 
+-    sget-boolean v8, Lcom/android/systemui/BasicRune;->NAVBAR_MULTI_MODAL_ICON_LARGE_COVER:Z
++    sget-boolean v5, Lcom/android/systemui/BasicRune;->NAVBAR_MULTI_MODAL_ICON_LARGE_COVER:Z
+ 
+-    if-eqz v8, :cond_181
++    if-eqz v5, :cond_192
+ 
+-    if-ne p1, v5, :cond_181
++    if-ne p1, v6, :cond_192
+ 
+     new-instance v1, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteView;
+ 
+     iget-object v9, v0, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->navBarStore:Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;
+ 
+-    if-eqz v9, :cond_170
++    if-eqz v9, :cond_181
+ 
+-    move-object v6, v9
++    move-object v7, v9
+ 
+-    :cond_170
++    :cond_181
+     const-class v9, Landroid/content/Context;
+ 
+-    invoke-virtual {v6, v9, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {v7, v9, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+-    move-result-object v6
++    move-result-object v7
+ 
+-    check-cast v6, Landroid/content/Context;
++    check-cast v7, Landroid/content/Context;
+ 
+     iget-object p2, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$RemoteViewShortcut;->remoteViews:Landroid/widget/RemoteViews;
+ 
+     invoke-virtual {p2}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
+ 
+-    invoke-direct {v1, v6, v4, p2, v3}, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteView;-><init>(Landroid/content/Context;Ljava/lang/String;Landroid/widget/RemoteViews;I)V
++    invoke-direct {v1, v7, v4, p2, v3}, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteView;-><init>(Landroid/content/Context;Ljava/lang/String;Landroid/widget/RemoteViews;I)V
+ 
+-    goto :goto_189
++    goto :goto_19a
+ 
+-    :cond_181
++    :cond_192
+     new-instance p2, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteView;
+ 
+-    iget-object v6, v0, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->context:Landroid/content/Context;
++    iget-object v7, v0, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->context:Landroid/content/Context;
+ 
+-    invoke-direct {p2, v6, v4, v1, v3}, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteView;-><init>(Landroid/content/Context;Ljava/lang/String;Landroid/widget/RemoteViews;I)V
++    invoke-direct {p2, v7, v4, v1, v3}, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteView;-><init>(Landroid/content/Context;Ljava/lang/String;Landroid/widget/RemoteViews;I)V
+ 
+     move-object v1, p2
+ 
+-    :goto_189
++    :goto_19a
+     iget-object p2, v1, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteView;->requestClass:Ljava/lang/String;
+ 
+     invoke-virtual {v0, v2, p2}, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->removeRemoteView(ILjava/lang/String;)V
+ 
+-    if-eqz p2, :cond_1a3
++    if-eqz p2, :cond_1b4
+ 
+     const-string v3, "honeyboard"
+ 
+-    invoke-static {p2, v3, v7}, Lkotlin/text/StringsKt__StringsKt;->contains(Ljava/lang/CharSequence;Ljava/lang/CharSequence;Z)Z
++    invoke-static {p2, v3, v8}, Lkotlin/text/StringsKt__StringsKt;->contains(Ljava/lang/CharSequence;Ljava/lang/CharSequence;Z)Z
+ 
+     move-result p2
+ 
+-    if-ne p2, v5, :cond_1a3
++    if-ne p2, v6, :cond_1b4
+ 
+-    if-eqz v8, :cond_19d
++    if-eqz v5, :cond_1ae
+ 
+-    if-ne p1, v5, :cond_19d
++    if-ne p1, v6, :cond_1ae
+ 
+-    goto :goto_19e
++    goto :goto_1af
+ 
+-    :cond_19d
+-    move v7, v2
++    :cond_1ae
++    move v8, v2
+ 
+-    :goto_19e
+-    iput-boolean v5, v0, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->showInGestureMode:Z
++    :goto_1af
++    iput-boolean v6, v0, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->showInGestureMode:Z
+ 
+-    iput v7, v0, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->adaptivePosition:I
++    iput v8, v0, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->adaptivePosition:I
+ 
+-    move v2, v7
++    move v2, v8
+ 
+-    :cond_1a3
+-    if-eqz v2, :cond_1ae
++    :cond_1b4
++    if-eqz v2, :cond_1bf
+ 
+-    if-eq v2, v5, :cond_1a8
++    if-eq v2, v6, :cond_1b9
+ 
+-    goto :goto_1b3
++    goto :goto_1c4
+ 
+-    :cond_1a8
++    :cond_1b9
+     iget-object p1, v0, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->rightViewList:Ljava/util/PriorityQueue;
+ 
+     invoke-virtual {p1, v1}, Ljava/util/PriorityQueue;->add(Ljava/lang/Object;)Z
+ 
+-    goto :goto_1b3
++    goto :goto_1c4
+ 
+-    :cond_1ae
++    :cond_1bf
+     iget-object p1, v0, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->leftViewList:Ljava/util/PriorityQueue;
+ 
+     invoke-virtual {p1, v1}, Ljava/util/PriorityQueue;->add(Ljava/lang/Object;)Z
+ 
+-    :goto_1b3
++    :goto_1c4
+     iget-object p1, v1, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteView;->view:Landroid/view/View;
+ 
+     invoke-virtual {v0, p1}, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->applyTint(Landroid/view/View;)V
+ 
+     return-object p0
+ 
+-    :cond_1b9
++    :cond_1ca
+     invoke-virtual {v0, v2, v4}, Lcom/android/systemui/navigationbar/remoteview/NavBarRemoteViewManager;->removeRemoteView(ILjava/lang/String;)V
+ 
+     return-object p0
+ 
+-    :cond_1bd
++    :cond_1ce
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateNavBarNormalStyle;
+ 
+-    const v3, 0x7e0a0897
++    const v4, 0x7e0a0897
+ 
+-    const/16 v8, 0x8
++    const/16 v9, 0x8
+ 
+-    const-class v9, Lcom/android/systemui/navigationbar/views/NavigationBar;
++    const-class v10, Lcom/android/systemui/navigationbar/views/NavigationBar;
+ 
+-    if-eqz v0, :cond_1ef
++    if-eqz v0, :cond_200
+ 
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+@@ -650,7 +666,7 @@
+ 
+     move-result-object p2
+ 
+-    invoke-virtual {p2, v8}, Landroid/widget/FrameLayout;->setVisibility(I)V
++    invoke-virtual {p2, v9}, Landroid/widget/FrameLayout;->setVisibility(I)V
+ 
+     const-class p2, Lcom/android/systemui/navigationbar/views/NavigationBarView;
+ 
+@@ -660,15 +676,15 @@
+ 
+     check-cast p2, Lcom/android/systemui/navigationbar/views/NavigationBarView;
+ 
+-    invoke-virtual {p2, v3}, Landroid/widget/FrameLayout;->requireViewById(I)Landroid/view/View;
++    invoke-virtual {p2, v4}, Landroid/widget/FrameLayout;->requireViewById(I)Landroid/view/View;
+ 
+     move-result-object p2
+ 
+     check-cast p2, Lcom/android/systemui/navigationbar/views/NavigationBarInflaterView;
+ 
+-    invoke-virtual {p2, v7}, Landroid/widget/FrameLayout;->setVisibility(I)V
++    invoke-virtual {p2, v8}, Landroid/widget/FrameLayout;->setVisibility(I)V
+ 
+-    invoke-virtual {p0, v9, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v10, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+@@ -676,14 +692,14 @@
+ 
+     invoke-virtual {p1}, Lcom/android/systemui/navigationbar/views/NavigationBar;->updateNavBarLayoutParams()V
+ 
+-    invoke-virtual {p1, v7}, Lcom/android/systemui/navigationbar/views/NavigationBar;->updateNavBarStyle(Z)V
++    invoke-virtual {p1, v8}, Lcom/android/systemui/navigationbar/views/NavigationBar;->updateNavBarStyle(Z)V
+ 
+     return-object p0
+ 
+-    :cond_1ef
++    :cond_200
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateNavBarSUWStyle;
+ 
+-    if-eqz v0, :cond_21a
++    if-eqz v0, :cond_22b
+ 
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+@@ -695,21 +711,21 @@
+ 
+     check-cast p2, Lcom/android/systemui/navigationbar/views/NavigationBarView;
+ 
+-    invoke-virtual {p2, v3}, Landroid/widget/FrameLayout;->requireViewById(I)Landroid/view/View;
++    invoke-virtual {p2, v4}, Landroid/widget/FrameLayout;->requireViewById(I)Landroid/view/View;
+ 
+     move-result-object p2
+ 
+     check-cast p2, Lcom/android/systemui/navigationbar/views/NavigationBarInflaterView;
+ 
+-    invoke-virtual {p2, v8}, Landroid/widget/FrameLayout;->setVisibility(I)V
++    invoke-virtual {p2, v9}, Landroid/widget/FrameLayout;->setVisibility(I)V
+ 
+     invoke-virtual {p0, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getSUWNavigationBarView(I)Lcom/android/systemui/navigationbar/views/SamsungNavigationBarSetupWizardView;
+ 
+     move-result-object p2
+ 
+-    invoke-virtual {p2, v7}, Landroid/widget/FrameLayout;->setVisibility(I)V
++    invoke-virtual {p2, v8}, Landroid/widget/FrameLayout;->setVisibility(I)V
+ 
+-    invoke-virtual {p0, v9, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v10, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+@@ -717,14 +733,14 @@
+ 
+     invoke-virtual {p1}, Lcom/android/systemui/navigationbar/views/NavigationBar;->updateNavBarLayoutParams()V
+ 
+-    invoke-virtual {p1, v5}, Lcom/android/systemui/navigationbar/views/NavigationBar;->updateNavBarStyle(Z)V
++    invoke-virtual {p1, v6}, Lcom/android/systemui/navigationbar/views/NavigationBar;->updateNavBarStyle(Z)V
+ 
+     return-object p0
+ 
+-    :cond_21a
++    :cond_22b
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateSUWDisabled;
+ 
+-    if-eqz v0, :cond_22e
++    if-eqz v0, :cond_23f
+ 
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+@@ -742,10 +758,10 @@
+ 
+     return-object p0
+ 
+-    :cond_22e
++    :cond_23f
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateSUWDarkIntensity;
+ 
+-    if-eqz v0, :cond_2ad
++    if-eqz v0, :cond_2be
+ 
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+@@ -803,11 +819,11 @@
+ 
+     iget-object v1, p1, Lcom/android/systemui/navigationbar/views/SamsungNavigationBarSetupWizardView;->prevBtn:Landroid/widget/ImageView;
+ 
+-    if-nez v1, :cond_26f
++    if-nez v1, :cond_280
+ 
+-    move-object v1, v6
++    move-object v1, v7
+ 
+-    :cond_26f
++    :cond_280
+     new-instance v2, Landroid/graphics/PorterDuffColorFilter;
+ 
+     sget-object v3, Landroid/graphics/PorterDuff$Mode;->SRC_ATOP:Landroid/graphics/PorterDuff$Mode;
+@@ -818,11 +834,11 @@
+ 
+     iget-object v1, p1, Lcom/android/systemui/navigationbar/views/SamsungNavigationBarSetupWizardView;->imeBtn:Landroid/widget/ImageView;
+ 
+-    if-nez v1, :cond_27e
++    if-nez v1, :cond_28f
+ 
+-    move-object v1, v6
++    move-object v1, v7
+ 
+-    :cond_27e
++    :cond_28f
+     new-instance v2, Landroid/graphics/PorterDuffColorFilter;
+ 
+     invoke-direct {v2, v0, v3}, Landroid/graphics/PorterDuffColorFilter;-><init>(ILandroid/graphics/PorterDuff$Mode;)V
+@@ -831,11 +847,11 @@
+ 
+     iget-object v1, p1, Lcom/android/systemui/navigationbar/views/SamsungNavigationBarSetupWizardView;->a11yBtn:Landroid/widget/ImageView;
+ 
+-    if-nez v1, :cond_28b
++    if-nez v1, :cond_29c
+ 
+-    move-object v1, v6
++    move-object v1, v7
+ 
+-    :cond_28b
++    :cond_29c
+     new-instance v2, Landroid/graphics/PorterDuffColorFilter;
+ 
+     invoke-direct {v2, v0, v3}, Landroid/graphics/PorterDuffColorFilter;-><init>(ILandroid/graphics/PorterDuff$Mode;)V
+@@ -844,40 +860,40 @@
+ 
+     iget-object v0, p1, Lcom/android/systemui/navigationbar/views/SamsungNavigationBarSetupWizardView;->backRipple:Lcom/android/systemui/shared/navigationbar/SamsungKeyButtonRipple;
+ 
+-    if-nez v0, :cond_298
++    if-nez v0, :cond_2a9
+ 
+-    move-object v0, v6
++    move-object v0, v7
+ 
+-    :cond_298
++    :cond_2a9
+     invoke-virtual {v0, p2}, Lcom/android/systemui/shared/navigationbar/SamsungKeyButtonRipple;->setDarkIntensity(F)V
+ 
+     iget-object v0, p1, Lcom/android/systemui/navigationbar/views/SamsungNavigationBarSetupWizardView;->backAltRipple:Lcom/android/systemui/shared/navigationbar/SamsungKeyButtonRipple;
+ 
+-    if-nez v0, :cond_2a0
++    if-nez v0, :cond_2b1
+ 
+-    move-object v0, v6
++    move-object v0, v7
+ 
+-    :cond_2a0
++    :cond_2b1
+     invoke-virtual {v0, p2}, Lcom/android/systemui/shared/navigationbar/SamsungKeyButtonRipple;->setDarkIntensity(F)V
+ 
+     iget-object p1, p1, Lcom/android/systemui/navigationbar/views/SamsungNavigationBarSetupWizardView;->a11yRipple:Lcom/android/systemui/shared/navigationbar/SamsungKeyButtonRipple;
+ 
+-    if-nez p1, :cond_2a8
++    if-nez p1, :cond_2b9
+ 
+-    goto :goto_2a9
++    goto :goto_2ba
+ 
+-    :cond_2a8
+-    move-object v6, p1
++    :cond_2b9
++    move-object v7, p1
+ 
+-    :goto_2a9
+-    invoke-virtual {v6, p2}, Lcom/android/systemui/shared/navigationbar/SamsungKeyButtonRipple;->setDarkIntensity(F)V
++    :goto_2ba
++    invoke-virtual {v7, p2}, Lcom/android/systemui/shared/navigationbar/SamsungKeyButtonRipple;->setDarkIntensity(F)V
+ 
+     return-object p0
+ 
+-    :cond_2ad
++    :cond_2be
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateSUWIconHints;
+ 
+-    if-eqz v0, :cond_2f1
++    if-eqz v0, :cond_302
+ 
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+@@ -893,13 +909,13 @@
+ 
+     iput p2, p1, Lcom/android/systemui/navigationbar/views/SamsungNavigationBarSetupWizardView;->hints:I
+ 
+-    and-int/2addr p2, v5
++    and-int/2addr p2, v6
+ 
+-    if-eqz p2, :cond_2d1
++    if-eqz p2, :cond_2e2
+ 
+     sget-boolean p2, Lcom/android/systemui/BasicRune;->NAVBAR_SETUP_WIZARD_GLIF_EXPRESSIVE:Z
+ 
+-    if-eqz p2, :cond_2d1
++    if-eqz p2, :cond_2e2
+ 
+     iget-object p2, p1, Lcom/android/systemui/navigationbar/views/SamsungNavigationBarSetupWizardView;->navBarStateManager:Lcom/android/systemui/navigationbar/store/NavBarStateManager;
+ 
+@@ -909,64 +925,64 @@
+ 
+     move-result p2
+ 
+-    if-nez p2, :cond_2d1
++    if-nez p2, :cond_2e2
+ 
+-    goto :goto_2d2
++    goto :goto_2e3
+ 
+-    :cond_2d1
+-    move v5, v7
++    :cond_2e2
++    move v6, v8
+ 
+-    :goto_2d2
++    :goto_2e3
+     iget-object p2, p1, Lcom/android/systemui/navigationbar/views/SamsungNavigationBarSetupWizardView;->imeBtnLayout:Lcom/android/systemui/navigationbar/views/SamsungNavigationBarSetupWizardView$NavigationBarSetupWizardButton;
+ 
+-    if-nez p2, :cond_2d7
++    if-nez p2, :cond_2e8
+ 
+-    move-object p2, v6
++    move-object p2, v7
+ 
+-    :cond_2d7
+-    if-eqz v5, :cond_2db
++    :cond_2e8
++    if-eqz v6, :cond_2ec
+ 
+-    move v0, v7
++    move v0, v8
+ 
+-    goto :goto_2dc
++    goto :goto_2ed
+ 
+-    :cond_2db
+-    move v0, v4
++    :cond_2ec
++    move v0, v5
+ 
+-    :goto_2dc
++    :goto_2ed
+     invoke-virtual {p2, v0}, Landroid/widget/LinearLayout;->setVisibility(I)V
+ 
+     iget-object p1, p1, Lcom/android/systemui/navigationbar/views/SamsungNavigationBarSetupWizardView;->prevBtnLayout:Lcom/android/systemui/navigationbar/views/SamsungNavigationBarSetupWizardView$NavigationBarSetupWizardButton;
+ 
+-    if-nez p1, :cond_2e4
++    if-nez p1, :cond_2f5
+ 
+-    goto :goto_2e5
++    goto :goto_2f6
+ 
+-    :cond_2e4
+-    move-object v6, p1
++    :cond_2f5
++    move-object v7, p1
+ 
+-    :goto_2e5
+-    if-nez v5, :cond_2ed
++    :goto_2f6
++    if-nez v6, :cond_2fe
+ 
+     sget-boolean p1, Lcom/android/systemui/BasicRune;->NAVBAR_SETUP_WIZARD_GLIF_EXPRESSIVE:Z
+ 
+-    if-eqz p1, :cond_2ec
++    if-eqz p1, :cond_2fd
+ 
+-    goto :goto_2ed
++    goto :goto_2fe
+ 
+-    :cond_2ec
+-    move v4, v7
++    :cond_2fd
++    move v5, v8
+ 
+-    :cond_2ed
+-    :goto_2ed
+-    invoke-virtual {v6, v4}, Landroid/widget/LinearLayout;->setVisibility(I)V
++    :cond_2fe
++    :goto_2fe
++    invoke-virtual {v7, v5}, Landroid/widget/LinearLayout;->setVisibility(I)V
+ 
+     return-object p0
+ 
+-    :cond_2f1
++    :cond_302
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateSUWA11yIcon;
+ 
+-    if-eqz v0, :cond_335
++    if-eqz v0, :cond_346
+ 
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+@@ -986,7 +1002,7 @@
+ 
+     sget-boolean v1, Lcom/android/systemui/BasicRune;->NAVBAR_SETUP_WIZARD_GLIF_EXPRESSIVE:Z
+ 
+-    if-eqz v1, :cond_317
++    if-eqz v1, :cond_328
+ 
+     iget-object v1, p1, Lcom/android/systemui/navigationbar/views/SamsungNavigationBarSetupWizardView;->navBarStateManager:Lcom/android/systemui/navigationbar/store/NavBarStateManager;
+ 
+@@ -996,66 +1012,66 @@
+ 
+     move-result v1
+ 
+-    if-nez v1, :cond_315
++    if-nez v1, :cond_326
+ 
+-    goto :goto_317
++    goto :goto_328
+ 
+-    :cond_315
+-    move v1, v7
++    :cond_326
++    move v1, v8
+ 
+-    goto :goto_318
++    goto :goto_329
+ 
+-    :cond_317
+-    :goto_317
+-    move v1, v5
++    :cond_328
++    :goto_328
++    move v1, v6
+ 
+-    :goto_318
++    :goto_329
+     iget-object v2, p1, Lcom/android/systemui/navigationbar/views/SamsungNavigationBarSetupWizardView;->a11yLayout:Lcom/android/systemui/navigationbar/views/SamsungNavigationBarSetupWizardView$NavigationBarSetupWizardButton;
+ 
+-    if-nez v2, :cond_31d
++    if-nez v2, :cond_32e
+ 
+-    move-object v2, v6
++    move-object v2, v7
+ 
+-    :cond_31d
+-    if-eqz v0, :cond_322
++    :cond_32e
++    if-eqz v0, :cond_333
+ 
+-    if-eqz v1, :cond_322
++    if-eqz v1, :cond_333
+ 
+-    move v4, v7
++    move v5, v8
+ 
+-    :cond_322
+-    invoke-virtual {v2, v4}, Landroid/widget/LinearLayout;->setVisibility(I)V
++    :cond_333
++    invoke-virtual {v2, v5}, Landroid/widget/LinearLayout;->setVisibility(I)V
+ 
+     iget-object p1, p1, Lcom/android/systemui/navigationbar/views/SamsungNavigationBarSetupWizardView;->a11yLayout:Lcom/android/systemui/navigationbar/views/SamsungNavigationBarSetupWizardView$NavigationBarSetupWizardButton;
+ 
+-    if-nez p1, :cond_32a
++    if-nez p1, :cond_33b
+ 
+-    goto :goto_32b
++    goto :goto_33c
+ 
+-    :cond_32a
+-    move-object v6, p1
++    :cond_33b
++    move-object v7, p1
+ 
+-    :goto_32b
+-    if-eqz p2, :cond_330
++    :goto_33c
++    if-eqz p2, :cond_341
+ 
+-    if-eqz v1, :cond_330
++    if-eqz v1, :cond_341
+ 
+-    goto :goto_331
++    goto :goto_342
+ 
+-    :cond_330
+-    move v5, v7
++    :cond_341
++    move v6, v8
+ 
+-    :goto_331
+-    invoke-virtual {v6, v5}, Landroid/widget/LinearLayout;->setLongClickable(Z)V
++    :goto_342
++    invoke-virtual {v7, v6}, Landroid/widget/LinearLayout;->setLongClickable(Z)V
+ 
+     return-object p0
+ 
+-    :cond_335
++    :cond_346
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateNavBarGoneStateFlag;
+ 
+-    iget-object v3, p0, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->sysUiFlagContainer:Lcom/android/systemui/model/SysUiState;
++    iget-object v4, p0, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->sysUiFlagContainer:Lcom/android/systemui/model/SysUiState;
+ 
+-    if-eqz v0, :cond_356
++    if-eqz v0, :cond_367
+ 
+     check-cast p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateNavBarGoneStateFlag;
+ 
+@@ -1063,17 +1079,17 @@
+ 
+     iget p2, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$Action;->navBarVisibility:I
+ 
+-    if-ne p2, v8, :cond_344
++    if-ne p2, v9, :cond_355
+ 
+-    goto :goto_345
++    goto :goto_356
+ 
+-    :cond_344
+-    move v5, v7
++    :cond_355
++    move v6, v8
+ 
+-    :goto_345
++    :goto_356
+     const-wide v0, 0x200000000000L
+ 
+-    invoke-interface {v3, v0, v1, v5}, Lcom/android/systemui/model/SysUiState;->setFlag(JZ)Lcom/android/systemui/model/SysUiState;
++    invoke-interface {v4, v0, v1, v6}, Lcom/android/systemui/model/SysUiState;->setFlag(JZ)Lcom/android/systemui/model/SysUiState;
+ 
+     move-result-object p2
+ 
+@@ -1085,10 +1101,10 @@
+ 
+     return-object p0
+ 
+-    :cond_356
++    :cond_367
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$SetNavBarVisibility;
+ 
+-    if-eqz v0, :cond_38c
++    if-eqz v0, :cond_39d
+ 
+     check-cast p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$SetNavBarVisibility;
+ 
+@@ -1098,7 +1114,7 @@
+ 
+     iget-boolean v0, p0, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->handleEventLoggingEnabled:Z
+ 
+-    if-eqz v0, :cond_377
++    if-eqz v0, :cond_388
+ 
+     iget v0, p0, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->loggingDepth:I
+ 
+@@ -1116,7 +1132,7 @@
+ 
+     invoke-virtual {v1, v0, v2}, Lcom/android/systemui/navigationbar/util/StoreLogUtil;->printLog(ILjava/lang/String;)V
+ 
+-    :cond_377
++    :cond_388
+     const-class v0, Lcom/android/systemui/navigationbar/views/NavigationBarView;
+ 
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+@@ -1137,12 +1153,12 @@
+ 
+     return-object p0
+ 
+-    :cond_38c
++    :cond_39d
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateEdgeBackGestureDisabledPolicy;
+ 
+-    const-class v4, Lcom/android/systemui/navigationbar/TaskbarDelegate;
++    const-class v5, Lcom/android/systemui/navigationbar/TaskbarDelegate;
+ 
+-    if-eqz v0, :cond_3d8
++    if-eqz v0, :cond_3e9
+ 
+     check-cast p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateEdgeBackGestureDisabledPolicy;
+ 
+@@ -1152,7 +1168,7 @@
+ 
+     iget-boolean v0, p0, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->handleEventLoggingEnabled:Z
+ 
+-    if-eqz v0, :cond_3af
++    if-eqz v0, :cond_3c0
+ 
+     iget v0, p0, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->loggingDepth:I
+ 
+@@ -1170,54 +1186,54 @@
+ 
+     invoke-virtual {v1, v0, v2}, Lcom/android/systemui/navigationbar/util/StoreLogUtil;->printLog(ILjava/lang/String;)V
+ 
+-    :cond_3af
++    :cond_3c0
+     iget v0, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+-    if-nez v0, :cond_3c2
++    if-nez v0, :cond_3d3
+ 
+-    invoke-virtual {p0, v9, v0}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v10, v0}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object v0
+ 
+     check-cast v0, Lcom/android/systemui/navigationbar/views/NavigationBar;
+ 
+-    if-eqz v0, :cond_3c2
++    if-eqz v0, :cond_3d3
+ 
+     iget-object v0, v0, Lcom/android/systemui/navigationbar/views/NavigationBar;->mEdgeBackGestureHandler:Lcom/android/systemui/navigationbar/gestural/EdgeBackGestureHandler;
+ 
+-    if-eqz v0, :cond_3c2
++    if-eqz v0, :cond_3d3
+ 
+     invoke-virtual {v0, p2}, Lcom/android/systemui/navigationbar/gestural/EdgeBackGestureHandler;->updateDisablePolicy(I)V
+ 
+-    :cond_3c2
++    :cond_3d3
+     sget-boolean v0, Lcom/android/systemui/BasicRune;->NAVBAR_TASKBAR:Z
+ 
+-    if-eqz v0, :cond_719
++    if-eqz v0, :cond_73d
+ 
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+-    invoke-virtual {p0, v4, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v5, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+     check-cast p1, Lcom/android/systemui/navigationbar/TaskbarDelegate;
+ 
+-    if-eqz p1, :cond_719
++    if-eqz p1, :cond_73d
+ 
+     iget-object p1, p1, Lcom/android/systemui/navigationbar/TaskbarDelegate;->mEdgeBackGestureHandler:Lcom/android/systemui/navigationbar/gestural/EdgeBackGestureHandler;
+ 
+-    if-eqz p1, :cond_719
++    if-eqz p1, :cond_73d
+ 
+     invoke-virtual {p1, p2}, Lcom/android/systemui/navigationbar/gestural/EdgeBackGestureHandler;->updateDisablePolicy(I)V
+ 
+     return-object p0
+ 
+-    :cond_3d8
++    :cond_3e9
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$SetGestureHintViewGroup;
+ 
+-    const-class v5, Lcom/android/systemui/navigationbar/gestural/GestureHintAnimator;
++    const-class v6, Lcom/android/systemui/navigationbar/gestural/GestureHintAnimator;
+ 
+-    if-eqz v0, :cond_3fd
++    if-eqz v0, :cond_40e
+ 
+     const-class p2, Lcom/android/systemui/navigationbar/views/NavigationBarView;
+ 
+@@ -1231,7 +1247,7 @@
+ 
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+-    invoke-virtual {p0, v5, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v6, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+@@ -1251,10 +1267,10 @@
+ 
+     return-object p0
+ 
+-    :cond_3fd
++    :cond_40e
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateGestureHintVisibility;
+ 
+-    if-eqz v0, :cond_426
++    if-eqz v0, :cond_437
+ 
+     iget-object p2, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->manager:Lcom/android/systemui/navigationbar/store/NavBarStateManager;
+ 
+@@ -1296,14 +1312,14 @@
+ 
+     return-object p0
+ 
+-    :cond_426
++    :cond_437
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$ResetHintVI;
+ 
+-    if-eqz v0, :cond_43d
++    if-eqz v0, :cond_44e
+ 
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+-    invoke-virtual {p0, v5, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v6, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+@@ -1319,10 +1335,10 @@
+ 
+     return-object p0
+ 
+-    :cond_43d
++    :cond_44e
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$StartHintVI;
+ 
+-    if-eqz v0, :cond_45a
++    if-eqz v0, :cond_46b
+ 
+     check-cast p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$StartHintVI;
+ 
+@@ -1332,7 +1348,7 @@
+ 
+     iget v0, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+-    invoke-virtual {p0, v5, v0}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v6, v0}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object v0
+ 
+@@ -1350,10 +1366,10 @@
+ 
+     return-object p0
+ 
+-    :cond_45a
++    :cond_46b
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$MoveHintVI;
+ 
+-    if-eqz v0, :cond_482
++    if-eqz v0, :cond_493
+ 
+     check-cast p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$MoveHintVI;
+ 
+@@ -1363,7 +1379,7 @@
+ 
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+-    invoke-virtual {p0, v5, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v6, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+@@ -1391,10 +1407,10 @@
+ 
+     return-object p0
+ 
+-    :cond_482
++    :cond_493
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateSysUiFlags;
+ 
+-    if-eqz v0, :cond_4d0
++    if-eqz v0, :cond_4e1
+ 
+     check-cast p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateSysUiFlags;
+ 
+@@ -1406,12 +1422,12 @@
+ 
+     move-result-object p2
+ 
+-    :goto_490
++    :goto_4a1
+     invoke-interface {p2}, Ljava/util/Iterator;->hasNext()Z
+ 
+     move-result v0
+ 
+-    if-eqz v0, :cond_4c8
++    if-eqz v0, :cond_4d9
+ 
+     invoke-interface {p2}, Ljava/util/Iterator;->next()Ljava/lang/Object;
+ 
+@@ -1421,13 +1437,13 @@
+ 
+     iget-boolean v2, p0, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->handleEventLoggingEnabled:Z
+ 
+-    if-eqz v2, :cond_4c0
++    if-eqz v2, :cond_4d1
+ 
+     iget v2, p0, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->loggingDepth:I
+ 
+-    iget-wide v4, v0, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$SysUiFlagInfo;->flag:J
++    iget-wide v5, v0, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$SysUiFlagInfo;->flag:J
+ 
+-    iget-boolean v6, v0, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$SysUiFlagInfo;->value:Z
++    iget-boolean v3, v0, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$SysUiFlagInfo;->value:Z
+ 
+     new-instance v7, Ljava/lang/StringBuilder;
+ 
+@@ -1435,42 +1451,42 @@
+ 
+     invoke-direct {v7, v8}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
+ 
+-    invoke-virtual {v7, v4, v5}, Ljava/lang/StringBuilder;->append(J)Ljava/lang/StringBuilder;
++    invoke-virtual {v7, v5, v6}, Ljava/lang/StringBuilder;->append(J)Ljava/lang/StringBuilder;
+ 
+-    const-string v4, " : "
++    const-string v5, " : "
+ 
+-    invoke-virtual {v7, v4}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++    invoke-virtual {v7, v5}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+ 
+-    invoke-virtual {v7, v6}, Ljava/lang/StringBuilder;->append(Z)Ljava/lang/StringBuilder;
++    invoke-virtual {v7, v3}, Ljava/lang/StringBuilder;->append(Z)Ljava/lang/StringBuilder;
+ 
+     invoke-virtual {v7}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+ 
+-    move-result-object v4
++    move-result-object v3
+ 
+-    invoke-virtual {v1, v2, v4}, Lcom/android/systemui/navigationbar/util/StoreLogUtil;->printLog(ILjava/lang/String;)V
++    invoke-virtual {v1, v2, v3}, Lcom/android/systemui/navigationbar/util/StoreLogUtil;->printLog(ILjava/lang/String;)V
+ 
+-    :cond_4c0
+-    iget-wide v4, v0, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$SysUiFlagInfo;->flag:J
++    :cond_4d1
++    iget-wide v2, v0, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$SysUiFlagInfo;->flag:J
+ 
+     iget-boolean v0, v0, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$SysUiFlagInfo;->value:Z
+ 
+-    invoke-interface {v3, v4, v5, v0}, Lcom/android/systemui/model/SysUiState;->setFlag(JZ)Lcom/android/systemui/model/SysUiState;
++    invoke-interface {v4, v2, v3, v0}, Lcom/android/systemui/model/SysUiState;->setFlag(JZ)Lcom/android/systemui/model/SysUiState;
+ 
+-    goto :goto_490
++    goto :goto_4a1
+ 
+-    :cond_4c8
++    :cond_4d9
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+-    check-cast v3, Lcom/android/systemui/model/SysUiStateImpl;
++    check-cast v4, Lcom/android/systemui/model/SysUiStateImpl;
+ 
+-    invoke-virtual {v3}, Lcom/android/systemui/model/SysUiStateImpl;->commitUpdate()V
++    invoke-virtual {v4}, Lcom/android/systemui/model/SysUiStateImpl;->commitUpdate()V
+ 
+     return-object p0
+ 
+-    :cond_4d0
++    :cond_4e1
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateOneHandModeInfo;
+ 
+-    if-eqz v0, :cond_4e2
++    if-eqz v0, :cond_4f3
+ 
+     sget-object p1, Lcom/android/systemui/navigationbar/util/OneHandModeUtil;->Companion:Lcom/android/systemui/navigationbar/util/OneHandModeUtil$Companion;
+ 
+@@ -1486,14 +1502,14 @@
+ 
+     return-object p0
+ 
+-    :cond_4e2
++    :cond_4f3
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateRegionSamplingRect;
+ 
+-    if-eqz v0, :cond_4f4
++    if-eqz v0, :cond_505
+ 
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+-    invoke-virtual {p0, v9, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v10, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+@@ -1505,10 +1521,10 @@
+ 
+     return-object p0
+ 
+-    :cond_4f4
++    :cond_505
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$RecalculateGestureInsetScale;
+ 
+-    if-eqz v0, :cond_591
++    if-eqz v0, :cond_5a2
+ 
+     sget-object v0, Lcom/android/systemui/navigationbar/util/NavigationModeUtil;->INSTANCE:Lcom/android/systemui/navigationbar/util/NavigationModeUtil;
+ 
+@@ -1532,14 +1548,14 @@
+ 
+     invoke-virtual {v0}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
+ 
+-    :try_start_50f
++    :try_start_520
+     sget-object v0, Lcom/android/systemui/navigationbar/util/NavigationModeUtil;->sideInsetScaleArray:[F
+ 
+     array-length v0, v0
+ 
+     const/high16 v2, 0x3f800000    # 1.0f
+ 
+-    if-nez v0, :cond_538
++    if-nez v0, :cond_549
+ 
+     invoke-virtual {p1}, Landroid/content/Context;->getResources()Landroid/content/res/Resources;
+ 
+@@ -1557,10 +1573,10 @@
+ 
+     new-array v4, v3, [F
+ 
+-    move v5, v7
++    move v5, v8
+ 
+-    :goto_528
+-    if-ge v5, v3, :cond_533
++    :goto_539
++    if-ge v5, v3, :cond_544
+ 
+     invoke-virtual {v0, v5, v2}, Landroid/content/res/TypedArray;->getFloat(IF)F
+ 
+@@ -1570,19 +1586,19 @@
+ 
+     add-int/lit8 v5, v5, 0x1
+ 
+-    goto :goto_528
++    goto :goto_539
+ 
+-    :cond_533
++    :cond_544
+     invoke-virtual {v0}, Landroid/content/res/TypedArray;->recycle()V
+ 
+     sput-object v4, Lcom/android/systemui/navigationbar/util/NavigationModeUtil;->sideInsetScaleArray:[F
+ 
+-    :cond_538
++    :cond_549
+     sget-object v0, Lcom/android/systemui/navigationbar/util/NavigationModeUtil;->bottomInsetScaleArray:[F
+ 
+     array-length v0, v0
+ 
+-    if-nez v0, :cond_55e
++    if-nez v0, :cond_56f
+ 
+     invoke-virtual {p1}, Landroid/content/Context;->getResources()Landroid/content/res/Resources;
+ 
+@@ -1600,39 +1616,39 @@
+ 
+     new-array v4, v3, [F
+ 
+-    :goto_54e
+-    if-ge v7, v3, :cond_559
++    :goto_55f
++    if-ge v8, v3, :cond_56a
+ 
+-    invoke-virtual {v0, v7, v2}, Landroid/content/res/TypedArray;->getFloat(IF)F
++    invoke-virtual {v0, v8, v2}, Landroid/content/res/TypedArray;->getFloat(IF)F
+ 
+     move-result v5
+ 
+-    aput v5, v4, v7
++    aput v5, v4, v8
+ 
+-    add-int/lit8 v7, v7, 0x1
++    add-int/lit8 v8, v8, 0x1
+ 
+-    goto :goto_54e
++    goto :goto_55f
+ 
+-    :cond_559
++    :cond_56a
+     invoke-virtual {v0}, Landroid/content/res/TypedArray;->recycle()V
+ 
+     sput-object v4, Lcom/android/systemui/navigationbar/util/NavigationModeUtil;->bottomInsetScaleArray:[F
+ 
+-    :cond_55e
+-    if-eqz p2, :cond_565
++    :cond_56f
++    if-eqz p2, :cond_576
+ 
+     invoke-virtual {v1}, Lcom/android/systemui/util/SettingsHelper;->getNavigationBarBackGestureSentivitySub()I
+ 
+     move-result p2
+ 
+-    goto :goto_569
++    goto :goto_57a
+ 
+-    :cond_565
++    :cond_576
+     invoke-virtual {v1}, Lcom/android/systemui/util/SettingsHelper;->getNavigationBarBackGestureSentivity()I
+ 
+     move-result p2
+ 
+-    :goto_569
++    :goto_57a
+     invoke-virtual {p1}, Landroid/content/Context;->getContentResolver()Landroid/content/ContentResolver;
+ 
+     move-result-object v0
+@@ -1668,19 +1684,19 @@
+     aget p2, v1, p2
+ 
+     invoke-static {p1, v0, p2}, Landroid/provider/Settings$Secure;->putFloat(Landroid/content/ContentResolver;Ljava/lang/String;F)Z
+-    :try_end_590
+-    .catch Ljava/lang/Exception; {:try_start_50f .. :try_end_590} :catch_719
++    :try_end_5a1
++    .catch Ljava/lang/Exception; {:try_start_520 .. :try_end_5a1} :catch_73d
+ 
+     return-object p0
+ 
+-    :cond_591
++    :cond_5a2
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$ShowA11ySwipeUpTipPopup;
+ 
+-    if-eqz v0, :cond_5a1
++    if-eqz v0, :cond_5b2
+ 
+     const-class p1, Lcom/android/systemui/navigationbar/views/NavigationBarView;
+ 
+-    invoke-virtual {p0, p1, v7}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, p1, v8}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+@@ -1690,14 +1706,14 @@
+ 
+     return-object p0
+ 
+-    :cond_5a1
++    :cond_5b2
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateNavigationIcon;
+ 
+-    if-eqz v0, :cond_5b3
++    if-eqz v0, :cond_5c4
+ 
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+-    invoke-virtual {p0, v2, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v3, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+@@ -1709,37 +1725,55 @@
+ 
+     return-object p0
+ 
+-    :cond_5b3
++    :cond_5c4
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateTaskBarIconsAndHints;
+ 
+-    if-eqz v0, :cond_5c5
++    if-eqz v0, :cond_5e9
+ 
+-    invoke-virtual {p0, v4, v7}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v5, v8}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+     check-cast p1, Lcom/android/systemui/navigationbar/TaskbarDelegate;
+ 
+-    if-eqz p1, :cond_719
++    if-eqz p1, :cond_73d
++
++    invoke-virtual {p1}, Lcom/android/systemui/navigationbar/TaskbarDelegate;->updateTaskbarButtonIconsAndHints()Lcom/android/systemui/shared/navigationbar/NavBarEvents;
++
++    sget-boolean p2, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
++
++    if-eqz p2, :cond_73d
++
++    iget-boolean p1, p1, Lcom/android/systemui/navigationbar/TaskbarDelegate;->mInitialized:Z
++
++    if-nez p1, :cond_73d
++
++    sget-object p1, Lcom/android/systemui/Dependency;->sDependency:Lcom/android/systemui/Dependency;
+ 
+-    invoke-virtual {p1}, Lcom/android/systemui/navigationbar/TaskbarDelegate;->updateTaskbarButtonIconsAndHints$1()V
++    invoke-virtual {p1, v2}, Lcom/android/systemui/Dependency;->getDependencyInner(Ljava/lang/Object;)Ljava/lang/Object;
+ 
+-    sget-boolean p1, Lcom/android/systemui/BasicRune;->ONE_UI_8_5:Z
++    move-result-object p1
++
++    check-cast p1, Lcom/android/systemui/navigationbar/NavigationBarController;
++
++    check-cast p1, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;
++
++    invoke-virtual {p1}, Lcom/android/systemui/navigationbar/NavigationBarControllerImpl;->onInitializedTaskbarNavigationBar()V
+ 
+     return-object p0
+ 
+-    :cond_5c5
++    :cond_5e9
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateTaskBarNavBarEvents;
+ 
+-    if-eqz v0, :cond_5db
++    if-eqz v0, :cond_5ff
+ 
+-    invoke-virtual {p0, v4, v7}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v5, v8}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+     check-cast p1, Lcom/android/systemui/navigationbar/TaskbarDelegate;
+ 
+-    if-eqz p1, :cond_719
++    if-eqz p1, :cond_73d
+ 
+     check-cast p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateTaskBarNavBarEvents;
+ 
+@@ -1751,14 +1785,14 @@
+ 
+     return-object p0
+ 
+-    :cond_5db
++    :cond_5ff
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateNavBarLayoutParams;
+ 
+-    if-eqz v0, :cond_5eb
++    if-eqz v0, :cond_60f
+ 
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+-    invoke-virtual {p0, v9, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v10, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+@@ -1768,35 +1802,35 @@
+ 
+     return-object p0
+ 
+-    :cond_5eb
++    :cond_60f
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateA11YStatus;
+ 
+-    if-eqz v0, :cond_60e
++    if-eqz v0, :cond_632
+ 
+     iget p2, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+-    invoke-virtual {p0, v9, p2}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v10, p2}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p2
+ 
+     check-cast p2, Lcom/android/systemui/navigationbar/views/NavigationBar;
+ 
+-    if-eqz p2, :cond_5fe
++    if-eqz p2, :cond_622
+ 
+     iget-object p2, p2, Lcom/android/systemui/navigationbar/views/NavigationBar;->mNavBarHelper:Lcom/android/systemui/navigationbar/NavBarHelper;
+ 
+     invoke-virtual {p2}, Lcom/android/systemui/navigationbar/NavBarHelper;->updateA11yState()V
+ 
+-    :cond_5fe
++    :cond_622
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+-    invoke-virtual {p0, v4, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v5, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+     check-cast p1, Lcom/android/systemui/navigationbar/TaskbarDelegate;
+ 
+-    if-eqz p1, :cond_719
++    if-eqz p1, :cond_73d
+ 
+     iget-object p1, p1, Lcom/android/systemui/navigationbar/TaskbarDelegate;->mNavBarHelper:Lcom/android/systemui/navigationbar/NavBarHelper;
+ 
+@@ -1804,10 +1838,10 @@
+ 
+     return-object p0
+ 
+-    :cond_60e
++    :cond_632
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$ForceHideGestureHint;
+ 
+-    if-eqz v0, :cond_625
++    if-eqz v0, :cond_649
+ 
+     iget-object p2, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->manager:Lcom/android/systemui/navigationbar/store/NavBarStateManager;
+ 
+@@ -1823,14 +1857,14 @@
+ 
+     check-cast p1, Lcom/android/systemui/navigationbar/views/NavigationBarView;
+ 
+-    invoke-virtual {p1, v7, v7, v7}, Lcom/android/systemui/navigationbar/views/NavigationBarView;->updateHintVisibility(ZZZ)V
++    invoke-virtual {p1, v8, v8, v8}, Lcom/android/systemui/navigationbar/views/NavigationBarView;->updateHintVisibility(ZZZ)V
+ 
+     return-object p0
+ 
+-    :cond_625
++    :cond_649
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateTaskbarStatus;
+ 
+-    if-eqz v0, :cond_683
++    if-eqz v0, :cond_6a7
+ 
+     check-cast p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateTaskbarStatus;
+ 
+@@ -1842,52 +1876,52 @@
+ 
+     iget-object v2, p0, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->pluginBarInteractionManager:Lcom/android/systemui/navigationbar/plugin/PluginBarInteractionManager;
+ 
+-    if-eqz v0, :cond_644
++    if-eqz v0, :cond_668
+ 
+-    if-eqz v1, :cond_639
++    if-eqz v1, :cond_65d
+ 
+-    iget-object v6, v1, Lcom/android/systemui/navigationbar/TaskbarDelegate;->mPluginTaskbar:Lcom/android/systemui/navigationbar/plugin/SamsungPluginTaskBar;
++    iget-object v7, v1, Lcom/android/systemui/navigationbar/TaskbarDelegate;->mPluginTaskbar:Lcom/android/systemui/navigationbar/plugin/SamsungPluginTaskBar;
+ 
+-    :cond_639
+-    invoke-virtual {v6}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
++    :cond_65d
++    invoke-virtual {v7}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
+ 
+     iget-object v0, v2, Lcom/android/systemui/navigationbar/plugin/PluginBarInteractionManager;->pluginNavigationBar:Lcom/samsung/systemui/splugins/navigationbar/PluginNavigationBar;
+ 
+-    if-eqz v0, :cond_652
++    if-eqz v0, :cond_676
+ 
+-    invoke-interface {v0, v6}, Lcom/samsung/systemui/splugins/navigationbar/PluginNavigationBar;->onAttachedToWindow(Lcom/samsung/systemui/splugins/navigationbar/ExtendableBar;)V
++    invoke-interface {v0, v7}, Lcom/samsung/systemui/splugins/navigationbar/PluginNavigationBar;->onAttachedToWindow(Lcom/samsung/systemui/splugins/navigationbar/ExtendableBar;)V
+ 
+-    goto :goto_652
++    goto :goto_676
+ 
+-    :cond_644
+-    if-eqz v1, :cond_648
++    :cond_668
++    if-eqz v1, :cond_66c
+ 
+-    iget-object v6, v1, Lcom/android/systemui/navigationbar/TaskbarDelegate;->mPluginTaskbar:Lcom/android/systemui/navigationbar/plugin/SamsungPluginTaskBar;
++    iget-object v7, v1, Lcom/android/systemui/navigationbar/TaskbarDelegate;->mPluginTaskbar:Lcom/android/systemui/navigationbar/plugin/SamsungPluginTaskBar;
+ 
+-    :cond_648
+-    invoke-virtual {v6}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
++    :cond_66c
++    invoke-virtual {v7}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
+ 
+     iget-object v0, v2, Lcom/android/systemui/navigationbar/plugin/PluginBarInteractionManager;->pluginNavigationBar:Lcom/samsung/systemui/splugins/navigationbar/PluginNavigationBar;
+ 
+-    if-eqz v0, :cond_652
++    if-eqz v0, :cond_676
+ 
+-    invoke-interface {v0, v6}, Lcom/samsung/systemui/splugins/navigationbar/PluginNavigationBar;->onDetachedFromWindow(Lcom/samsung/systemui/splugins/navigationbar/ExtendableBar;)V
++    invoke-interface {v0, v7}, Lcom/samsung/systemui/splugins/navigationbar/PluginNavigationBar;->onDetachedFromWindow(Lcom/samsung/systemui/splugins/navigationbar/ExtendableBar;)V
+ 
+-    :cond_652
+-    :goto_652
++    :cond_676
++    :goto_676
+     iget p1, p1, Lcom/android/systemui/navigationbar/bandaid/Band$Kit;->displayId:I
+ 
+-    invoke-virtual {p0, v9, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v10, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+     check-cast p1, Lcom/android/systemui/navigationbar/views/NavigationBar;
+ 
+-    if-eqz p1, :cond_719
++    if-eqz p1, :cond_73d
+ 
+     sget-boolean v0, Lcom/android/systemui/BasicRune;->NAVBAR_POLICY_VISIBILITY:Z
+ 
+-    if-eqz v0, :cond_719
++    if-eqz v0, :cond_73d
+ 
+     invoke-interface {p0}, Lcom/android/systemui/navigationbar/store/NavBarStore;->getNavStateManager()Lcom/android/systemui/navigationbar/store/NavBarStateManager;
+ 
+@@ -1899,7 +1933,7 @@
+ 
+     move-result v0
+ 
+-    if-eqz v0, :cond_719
++    if-eqz v0, :cond_73d
+ 
+     invoke-virtual {p1}, Lcom/android/systemui/navigationbar/views/NavigationBar;->getView()Lcom/android/systemui/navigationbar/views/NavigationBarView;
+ 
+@@ -1911,7 +1945,7 @@
+ 
+     iget-object v0, p1, Lcom/android/systemui/navigationbar/views/NavigationBar;->mRegionSamplingHelper:Lcom/android/wm/shell/shared/handles/RegionSamplingHelper;
+ 
+-    if-nez p2, :cond_67f
++    if-nez p2, :cond_6a3
+ 
+     iget-object p1, p1, Lcom/android/systemui/navigationbar/views/NavigationBar;->mSamplingBounds:Landroid/graphics/Rect;
+ 
+@@ -1919,15 +1953,15 @@
+ 
+     return-object p0
+ 
+-    :cond_67f
++    :cond_6a3
+     invoke-virtual {v0}, Lcom/android/wm/shell/shared/handles/RegionSamplingHelper;->stop()V
+ 
+     return-object p0
+ 
+-    :cond_683
++    :cond_6a7
+     instance-of v0, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateIndicatorSpringParams;
+ 
+-    if-eqz v0, :cond_6d1
++    if-eqz v0, :cond_6f5
+ 
+     check-cast p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateIndicatorSpringParams;
+ 
+@@ -1943,9 +1977,9 @@
+ 
+     move-result v0
+ 
+-    if-eqz v0, :cond_6c1
++    if-eqz v0, :cond_6e5
+ 
+-    invoke-virtual {p0, v4, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v5, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+@@ -1969,12 +2003,12 @@
+ 
+     move-result-object p1
+ 
+-    :goto_6af
++    :goto_6d3
+     invoke-interface {p1}, Ljava/util/Iterator;->hasNext()Z
+ 
+     move-result v1
+ 
+-    if-eqz v1, :cond_719
++    if-eqz v1, :cond_73d
+ 
+     invoke-interface {p1}, Ljava/util/Iterator;->next()Ljava/lang/Object;
+ 
+@@ -1986,9 +2020,9 @@
+ 
+     invoke-interface {v1, v0, p2}, Lcom/android/systemui/plugins/NavigationEdgeBackPlugin;->updateActiveIndicatorSpringParams(FF)V
+ 
+-    goto :goto_6af
++    goto :goto_6d3
+ 
+-    :cond_6c1
++    :cond_6e5
+     const-class v0, Lcom/android/systemui/navigationbar/views/NavigationBarView;
+ 
+     invoke-virtual {p0, v0, p1}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+@@ -2005,35 +2039,35 @@
+ 
+     return-object p0
+ 
+-    :cond_6d1
++    :cond_6f5
+     instance-of p1, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateDefaultNavigationBarStatus;
+ 
+-    if-eqz p1, :cond_6f3
++    if-eqz p1, :cond_717
+ 
+-    invoke-virtual {p0, v9, v7}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, v10, v8}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+     check-cast p1, Lcom/android/systemui/navigationbar/views/NavigationBar;
+ 
+-    if-eqz p1, :cond_6e0
++    if-eqz p1, :cond_704
+ 
+     invoke-virtual {p1}, Lcom/android/systemui/navigationbar/views/NavigationBar;->updateSystemUiStateFlags()V
+ 
+-    :cond_6e0
++    :cond_704
+     const-class p1, Lcom/android/systemui/navigationbar/views/NavigationBarView;
+ 
+-    invoke-virtual {p0, p1, v7}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, p1, v8}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p1
+ 
+     check-cast p1, Lcom/android/systemui/navigationbar/views/NavigationBarView;
+ 
+-    if-eqz p1, :cond_719
++    if-eqz p1, :cond_73d
+ 
+     iget-object p1, p1, Lcom/android/systemui/navigationbar/views/NavigationBarView;->mRotationButtonController:Lcom/android/systemui/shared/rotation/RotationButtonController;
+ 
+-    if-eqz p1, :cond_719
++    if-eqz p1, :cond_73d
+ 
+     const-wide/16 v0, 0x0
+ 
+@@ -2041,10 +2075,10 @@
+ 
+     return-object p0
+ 
+-    :cond_6f3
++    :cond_717
+     instance-of p1, p2, Lcom/android/systemui/navigationbar/store/NavBarStoreAction$UpdateTouchProtectionStatus;
+ 
+-    if-eqz p1, :cond_719
++    if-eqz p1, :cond_73d
+ 
+     iget-object p1, p0, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->settingsHelper:Lcom/android/systemui/util/SettingsHelper;
+ 
+@@ -2054,24 +2088,24 @@
+ 
+     const-class p2, Lcom/android/systemui/navigationbar/views/NavigationBarView;
+ 
+-    invoke-virtual {p0, p2, v7}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
++    invoke-virtual {p0, p2, v8}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;->getModule(Ljava/lang/Class;I)Ljava/lang/Object;
+ 
+     move-result-object p2
+ 
+     check-cast p2, Lcom/android/systemui/navigationbar/views/NavigationBarView;
+ 
+-    if-eqz p2, :cond_70a
++    if-eqz p2, :cond_72e
+ 
+     invoke-virtual {p2, p1}, Lcom/android/systemui/navigationbar/views/NavigationBarView;->notifyTouchProtectionShown(Z)V
+ 
+-    :cond_70a
++    :cond_72e
+     sget-boolean p2, Lcom/android/systemui/BasicRune;->NAVBAR_TASKBAR:Z
+ 
+-    if-eqz p2, :cond_719
++    if-eqz p2, :cond_73d
+ 
+     sget-object p2, Lcom/android/systemui/Dependency;->sDependency:Lcom/android/systemui/Dependency;
+ 
+-    invoke-virtual {p2, v4}, Lcom/android/systemui/Dependency;->getDependencyInner(Ljava/lang/Object;)Ljava/lang/Object;
++    invoke-virtual {p2, v5}, Lcom/android/systemui/Dependency;->getDependencyInner(Ljava/lang/Object;)Ljava/lang/Object;
+ 
+     move-result-object p2
+ 
+@@ -2079,9 +2113,9 @@
+ 
+     invoke-virtual {p2, p1}, Lcom/android/systemui/navigationbar/TaskbarDelegate;->notifyTouchProtectionShown(Z)V
+ 
+-    :catch_719
+-    :cond_719
+-    :goto_719
++    :catch_73d
++    :cond_73d
++    :goto_73d
+     return-object p0
+ .end method
+ 
+diff --git a/smali_classes3/com/android/systemui/statusbar/phone/CentralSurfacesImpl.smali b/smali_classes3/com/android/systemui/statusbar/phone/CentralSurfacesImpl.smali
+index 844d059..75de44d 100644
+--- a/smali_classes3/com/android/systemui/statusbar/phone/CentralSurfacesImpl.smali
++++ b/smali_classes3/com/android/systemui/statusbar/phone/CentralSurfacesImpl.smali
+@@ -4062,6 +4062,93 @@
+     invoke-virtual {v0, v6}, Lcom/android/systemui/navigationbar/interactor/NavigationModeInteractor;->addCallback(Ljava/lang/Runnable;)V
+ 
+     :cond_373
++    sget-boolean v0, Lcom/android/systemui/BasicRune;->NAVBAR_DESKTOP:Z
++
++    if-eqz v0, :dexnav_cond_3cf
++
++    const-class v0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;
++
++    invoke-virtual {v13, v0}, Lcom/android/systemui/navigationbar/interactor/InteractorFactory;->get(Ljava/lang/Class;)Ljava/lang/Object;
++
++    move-result-object v0
++
++    check-cast v0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;
++
++    if-eqz v0, :dexnav_cond_3cf
++
++    new-instance v6, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl$initInteractor$21;
++
++    invoke-direct {v6, v4}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl$initInteractor$21;-><init>(Lcom/android/systemui/navigationbar/store/NavBarStoreImpl;)V
++
++    iget-object v7, v0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->broadcastReceiver:Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$2;
++
++    if-eqz v7, :dexnav_cond_38f
++
++    iget-object v10, v0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->broadcastDispatcher:Lcom/android/systemui/broadcast/BroadcastDispatcher;
++
++    invoke-virtual {v10, v7}, Lcom/android/systemui/broadcast/BroadcastDispatcher;->unregisterReceiver(Landroid/content/BroadcastReceiver;)V
++
++    :dexnav_cond_38f
++    new-instance v7, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$2;
++
++    invoke-direct {v7, v0, v6}, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$2;-><init>(Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;Ljava/util/function/Consumer;)V
++
++    iget-object v10, v0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->broadcastDispatcher:Lcom/android/systemui/broadcast/BroadcastDispatcher;
++
++    iget-object v11, v0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->intentFilter:Landroid/content/IntentFilter;
++
++    iget-object v14, v0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->bgHandler:Landroid/os/Handler;
++
++    sget-object v26, Landroid/os/UserHandle;->ALL:Landroid/os/UserHandle;
++
++    const/16 v27, 0x0
++
++    const/16 v28, 0x30
++
++    move-object/from16 v23, v7
++
++    move-object/from16 v22, v10
++
++    move-object/from16 v24, v11
++
++    move-object/from16 v25, v14
++
++    invoke-static/range {v22 .. v28}, Lcom/android/systemui/broadcast/BroadcastDispatcher;->registerReceiverWithHandler$default(Lcom/android/systemui/broadcast/BroadcastDispatcher;Landroid/content/BroadcastReceiver;Landroid/content/IntentFilter;Landroid/os/Handler;Landroid/os/UserHandle;Ljava/lang/String;I)V
++
++    iput-object v7, v0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->broadcastReceiver:Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$2;
++
++    iget-object v7, v0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->desktopMode:Lcom/android/wm/shell/desktopmode/api/DesktopMode;
++
++    if-eqz v7, :dexnav_cond_3c4
++
++    new-instance v10, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$4;
++
++    invoke-direct {v10, v0, v6}, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor$addCallback$4;-><init>(Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;Ljava/util/function/Consumer;)V
++
++    iget-object v11, v0, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->mainExecutor:Ljava/util/concurrent/Executor;
++
++    check-cast v7, Lcom/android/wm/shell/desktopmode/api/impl/DesktopModeImpl;
++
++    iget-object v14, v7, Lcom/android/wm/shell/desktopmode/api/impl/DesktopModeImpl;->mainExecutor:Lcom/android/wm/shell/common/ShellExecutor;
++
++    new-instance v15, Lcom/android/wm/shell/desktopmode/api/impl/DesktopModeImpl$addDefaultDisplayDesktopModeChangeListener$1;
++
++    invoke-direct {v15, v7, v10, v11}, Lcom/android/wm/shell/desktopmode/api/impl/DesktopModeImpl$addDefaultDisplayDesktopModeChangeListener$1;-><init>(Lcom/android/wm/shell/desktopmode/api/impl/DesktopModeImpl;Lcom/android/wm/shell/desktopmode/DesktopTasksController$DefaultDisplayDesktopModeChangeListener;Ljava/util/concurrent/Executor;)V
++
++    invoke-interface {v14, v15}, Ljava/util/concurrent/Executor;->execute(Ljava/lang/Runnable;)V
++
++    :dexnav_cond_3c4
++    invoke-virtual {v0}, Lcom/android/systemui/navigationbar/interactor/DesktopModeInteractor;->isEnabled()Z
++
++    move-result v0
++
++    invoke-static {v0}, Ljava/lang/Boolean;->valueOf(Z)Ljava/lang/Boolean;
++
++    move-result-object v0
++
++    invoke-virtual {v6, v0}, Lcom/android/systemui/navigationbar/store/NavBarStoreImpl$initInteractor$21;->accept(Ljava/lang/Object;)V
++
++    :dexnav_cond_3cf
+     const-class v0, Lcom/android/systemui/navigationbar/interactor/GameToolsInteractor;
+ 
+     invoke-virtual {v13, v0}, Lcom/android/systemui/navigationbar/interactor/InteractorFactory;->get(Ljava/lang/Class;)Ljava/lang/Object;
+-- 
+2.43.0
+

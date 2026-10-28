@@ -1,0 +1,4 @@
+id=dex
+name=DeX support
+author=ssch71
+description=Restore DeX navigation bar/taskbar paths stripped from flip-qssi SystemUI.
