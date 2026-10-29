@@ -271,6 +271,23 @@ if ! $SOURCE_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL; then
     if $TARGET_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL && [ "$SOURCE_PLATFORM_SDK_VERSION" -ge "37" ]; then
         # TODO: rebase resolution/ patches on One UI 9.0 smali
         LOGW "Skipping dynamic resolution control (patches not rebased for One UI 9.0)"
+
+        # Without the resolution switcher the panel stays at its native WQHD+ size,
+        # but the stock density is meant for the FHD+ default. Scale it by 1440/1080
+        # so the UI keeps its stock size.
+        DENSITY_PARTITION="vendor"
+        DENSITY="$(GET_PROP "vendor" "ro.sf.lcd_density")"
+        if [ ! "$DENSITY" ]; then
+            DENSITY_PARTITION="odm"
+            DENSITY="$(GET_PROP "odm" "ro.sf.lcd_density")"
+        fi
+        if [[ "$DENSITY" =~ ^[0-9]+$ ]]; then
+            SET_PROP "$DENSITY_PARTITION" "ro.sf.lcd_density" "$((DENSITY * 4 / 3))"
+            SET_PROP "$DENSITY_PARTITION" "ro.sf.init.lcd_density" "$((DENSITY * 4 / 3))"
+        else
+            LOGW "ro.sf.lcd_density not found, keeping the default density"
+        fi
+        unset DENSITY DENSITY_PARTITION
     elif $TARGET_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL; then
         if [[ "$(GET_FINGERPRINT_SENSOR_TYPE "$TARGET_FINGERPRINT_CONFIG_SENSOR")" == "optical" ]]; then
             ABORT "TARGET_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL is not supported on targets with an optical fingerprint sensor"

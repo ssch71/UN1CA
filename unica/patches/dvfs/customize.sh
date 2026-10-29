@@ -123,7 +123,8 @@ if [ -f "$SRC_DIR/target/$TARGET_CODENAME/dvfs/siop_model.xml" ]; then
         LOG "  (decrypted from target firmware SDHMS assets/siop_model)"
     else
         LOGW "Could not decrypt target SDHMS siop_model, falling back to target/$TARGET_CODENAME/dvfs/siop_model.xml"
-        EVAL "cp -a \"$SRC_DIR/target/$TARGET_CODENAME/dvfs/siop_model.xml\" \"$APKTOOL_DIR/system/priv-app/SamsungDeviceHealthManagerService/SamsungDeviceHealthManagerService.apk/assets/$TARGET_DVFSAPP_CONFIG_SSRM_POLICY_FILENAME.xml\""
+        # Same as above, One UI 9 SDHMS crashes on OverheatComplexType.DEX
+        EVAL "sed \"/<DEX[[:space:]]/d\" \"$SRC_DIR/target/$TARGET_CODENAME/dvfs/siop_model.xml\" > \"$APKTOOL_DIR/system/priv-app/SamsungDeviceHealthManagerService/SamsungDeviceHealthManagerService.apk/assets/$TARGET_DVFSAPP_CONFIG_SSRM_POLICY_FILENAME.xml\""
     fi
     LOG "- Adding /system/system/priv-app/SamsungDeviceHealthManagerService/SamsungDeviceHealthManagerService.apk/assets/ssrm_default.xml"
     EVAL "cp -a \"$MODPATH/assets/siop_default.xml\" \"$APKTOOL_DIR/system/priv-app/SamsungDeviceHealthManagerService/SamsungDeviceHealthManagerService.apk/assets/ssrm_default.xml\""
