@@ -191,10 +191,10 @@ public final class TextBackend {
     }
     interface Control { boolean cancelled(); long deadline(); void process(Process process); }
     String generateLocal(String input,boolean summary,Control control)throws Exception {
-        return generateControlled(LocalFormat.prompt(input,summary),summary,false,control);
+        return generateControlled(LocalFormat.prompt(input,summary),input,summary,false,control);
     }
     String generateRecall(String input,Control control)throws Exception {
-        return generateControlled(recallPrompt(input),false,true,control);
+        return generateControlled(recallPrompt(input),null,false,true,control);
     }
     // No keyword intent classification here: Samsung receives model predictions
     // and retains responsibility for validating parameters and routing actions.
@@ -218,12 +218,22 @@ public final class TextBackend {
             +"Friend: hello\n=> Unsafe\t\n"
             +"Conversation:\n"+input.replace("<|","< |").replace("|>","| >")+"\nEnd conversation.\n/no_think";
     }
-    private String generateControlled(String prompt,boolean summary,boolean recall,Control control)throws Exception {
+    private static final int CONTEXT_TOKENS=850;
+    private String generateControlled(String prompt,String input,boolean summary,boolean recall,Control control)throws Exception {
         runnerLock.lockInterruptibly(); File job=null;
         try{
             if(control.cancelled())throw new InterruptedIOException();
             prepareModel(control.deadline());
-            if(count(prompt,recall?control:null)>850)throw new IllegalArgumentException("context_limit");
+            int tokens=count(prompt,recall?control:null);
+            // Long chats used to fail outright here. Drop the oldest messages
+            // instead and keep the most recent ones that fit the context.
+            for(int tries=0;tokens>CONTEXT_TOKENS&&input!=null&&tries<4;tries++){
+                input=LocalFormat.shrink(input,summary,(double)(CONTEXT_TOKENS-40)/tokens);
+                if(input==null)break;
+                prompt=LocalFormat.prompt(input,summary);
+                tokens=count(prompt,control);
+            }
+            if(tokens>CONTEXT_TOKENS)throw new IllegalArgumentException("context_limit");
             if(control.cancelled()||SystemClock.elapsedRealtime()>=control.deadline())throw new InterruptedIOException();
             job=Files.createTempDirectory(context.getCacheDir().toPath(),"local-").toFile();
             Process process=launch(job,prompt,null);control.process(process);

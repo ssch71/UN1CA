@@ -35,4 +35,32 @@ final class LocalFormat {
         }
         return value.toString();
     }
+    /** Keep roughly the newest {@code keep} share of the conversation, dropping
+     *  whole old messages first. Returns null when nothing usable is left. */
+    static String shrink(String input,boolean summary,double keep)throws Exception {
+        keep=Math.max(0.1,Math.min(0.95,keep));
+        if(!summary){
+            JSONArray turns=new JSONArray(input),out=new JSONArray();
+            int total=0;for(int i=0;i<turns.length();i++)total+=turns.getJSONObject(i).getString("text").length();
+            int budget=(int)(total*keep),used=0,first=turns.length()-1;
+            while(first>0&&used+turns.getJSONObject(first).getString("text").length()<=budget){used+=turns.getJSONObject(first).getString("text").length();first--;}
+            if(first<turns.length()-1)first++;
+            for(int i=first;i<turns.length();i++)out.put(new JSONObject(turns.getJSONObject(i).toString()));
+            if(out.length()==turns.length()){
+                // A single long message: keep its end.
+                JSONObject last=out.getJSONObject(out.length()-1);String text=last.getString("text");
+                int cut=(int)(text.length()*keep);if(cut<1||cut>=text.length())return null;
+                last.put("text",text.substring(text.length()-cut));
+                if(out.length()>1){JSONArray single=new JSONArray();single.put(last);out=single;}
+            }
+            return out.toString();
+        }
+        int cut=(int)(input.length()*keep);
+        if(cut<1||cut>=input.length())return null;
+        String tail=input.substring(input.length()-cut);
+        int nl=tail.indexOf('\n');
+        if(nl>=0&&nl<tail.length()-1)tail=tail.substring(nl+1);
+        tail=tail.trim();
+        return tail.isEmpty()?null:tail;
+    }
 }
