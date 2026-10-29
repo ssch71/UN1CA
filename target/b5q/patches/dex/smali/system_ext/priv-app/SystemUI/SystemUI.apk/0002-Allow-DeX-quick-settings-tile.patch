@@ -1,0 +1,27 @@
+From 7f5e53c176f5a9a18c96cc5ee150c3fce555f609 Mon Sep 17 00:00:00 2001
+From: ssch71 <s01093450498@gmail.com>
+Date: Thu, 29 Oct 2026 17:40:00 +0900
+Subject: [PATCH] Allow DeX quick settings tile
+
+flip-qssi TileFeatureChecker rejects the One UI Home DesktopModeTile
+custom tile. Treat it as available like the qssi build does.
+---
+ smali_classes3/com/android/systemui/qs/TileFeatureChecker.smali | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/smali_classes3/com/android/systemui/qs/TileFeatureChecker.smali b/smali_classes3/com/android/systemui/qs/TileFeatureChecker.smali
+index 54dd643..adcf086 100644
+--- a/smali_classes3/com/android/systemui/qs/TileFeatureChecker.smali
++++ b/smali_classes3/com/android/systemui/qs/TileFeatureChecker.smali
+@@ -681,7 +681,7 @@
+ 
+     if-eqz p0, :cond_1b
+ 
+-    goto :goto_3
++    goto :goto_4
+ 
+     :cond_1b
+     const-string p0, "com.google.android.gms/.nearby.sharing.SharingTileService"
+-- 
+2.43.0
+
