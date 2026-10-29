@@ -5,7 +5,7 @@ SKIPUNZIP=1
 
 # Snapshot after paradigm's audio pack and the earlier S Pen/boot-sound mods.
 # Never replace the original media/audio tree at build time.
-if [[ "$TARGET_CODENAME" == ~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ && "$TARGET_PLATFORM_SDK_VERSION" == "37" ]]; then
+if [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ && "$TARGET_PLATFORM_SDK_VERSION" == "37" ]]; then
     PORTROM_STAGE="$(mktemp -d /tmp/unica-portrom-stage.XXXXXX)"
     python3 "$MODPATH/prepare.py" "$WORK_DIR" "$PORTROM_STAGE" \
         || { ABORT "PortROM audio preparation failed"; return 1; }
