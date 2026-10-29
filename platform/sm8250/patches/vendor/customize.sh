@@ -178,4 +178,12 @@ for UEV_PART in vendor odm; do
     SET_METADATA "$UEV_PART" "etc/ueventd.rc" 0 0 644 "u:object_r:vendor_configs_file:s0"
     LOG_STEP_OUT
 done
+# The Android 11 vendor ueventd.rc has no /dev/ion rule and the One UI 9
+# platform ueventd.rc does not set it either, so it stays root-only. QSEECom and
+# fastrpc still allocate from it.
+UEV_NEW="$WORK_DIR/vendor/etc/ueventd.rc"
+if [ -f "$UEV_NEW" ] && ! grep -q "^/dev/ion[[:space:]]" "$UEV_NEW"; then
+    LOG "- Adding /dev/ion to /vendor/etc/ueventd.rc"
+    printf '\n/dev/ion                  0664   system     system\n' >> "$UEV_NEW"
+fi
 unset UEV_PART UEV_OLD UEV_NEW
