@@ -6,7 +6,7 @@ _REZOSS_INTEGRATE_WONDERTAP()
 {
     local BASE="$MODPATH/wondertap"
     local ENABLE="${REZOSS_ENABLE_WONDERTAP_TEST:-true}"
-    [[ "$TARGET_CODENAME" == "dm3q" ]] || return 0
+    [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ ]] || return 0
     if [[ -f "$BASE/disable" || "$ENABLE" == "false" ]]; then
         LOG "- Wondertap experiment disabled"
         return 0

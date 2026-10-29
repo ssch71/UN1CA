@@ -23,7 +23,7 @@ DECODE_APK "system" "system/priv-app/SecSettings/SecSettings.apk"
 
 # Relax SDHMS uses the inspected dm3q persistent process, with no root shell,
 # kernel changes or cross-app data writes. Reject an unreviewed SDHMS ABI.
-if [[ "$TARGET_CODENAME" == "dm3q" ]]; then
+if [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ ]]; then
     python3 "$MODPATH/thermal/verify-input.py" \
         "$WORK_DIR/system/system/priv-app/SamsungDeviceHealthManagerService/SamsungDeviceHealthManagerService.apk" \
         || ABORT "Relax SDHMS firmware compatibility check failed"
@@ -273,7 +273,7 @@ LOG_STEP_OUT
 LOG "- Installing Battery Saving service policy"
 python3 "$MODPATH/battery/install-policy.py" "$WORK_DIR" || ABORT "Failed to install Battery Saving service policy"
 python3 "$MODPATH/ota/install-policy.py" "$WORK_DIR" || ABORT "Failed to install OTA staging service policy"
-if [[ "$TARGET_CODENAME" == "dm3q" ]]; then
+if [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ ]]; then
     python3 "$MODPATH/movecertificate/install-policy.py" "$WORK_DIR" || ABORT "Failed to install Move Certificate service policy"
 else
     DELETE_FROM_WORK_DIR "system" "system/bin/unica-movecert"
@@ -282,7 +282,7 @@ fi
 
 # dm3q-only GPU image editor and recovery backup policy. Other targets keep no
 # partition access or service; the shared Settings page reports unsupported.
-if [[ "$TARGET_CODENAME" == "dm3q" ]]; then
+if [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ ]] then
     "$MODPATH/gpu/verify-firmware.sh" "$WORK_DIR/kernel/vendor_boot.img" \
         "$WORK_DIR/vendor_dlkm/lib/modules/msm_kgsl.ko" || ABORT "GPU capability check failed; review the changed table/driver contract before shipping"
     python3 "$MODPATH/gpu/install-policy.py" "$WORK_DIR" || ABORT "Failed to install GPU tuning service policy"
