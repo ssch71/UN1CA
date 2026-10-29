@@ -154,6 +154,12 @@ security/unica_platform.pk8
 /unica/mods/settings/gpu/java/**
 !/unica/mods/settings/gpu/java/**/
 /unica/mods/settings/gpu/native/**
+# verify-firmware.cpp (the build-time GPU check) needs these headers in CI.
+!/unica/mods/settings/gpu/native/image.h
+!/unica/mods/settings/gpu/native/driver.h
+!/unica/mods/settings/gpu/native/layout.h
+!/unica/mods/settings/gpu/native/tables.h
+!/unica/mods/settings/gpu/native/stock_bins.h
 !/unica/mods/settings/gpu/native/**/
 /unica/mods/settings/gpu/tests/**
 !/unica/mods/settings/gpu/tests/**/

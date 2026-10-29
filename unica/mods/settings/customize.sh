@@ -282,12 +282,24 @@ fi
 
 # dm3q-only GPU image editor and recovery backup policy. Other targets keep no
 # partition access or service; the shared Settings page reports unsupported.
+# The GPU tables are pinned to the S23 Ultra firmware. Other SM8550 targets
+# get the editor only if their vendor_boot/kgsl pass the same check.
+UNICA_GPU=false
 if [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ ]]; then
-    "$MODPATH/gpu/verify-firmware.sh" "$WORK_DIR/kernel/vendor_boot.img" \
-        "$WORK_DIR/vendor_dlkm/lib/modules/msm_kgsl.ko" || ABORT "GPU capability check failed; review the changed table/driver contract before shipping"
+    if "$MODPATH/gpu/verify-firmware.sh" "$WORK_DIR/kernel/vendor_boot.img" \
+            "$WORK_DIR/vendor_dlkm/lib/modules/msm_kgsl.ko"; then
+        UNICA_GPU=true
+    elif [[ "$TARGET_CODENAME" == "dm3q" ]]; then
+        ABORT "GPU capability check failed; review the changed table/driver contract before shipping"
+    else
+        LOGW "GPU tuning skipped: $TARGET_CODENAME firmware does not match the inspected GPU table/driver contract"
+    fi
+fi
+if $UNICA_GPU; then
     python3 "$MODPATH/gpu/install-policy.py" "$WORK_DIR" || ABORT "Failed to install GPU tuning service policy"
 else
     DELETE_FROM_WORK_DIR "system" "system/bin/unica-gpu"
     DELETE_FROM_WORK_DIR "system" "system/etc/init/unica_gpu.rc"
     DELETE_FROM_WORK_DIR "system" "system/etc/unica/gpu"
 fi
+unset UNICA_GPU
