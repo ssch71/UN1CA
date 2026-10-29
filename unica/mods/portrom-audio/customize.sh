@@ -1,5 +1,6 @@
 # Copyright (c) 2026 UN1CA contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
+# shellcheck disable=SC2034
 SKIPUNZIP=1
 
 # Snapshot after paradigm's audio pack and the earlier S Pen/boot-sound mods.

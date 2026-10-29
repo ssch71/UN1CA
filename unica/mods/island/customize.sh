@@ -1,6 +1,7 @@
 # Native source port: sampple-korea/dynamicisland; module credits: sampple-korea.
 # Integration copyright (c) 2026 UN1CA contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
+# shellcheck disable=SC2034
 SKIPUNZIP=1
 if [[ "$TARGET_CODENAME" == "dm3q" && "$TARGET_PLATFORM_SDK_VERSION" == "37" ]]; then
     DECODE_APK "system_ext" "priv-app/SystemUI/SystemUI.apk" || return 1
