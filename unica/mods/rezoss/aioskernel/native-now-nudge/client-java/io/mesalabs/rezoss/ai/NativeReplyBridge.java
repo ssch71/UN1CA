@@ -13,12 +13,17 @@ public final class NativeReplyBridge {
   return (Boolean)Class.forName("io.mesalabs.rezoss.ai.NativeNowNudgeRoute").getMethod("enabled",Context.class).invoke(null,context);
  }
  // Busy group chats re-request on every message; each generation takes 10-20 s
- // on the NPU, so results arrive for a notification that was already replaced
- // and the queue starves everything else (1:1 chats, in-app replies). Generate
- // at most once per conversation per window and let other chats through.
- private static final long CONVERSATION_WINDOW_MS=20000;
+ // on the NPU, so results arrive for a notification that was already replaced,
+ // the NPU never idles (heat, throttling) and in-app requests from the keyboard
+ // queue behind it until they fail. Notification replies are best effort:
+ // generate at most once per conversation per window, never more often than
+ // GLOBAL_GAP_MS overall, and not at all while the screen is off or the device
+ // is already hot.
+ private static final long CONVERSATION_WINDOW_MS=60000;
+ private static final long GLOBAL_GAP_MS=30000;
  private static final Map<Object,Boolean> approved=Collections.synchronizedMap(new WeakHashMap<Object,Boolean>());
  private static final Map<String,Long> lastStart=new HashMap<>();
+ private static long lastGlobal;
  private static String conversationKey(Object param){
   for(Method m:param.getClass().getMethods()){
    if(m.getParameterTypes().length!=0||m.getReturnType()!=String.class)continue;
@@ -28,16 +33,30 @@ public final class NativeReplyBridge {
   }
   return null;
  }
- private static boolean throttled(Object param){
-  String key=conversationKey(param);long window=CONVERSATION_WINDOW_MS;
-  if(key==null){key="*";window=CONVERSATION_WINDOW_MS/4;}
+ private static String skipReason(Context context){
+  try{
+   android.os.PowerManager pm=(android.os.PowerManager)context.getSystemService(Context.POWER_SERVICE);
+   if(pm!=null){
+    if(!pm.isInteractive())return "screen_off";
+    if(pm.getCurrentThermalStatus()>=android.os.PowerManager.THERMAL_STATUS_MODERATE)return "thermal="+pm.getCurrentThermalStatus();
+    if(pm.isPowerSaveMode())return "power_save";
+   }
+  }catch(Exception ignored){}
+  return null;
+ }
+ private static boolean throttled(Context context,Object param){
+  String reason=skipReason(context);
+  if(reason!=null){Log.i("RezossNudgeClient","Skipped reply request reason="+reason);return true;}
+  String key=conversationKey(param);if(key==null)key="*";
   long now=android.os.SystemClock.elapsedRealtime();
   synchronized(lastStart){
+   if(lastGlobal!=0&&now-lastGlobal<GLOBAL_GAP_MS){Log.i("RezossNudgeClient","Skipped reply request reason=global age="+(now-lastGlobal));return true;}
    Long last=lastStart.get(key);
-   if(last!=null&&now-last<window){Log.i("RezossNudgeClient","Skipped repeated reply request key#"+Integer.toHexString(key.hashCode())+" age="+(now-last));return true;}
-   lastStart.put(key,now);
+   if(last!=null&&now-last<CONVERSATION_WINDOW_MS){Log.i("RezossNudgeClient","Skipped repeated reply request key#"+Integer.toHexString(key.hashCode())+" age="+(now-last));return true;}
+   lastStart.put(key,now);lastGlobal=now;
    if(lastStart.size()>64)lastStart.clear();
   }
+  Log.i("RezossNudgeClient","Starting reply request key#"+Integer.toHexString(key.hashCode()));
   return false;
  }
  private static boolean eligible(Context context,Object param)throws Exception{
@@ -46,7 +65,7 @@ public final class NativeReplyBridge {
  public static boolean shouldGenerateNow(Context context,Object param){
   try{
    if(approved.containsKey(param))return true;
-   if(!eligible(context,param)||throttled(param))return false;
+   if(!eligible(context,param)||throttled(context,param))return false;
    approved.put(param,Boolean.TRUE);return true;
   }
   catch(Exception e){Log.e("RezossNudgeClient","Notification profile rejected",e);return false;}
