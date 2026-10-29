@@ -57,8 +57,6 @@ lib/vendor.qti.hardware.qccsyshal@1.0.so
 lib/vendor.qti.hardware.qccsyshal@1.1.so
 lib/vendor.qti.hardware.qccsyshal@1.2.so
 lib/vendor.qti.hardware.qccvndhal@1.0.so
-lib/vendor.qti.hardware.trustedui@1.1.so
-lib/vendor.qti.hardware.trustedui@1.2.so
 lib/vendor.qti.qccvndhal_aidl-V1-ndk.so
 lib64/libqcc.so
 lib64/libqccdme.so
@@ -68,8 +66,6 @@ lib64/vendor.qti.hardware.qccsyshal@1.1.so
 lib64/vendor.qti.hardware.qccsyshal@1.2-halimpl.so
 lib64/vendor.qti.hardware.qccsyshal@1.2.so
 lib64/vendor.qti.hardware.qccvndhal@1.0.so
-lib64/vendor.qti.hardware.trustedui@1.1.so
-lib64/vendor.qti.hardware.trustedui@1.2.so
 lib64/vendor.qti.qccvndhal_aidl-V1-ndk.so
 priv-app/com.qualcomm.location
 priv-app/com.qualcomm.qti.services.systemhelper
