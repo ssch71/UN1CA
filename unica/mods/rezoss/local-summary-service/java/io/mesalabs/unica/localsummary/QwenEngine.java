@@ -120,9 +120,10 @@ public final class QwenEngine {
     }
 
     public static String summary(String input) {
+        // V73 enforces its own service limit; the backend caps summary jobs at 75 s.
         String result = generate(input, true, 70000);
         if (result != null) return result;
-        Log.i("RezossAI", "summary status=fallback");
-        return "New messages are waiting.";
+        Log.i("RezossAI", "summary status=unavailable");
+        return null;
     }
 }

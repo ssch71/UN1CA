@@ -21,6 +21,17 @@ SMALI_PATCH "system" "system/framework/framework.jar" \
 
 DECODE_APK "system" "system/priv-app/SecSettings/SecSettings.apk"
 
+# Relax SDHMS uses the inspected dm3q persistent process, with no root shell,
+# kernel changes or cross-app data writes. Reject an unreviewed SDHMS ABI.
+if [[ "$TARGET_CODENAME" == "dm3q" ]]; then
+    python3 "$MODPATH/thermal/verify-input.py" \
+        "$WORK_DIR/system/system/priv-app/SamsungDeviceHealthManagerService/SamsungDeviceHealthManagerService.apk" \
+        || ABORT "Relax SDHMS firmware compatibility check failed"
+    APPLY_PATCH "system" "system/priv-app/SamsungDeviceHealthManagerService/SamsungDeviceHealthManagerService.apk" \
+        "$MODPATH/thermal/patches/0001-Add-protected-SDHMS-policy-switch.patch" \
+        || ABORT "Failed to install Relax SDHMS policy control"
+fi
+
 # SoftwareUpdateUtils no longer exposes isOTAUpgradeAllowed(Context) on One UI 9.
 
 # The camera feature override hooks an obfuscated SamsungCamera class that only
@@ -262,6 +273,12 @@ LOG_STEP_OUT
 LOG "- Installing Battery Saving service policy"
 python3 "$MODPATH/battery/install-policy.py" "$WORK_DIR" || ABORT "Failed to install Battery Saving service policy"
 python3 "$MODPATH/ota/install-policy.py" "$WORK_DIR" || ABORT "Failed to install OTA staging service policy"
+if [[ "$TARGET_CODENAME" == "dm3q" ]]; then
+    python3 "$MODPATH/movecertificate/install-policy.py" "$WORK_DIR" || ABORT "Failed to install Move Certificate service policy"
+else
+    DELETE_FROM_WORK_DIR "system" "system/bin/unica-movecert"
+    DELETE_FROM_WORK_DIR "system" "system/etc/init/unica_movecert.rc"
+fi
 
 # dm3q-only GPU image editor and recovery backup policy. Other targets keep no
 # partition access or service; the shared Settings page reports unsupported.

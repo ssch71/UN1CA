@@ -28,8 +28,13 @@ object RomApp {
     private const val MAX_XML = 256 * 1024
     private val dirty = AtomicBoolean(true)
     private var observer: FileObserver? = null
-    private var lastXml: String? = null
     private var lastWire: String? = null
+    private var profileConfig: String? = null
+    private var cachedProfiles = JSONArray()
+    @Volatile private var expectedProfiles = 0
+    @Volatile private var configError = false
+    @Volatile private var routingActive = false
+    private var nextStatus = 0L
     private var lastEnabled = false
     private var nextRead = 0L
     private var nextPackages = 0L
@@ -39,10 +44,18 @@ object RomApp {
     @Volatile private var activeEpoch = -1L
     @Volatile private var acknowledged = false
 
+    @Volatile private var targetSnapshot = emptyMap<Int, String>()
+    @Volatile private var scopeSnapshot = "[]"
+    fun requestRefresh() { nextPackages = 0; dirty.set(true) }
+    fun adminTargets(): Map<Int, String> = targetSnapshot
+    fun adminScope(): JSONArray = JSONArray(scopeSnapshot)
+
     @JvmStatic
     fun main(args: Array<String>) {
         require(args.size == 1)
         require(android.os.Process.myUid() == 0) { "ROM daemon requires uid 0" }
+        // Fail before probes, persistence or injection when a standalone backend owns this boot.
+        StartupGuard.check()
         ServiceManager.waitForService("package")
         Looper.prepareMainLooper()
         val thread = ActivityThread.systemMain()
@@ -62,7 +75,7 @@ object RomApp {
         val harvest = Harvester.run(app)
         Control.onRomAck = { msg ->
             acknowledged = msg.optLong("epoch", -1) == activeEpoch &&
-                msg.optBoolean("ok") && msg.optInt("profilesApplied") == 1 &&
+                msg.optBoolean("ok") && msg.optInt("profilesApplied") == expectedProfiles &&
                 msg.optInt("profilesFailed") == 0
             publishReady()
         }
@@ -71,6 +84,7 @@ object RomApp {
             acknowledged = false
             publishReady()
         }
+        RomAdmin.start(harvest)
         Control.start()
         Injector(File(args[0])).start()
         observer = object : FileObserver(File("/data/system/users/0"),
@@ -85,9 +99,14 @@ object RomApp {
             override fun run() {
                 try {
                     if (SystemClock.elapsedRealtime() >= retryAfter) update(harvest)
+                    if (SystemClock.elapsedRealtime() >= nextStatus) {
+                        publishReady()
+                        nextStatus = SystemClock.elapsedRealtime() + 3000
+                    }
                 } catch (error: Exception) {
                     // Do not log exceptions containing XML, command output, or private keys.
                     SystemLogger.warning("RomApp: refresh failed (${error.javaClass.simpleName}); disabling new interception")
+                    configError = true
                     push(harvest, false)
                     dirty.set(true)
                     retryAfter = SystemClock.elapsedRealtime() + 10_000
@@ -108,17 +127,8 @@ object RomApp {
         // fallback for missed file events, atomic SettingsProvider writes, and imports while off.
         val refresh = dirty.getAndSet(false) || enabled != lastEnabled || now >= nextRead
         if (refresh) {
-            val xml = readSetting()
-            if (xml != null) lastXml = xml
-            // A cleared setting disables routing immediately. Retain the last signer in MEMORY
-            // only so existing simulator blobs can still be used during this daemon lifetime.
-            // Nothing copies the imported XML out of Settings.Secure onto disk.
-            if (xml == null) {
-                push(harvest, false)
-                lastEnabled = enabled
-                nextRead = now + 30_000
-                return
-            }
+            val xml = readSetting(SETTING)
+            profileConfig = readSetting(RomProfiles.SETTING)
             if (enabled && (apps.isEmpty() || now >= nextPackages)) {
                 // One binder enumeration; no labels, icons, launchers, or per-app IPC polling.
                 val pm = checkNotNull(Packages.packageManagerService())
@@ -127,16 +137,32 @@ object RomApp {
                     .groupBy({ it.uid }, { it.packageName })
                 nextPackages = now + 30_000
             }
-            push(harvest, enabled)
+            val overrideText = readSetting("unica_teesim_overrides")
+            val edits = overrideText?.let { JSONObject(it) } ?: JSONObject()
+            val allowed = setOf("attestationSecurityLevel", "keymasterSecurityLevel", "attestationVersion", "keymasterVersion")
+            require(edits.keys().asSequence().all { it in allowed })
+            val effective = Harvester.applyUserOverrides(harvest, edits.keys().asSequence().associateWith { edits.getString(it) })
+            RomAdmin.updateHarvest(effective)
+            val resolved = RomProfiles.resolve(profileConfig, xml, apps, effective)
+            // A cleared current signer disables new interception, but keep the previous signer
+            // in memory for existing simulator blobs during this daemon lifetime.
+            if (resolved.length() == 0) {
+                for (i in 0 until cachedProfiles.length()) cachedProfiles.getJSONObject(i).apply {
+                    put("packages", JSONArray()); put("packageUsers", JSONArray())
+                    put("uids", JSONArray()); put("uidPackages", JSONArray())
+                }
+            } else cachedProfiles = resolved
+            configError = false
+            push(effective, enabled)
             nextRead = now + 30_000
         }
         lastEnabled = enabled
     }
 
-    private fun readSetting(): String? {
+    private fun readSetting(name: String): String? {
         // The command executes SettingsProvider's system-server shell interface. A bare
         // app_process is not an AMS app and cannot reliably acquire a ContentProvider itself.
-        val process = ProcessBuilder("/system/bin/settings", "--user", "0", "get", "secure", SETTING)
+        val process = ProcessBuilder("/system/bin/settings", "--user", "0", "get", "secure", name)
             .redirectError(File("/dev/null")).start()
         val reader = java.util.concurrent.Executors.newSingleThreadExecutor()
         try {
@@ -172,46 +198,31 @@ object RomApp {
             put("attestVersionTee", h.effectiveInt("attestationVersion", Harvester.effectiveAttestation(h).second))
             put("attestVersionStrongBox", h.strongBoxAttestationVersion)
         }
-        val profiles = JSONArray()
-        lastXml?.let { xml ->
-            val packages = JSONArray()
-            val users = JSONArray()
-            val uids = JSONArray()
-            val uidPackages = JSONArray()
-            if (active) {
-                // Match the original global control for owner-user application UIDs; system,
-                // shell and keystore UIDs are excluded. Other Android users keep hardware keys.
-                for ((uid, names) in apps.toSortedMap()) {
-                    uids.put(uid)
-                    uidPackages.put(names.firstOrNull() ?: "")
-                    for (pkg in names.sorted()) { packages.put(pkg); users.put(0) }
-                }
+        // Keep prior signers in memory when disabled so existing simulator blobs remain usable.
+        val profiles = JSONArray(cachedProfiles.toString())
+        if (!active) for (i in 0 until profiles.length()) {
+            profiles.getJSONObject(i).apply {
+                put("packages", JSONArray()); put("packageUsers", JSONArray())
+                put("uids", JSONArray()); put("uidPackages", JSONArray())
             }
-            profiles.put(JSONObject().apply {
-                put("id", "unica")
-                put("keyboxB64", b64.encodeToString(xml.toByteArray(Charsets.UTF_8)))
-                put("mode", "patch")
-                put("securityLevel", Harvester.effectiveAttestation(h).first)
-                h.osVersion?.let { put("osVersion", it) }
-                // Keep ROM-reported levels; no calendar-based patch advancement.
-                DeviceProps.propOsVersion()?.let { put("osVersion", it) }
-                for ((field, kind, captured) in listOf(
-                    Triple("osPatchLevel", "system", h.osPatchLevel),
-                    Triple("vendorPatchLevel", "vendor", h.vendorPatchLevel),
-                    Triple("bootPatchLevel", "boot", h.bootPatchLevel))) {
-                    DeviceProps.resolvePatch("system_property", kind, captured)?.let { put(field, it) }
-                }
-                val ids = JSONObject()
-                for (name in listOf("brand", "device", "product", "manufacturer", "model")) {
-                    h.effective(name).takeIf { it.isNotBlank() }?.let { ids.put(name, it) }
-                }
-                put("deviceIds", ids)
-                put("packages", packages)
-                put("packageUsers", users)
-                put("uids", uids)
-                put("uidPackages", uidPackages)
-            })
         }
+        routingActive = active && (0 until profiles.length()).any { profiles.getJSONObject(it).getJSONArray("uids").length() > 0 }
+        KeyboxInspector.setRomSigners(profiles)
+        targetSnapshot = buildMap {
+            for (i in 0 until profiles.length()) {
+                val p = profiles.getJSONObject(i); val uids = p.getJSONArray("uids")
+                val names = p.getJSONArray("uidPackages")
+                for (j in 0 until uids.length()) put(uids.getInt(j), names.optString(j, ""))
+            }
+        }
+        scopeSnapshot = JSONArray().apply {
+            for (i in 0 until profiles.length()) {
+                val p = profiles.getJSONObject(i)
+                put(JSONObject().put("id", p.getString("id")).put("uids", p.getJSONArray("uids"))
+                    .put("packages", p.getJSONArray("packages")))
+            }
+        }.toString()
+        expectedProfiles = profiles.length()
         val msg = JSONObject().apply {
             put("type", "config")
             put("redactSalt", Redact.saltBase64())
@@ -222,18 +233,24 @@ object RomApp {
         val wire = msg.toString()
         if (wire == lastWire) return
         val nextEpoch = ++epoch
-        activeEpoch = if (active && lastXml != null) nextEpoch else -1L
+        activeEpoch = nextEpoch
         acknowledged = false
         publishReady()
         msg.put("epoch", nextEpoch)
         Control.push(msg.toString())
         lastWire = wire
-        SystemLogger.info("RomApp: config queued, requested=${active && lastXml != null}")
+        SystemLogger.info("RomApp: config queued, requested=${active && profiles.length() > 0}")
     }
 
     private fun publishReady() {
         val enabled = SystemProperties.get(PROPERTY, "false") in setOf("1", "true", "y", "yes", "on")
-        val value = if (enabled && acknowledged) SystemClock.elapsedRealtime().toString() else "0"
+        val value = if (enabled && routingActive && acknowledged && expectedProfiles > 0 && !configError) SystemClock.elapsedRealtime().toString() else "0"
         SystemProperties.set("sys.unica.teesim.ready", value)
+        SystemProperties.set("sys.unica.teesim.connected", if (Control.isConnected()) "1" else "0")
+        SystemProperties.set("sys.unica.teesim.ack", if (acknowledged && !configError) "1" else "0")
+        // Loaded means the interceptor accepted every configured signer, not just XML present.
+        SystemProperties.set("sys.unica.teesim.loaded", if (expectedProfiles > 0 && acknowledged) "1" else "0")
+        SystemProperties.set("sys.unica.teesim.config_error", if (configError) "1" else "0")
+        SystemProperties.set("sys.unica.teesim.heartbeat", SystemClock.elapsedRealtime().toString())
     }
 }

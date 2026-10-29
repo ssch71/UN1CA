@@ -63,6 +63,7 @@ system/priv-app/IntelligentDynamicFpsService
 # Application recommendations
 SYSTEM_DEBLOAT+="
 system/app/MAPSAgent
+system/priv-app/OMCAgent5
 "
 
 # AppUpdateCenter
@@ -136,8 +137,13 @@ system/priv-app/FacAtFunction
 system/priv-app/FactoryTestProvider
 "
 
+# Samsung Text-to-speech engine
+#SYSTEM_DEBLOAT+="
+#system/app/SamsungTTS
+#"
+
 # Language packs
-SYSTEM_DEBLOAT+="$(find "$WORK_DIR/system" -type d -name "*TTSVoice*" | sed "s|$WORK_DIR/system/||g")"
+SYSTEM_DEBLOAT+="$(find "$WORK_DIR/system" -type d -name "*TTSVoice*" ! -name "SamsungTTSVoice_fr_FR_*" ! -name "SamsungTTSVoice_en_GB_*" | sed "s|$WORK_DIR/system/||g")"
 
 # LED Cover Service
 [ "$(GET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_FRAMEWORK_CONFIG_NFC_LED_COVER_LEVEL")" -lt "30" ] && SYSTEM_DEBLOAT+="

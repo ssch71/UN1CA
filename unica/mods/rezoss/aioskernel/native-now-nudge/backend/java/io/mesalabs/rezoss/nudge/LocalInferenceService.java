@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.os.*;
 import android.util.Log;
 import java.lang.Process;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -16,18 +17,27 @@ public final class LocalInferenceService extends Service {
     private TextBackend backend;
     private Messenger endpoint;
     private final class Job implements Runnable,TextBackend.Control,IBinder.DeathRecipient {
-        final Messenger callback;final int uid;final String input;final boolean summary;final long deadline;
+        final Messenger callback;final int uid;final String input;final boolean summary,recall;final long deadline;
         volatile String cancellation;volatile Process process;volatile Thread thread;
-        Job(Message m){callback=m.replyTo;uid=m.sendingUid;Bundle b=m.getData();input=b.getString("input","");summary=b.getBoolean("summary");deadline=Math.min(b.getLong("deadline",0),SystemClock.elapsedRealtime()+(summary?75000:45000));}
+        Job(Message m){callback=m.replyTo;uid=m.sendingUid;Bundle b=m.getData();input=b.getString("input","");summary=b.getBoolean("summary");recall="recall".equals(b.getString("task"));deadline=Math.min(b.getLong("deadline",0),SystemClock.elapsedRealtime()+(recall?8000:(summary?75000:45000)));}
         public boolean cancelled(){return cancellation!=null;}
         public long deadline(){return deadline;}
         public void process(Process p){process=p;if(p!=null&&cancelled())p.destroyForcibly();}
         synchronized void cancel(String reason){if(cancellation!=null)return;cancellation=reason;if(process!=null)process.destroyForcibly();if(thread!=null)thread.interrupt();}
         public void binderDied(){main.post(()->cancel("client_died"));}
         public void run(){
-            thread=Thread.currentThread();String value=null,status="unavailable";
-            try{if(!cancelled()){value=backend.generateLocal(input,summary,this);status="generated";}}
-            catch(Exception e){status=e instanceof IllegalArgumentException?e.getMessage():"inference_failed";}
+            thread=Thread.currentThread();long started=SystemClock.elapsedRealtime();String value=null,status="unavailable";
+            try{if(!cancelled()){value=recall?backend.generateRecall(input,this):backend.generateLocal(input,summary,this);status="generated";}}
+            catch(Exception e){
+                if(SystemClock.elapsedRealtime()>=deadline)status="deadline";
+                else if(e instanceof IOException && "deadline".equals(e.getMessage()))status="deadline";
+                else if(e instanceof IOException && "runner_failed".equals(e.getMessage()))status="runner_failed";
+                else if(e instanceof IllegalArgumentException && e.getMessage()!=null && e.getMessage().matches("[A-Za-z_]{1,48}"))status=e.getMessage();
+                else status="inference_failed";
+                // Never log prompt/output text or exception messages from the runner.
+                Log.i("RezossV73Local","request failure="+status+" exception="+e.getClass().getSimpleName()
+                        +" elapsedMs="+(SystemClock.elapsedRealtime()-started));
+            }
             finally{
                 thread=null;Thread.interrupted();
                 if(cancellation!=null){value=null;status=cancellation;}
@@ -42,14 +52,16 @@ public final class LocalInferenceService extends Service {
             @Override public void handleMessage(Message message){
                 if(message.replyTo==null)return;
                 try{
-                    boolean trusted=false;
-                    for(String caller:new String[]{"io.mesalabs.unica.localsummary"}){
-                        try{if(message.sendingUid==getPackageManager().getApplicationInfo(caller,0).uid&&ModelStore.trusted(LocalInferenceService.this,caller))trusted=true;}catch(android.content.pm.PackageManager.NameNotFoundException ignored){}
-                    }
-                    if(!trusted)throw new SecurityException("caller_denied");
+                    boolean summaryCaller=trusted(message.sendingUid,"io.mesalabs.unica.localsummary");
+                    boolean recallCaller=trusted(message.sendingUid,"com.samsung.android.ssco");
+                    if(!summaryCaller&&!recallCaller)throw new SecurityException("caller_denied");
                     IBinder key=message.replyTo.getBinder();
                     if(message.what==2){Job job=jobs.get(key);if(job!=null&&job.uid==message.sendingUid)job.cancel("client_cancelled");return;}
                     if(message.what!=1)return;
+                    Bundle request=message.getData();boolean recall="recall".equals(request.getString("task"));
+                    if(recall){
+                        if(!recallCaller||request.getBoolean("summary"))throw new SecurityException("task_denied");
+                    }else if(!summaryCaller||request.containsKey("task"))throw new SecurityException("task_denied");
                     if(backend==null||!backend.filesPresent()){respond(message.replyTo,null,"model_missing");return;}
                     if(!jobs.isEmpty()){respond(message.replyTo,null,"busy");return;}
                     Job job=new Job(message);
@@ -62,6 +74,10 @@ public final class LocalInferenceService extends Service {
             }
         });
         watchdog.scheduleAtFixedRate(()->main.post(()->{for(Job job:jobs.values()){String blocked=ThermalGuard.blocked(this);if(blocked==null&&SystemClock.elapsedRealtime()>=job.deadline)blocked="deadline";if(blocked!=null)job.cancel(blocked);}}),500,500,TimeUnit.MILLISECONDS);
+    }
+    private boolean trusted(int uid,String caller){
+        try{return uid==getPackageManager().getApplicationInfo(caller,0).uid&&ModelStore.trusted(this,caller);}
+        catch(android.content.pm.PackageManager.NameNotFoundException ignored){return false;}
     }
     private static void respond(Messenger callback,String value,String status){
         Message response=Message.obtain(null,1);Bundle b=new Bundle();b.putString("content",value);b.putString("status",status);response.setData(b);
