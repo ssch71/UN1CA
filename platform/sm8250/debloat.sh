@@ -80,3 +80,37 @@ system/etc/sysconfig/airviewdictionaryservice.xml
 system/media/audio/pensounds
 "
 
+# SKT,KT,LG
+SYSTEM_DEBLOAT+="
+system/app/KTAuth_Stub
+system/app/KTCustomerService
+system/app/LGUMiniCustomerCenter
+system/app/LGUplusTsmProxy
+system/app/SKTMemberShip_new
+system/app/TWorld
+system/priv-app/KTOneStore
+system/priv-app/KTServiceAgent
+system/priv-app/KTServiceMenu
+system/priv-app/LGUOZStore
+system/priv-app/OneStoreService
+system/priv-app/SKTOneStore
+system/priv-app/TPhoneOnePackage
+system/priv-app/TService
+"
+
+#I don't need
+SYSTEM_DEBLOAT+="
+system/app/BookmarkProvider
+system/app/Fast
+system/app/KidsHome_Installer
+system/app/Rampart
+system/app/SmartManager_v6_DeviceSecurity
+system/priv-app/AREmoji
+system/priv-app/HybridRadio
+system/priv-app/QRreader
+system/priv-app/SOAgent77
+system/priv-app/SPPPushClient
+system/priv-app/SamsungMagnifier3
+system/priv-app/SwiftkeyIme
+system/priv-app/SwiftkeySetting
+"
