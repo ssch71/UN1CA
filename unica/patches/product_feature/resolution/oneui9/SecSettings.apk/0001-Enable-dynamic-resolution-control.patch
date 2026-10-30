@@ -1,0 +1,458 @@
+From 32d10432f4e91f9f0c2e9d77122047952bdba738 Mon Sep 17 00:00:00 2001
+From: ssch71 <s01093450498@gmail.com>
+Date: Fri, 30 Oct 2026 16:47:32 +0900
+Subject: [PATCH] Enable dynamic resolution control
+
+Show the screen resolution menu and fall back to forced size and density
+when the composer exposes a single display mode (legacy DYN_RESOLUTION_CONTROL targets).
+---
+ .../settings/display/SecDisplayUtils.smali    |  20 +
+ ...ScreenResolutionPreferenceController.smali |  15 +-
+ .../io/mesalabs/unica/LegacyResolution.smali  | 373 ++++++++++++++++++
+ 3 files changed, 406 insertions(+), 2 deletions(-)
+ create mode 100644 smali_classes5/io/mesalabs/unica/LegacyResolution.smali
+
+diff --git a/smali_classes3/com/samsung/android/settings/display/SecDisplayUtils.smali b/smali_classes3/com/samsung/android/settings/display/SecDisplayUtils.smali
+index 1d4dd641..31240356 100644
+--- a/smali_classes3/com/samsung/android/settings/display/SecDisplayUtils.smali
++++ b/smali_classes3/com/samsung/android/settings/display/SecDisplayUtils.smali
+@@ -5009,6 +5009,16 @@
+ .method public static initSupportedResolutionData(Landroid/view/Display;)V
+     .locals 7
+ 
++    invoke-static {p0}, Lio/mesalabs/unica/LegacyResolution;->init(Landroid/view/Display;)Z
++
++    move-result v0
++
++    if-eqz v0, :cond_unica_legacy
++
++    return-void
++
++    :cond_unica_legacy
++
+     new-instance v0, Ljava/util/HashSet;
+ 
+     invoke-direct {v0}, Ljava/util/HashSet;-><init>()V
+@@ -6326,6 +6336,16 @@
+ .method public static setDisplayMode(Ljava/lang/String;Landroid/view/Display;)V
+     .locals 7
+ 
++    invoke-static {p0}, Lio/mesalabs/unica/LegacyResolution;->apply(Ljava/lang/String;)Z
++
++    move-result v0
++
++    if-eqz v0, :cond_unica_legacy
++
++    return-void
++
++    :cond_unica_legacy
++
+     invoke-static {p0}, Ljava/lang/Integer;->parseInt(Ljava/lang/String;)I
+ 
+     move-result v0
+diff --git a/smali_classes3/com/samsung/android/settings/display/controller/ScreenResolutionPreferenceController.smali b/smali_classes3/com/samsung/android/settings/display/controller/ScreenResolutionPreferenceController.smali
+index 6875a227..e5f49aa2 100644
+--- a/smali_classes3/com/samsung/android/settings/display/controller/ScreenResolutionPreferenceController.smali
++++ b/smali_classes3/com/samsung/android/settings/display/controller/ScreenResolutionPreferenceController.smali
+@@ -157,9 +157,20 @@
+ .method public getAvailabilityStatus()I
+     .locals 0
+ 
+-    sget-object p0, Lcom/samsung/android/settings/Rune;->COMMON_CONFIG_PACKAGE_NAME_SMART_MANAGER:Ljava/lang/String;
++    iget-object p0, p0, Lcom/android/settingslib/core/AbstractPreferenceController;->mContext:Landroid/content/Context;
++
++    invoke-static {p0}, Lcom/android/settings/Utils;->isDesktopModeEnabled(Landroid/content/Context;)Z
++
++    move-result p0
++
++    if-eqz p0, :cond_0
+ 
+-    const/4 p0, 0x3
++    const/4 p0, 0x5
++
++    return p0
++
++    :cond_0
++    const/4 p0, 0x0
+ 
+     return p0
+ .end method
+diff --git a/smali_classes5/io/mesalabs/unica/LegacyResolution.smali b/smali_classes5/io/mesalabs/unica/LegacyResolution.smali
+new file mode 100644
+index 00000000..09de0fcb
+--- /dev/null
++++ b/smali_classes5/io/mesalabs/unica/LegacyResolution.smali
+@@ -0,0 +1,373 @@
++.class public final Lio/mesalabs/unica/LegacyResolution;
++.super Ljava/lang/Object;
++.source "LegacyResolution.java"
++
++# UN1CA: legacy (forced size) screen resolution switching for WQHD panels whose
++# composer exposes a single display mode. One UI 9 only switches resolution
++# through display modes, so emulate WQHD/FHD/HD with forced size and density.
++
++
++# static fields
++.field private static final TAG:Ljava/lang/String; = "UN1CA-LegacyResolution"
++
++.field private static sHeight:I
++
++.field private static sLegacy:Z
++
++.field private static sWidth:I
++
++
++# direct methods
++.method public constructor <init>()V
++    .locals 0
++
++    invoke-direct {p0}, Ljava/lang/Object;-><init>()V
++
++    return-void
++.end method
++
++.method public static init(Landroid/view/Display;)Z
++    .locals 8
++
++    const/4 v7, 0x0
++
++    if-nez p0, :cond_0
++
++    return v7
++
++    :cond_0
++    new-instance v0, Ljava/util/HashSet;
++
++    invoke-direct {v0}, Ljava/util/HashSet;-><init>()V
++
++    invoke-virtual {p0}, Landroid/view/Display;->getSupportedModes()[Landroid/view/Display$Mode;
++
++    move-result-object v1
++
++    array-length v2, v1
++
++    move v3, v7
++
++    :goto_0
++    if-ge v3, v2, :cond_1
++
++    aget-object v4, v1, v3
++
++    new-instance v5, Landroid/graphics/Point;
++
++    invoke-virtual {v4}, Landroid/view/Display$Mode;->getPhysicalWidth()I
++
++    move-result v6
++
++    invoke-virtual {v4}, Landroid/view/Display$Mode;->getPhysicalHeight()I
++
++    move-result v4
++
++    invoke-direct {v5, v6, v4}, Landroid/graphics/Point;-><init>(II)V
++
++    invoke-virtual {v0, v5}, Ljava/util/HashSet;->add(Ljava/lang/Object;)Z
++
++    add-int/lit8 v3, v3, 0x1
++
++    goto :goto_0
++
++    :cond_1
++    invoke-virtual {v0}, Ljava/util/HashSet;->size()I
++
++    move-result v2
++
++    const/4 v3, 0x3
++
++    if-lt v2, v3, :cond_2
++
++    sput-boolean v7, Lio/mesalabs/unica/LegacyResolution;->sLegacy:Z
++
++    return v7
++
++    :cond_2
++    new-instance v1, Landroid/graphics/Point;
++
++    invoke-direct {v1}, Landroid/graphics/Point;-><init>()V
++
++    :try_start_0
++    invoke-static {}, Landroid/view/WindowManagerGlobal;->getWindowManagerService()Landroid/view/IWindowManager;
++
++    move-result-object v2
++
++    invoke-interface {v2, v7, v1}, Landroid/view/IWindowManager;->getInitialDisplaySize(ILandroid/graphics/Point;)V
++    :try_end_0
++    .catch Ljava/lang/Exception; {:try_start_0 .. :try_end_0} :catch_0
++
++    iget v2, v1, Landroid/graphics/Point;->x:I
++
++    iget v3, v1, Landroid/graphics/Point;->y:I
++
++    if-le v2, v3, :cond_3
++
++    move v4, v2
++
++    move v2, v3
++
++    move v3, v4
++
++    :cond_3
++    const/16 v4, 0x5a0
++
++    if-ge v2, v4, :cond_4
++
++    sput-boolean v7, Lio/mesalabs/unica/LegacyResolution;->sLegacy:Z
++
++    return v7
++
++    :cond_4
++    sput v2, Lio/mesalabs/unica/LegacyResolution;->sWidth:I
++
++    sput v3, Lio/mesalabs/unica/LegacyResolution;->sHeight:I
++
++    new-instance v0, Ljava/util/HashSet;
++
++    invoke-direct {v0}, Ljava/util/HashSet;-><init>()V
++
++    div-int/lit8 v4, v2, 0x2
++
++    div-int/lit8 v5, v3, 0x2
++
++    new-instance v6, Landroid/graphics/Point;
++
++    invoke-direct {v6, v4, v5}, Landroid/graphics/Point;-><init>(II)V
++
++    invoke-virtual {v0, v6}, Ljava/util/HashSet;->add(Ljava/lang/Object;)Z
++
++    sput v4, Lcom/samsung/android/settings/display/SecDisplayUtils;->mHDWidth:I
++
++    mul-int/lit8 v4, v2, 0x3
++
++    div-int/lit8 v4, v4, 0x4
++
++    mul-int/lit8 v5, v3, 0x3
++
++    div-int/lit8 v5, v5, 0x4
++
++    new-instance v6, Landroid/graphics/Point;
++
++    invoke-direct {v6, v4, v5}, Landroid/graphics/Point;-><init>(II)V
++
++    invoke-virtual {v0, v6}, Ljava/util/HashSet;->add(Ljava/lang/Object;)Z
++
++    sput v4, Lcom/samsung/android/settings/display/SecDisplayUtils;->mFHDWidth:I
++
++    new-instance v6, Landroid/graphics/Point;
++
++    invoke-direct {v6, v2, v3}, Landroid/graphics/Point;-><init>(II)V
++
++    invoke-virtual {v0, v6}, Ljava/util/HashSet;->add(Ljava/lang/Object;)Z
++
++    sput v2, Lcom/samsung/android/settings/display/SecDisplayUtils;->mWQHDWidth:I
++
++    sput-object v0, Lcom/samsung/android/settings/display/SecDisplayUtils;->mSupportedResolutions:Ljava/util/Set;
++
++    const/4 v0, 0x1
++
++    sput-boolean v0, Lio/mesalabs/unica/LegacyResolution;->sLegacy:Z
++
++    return v0
++
++    :catch_0
++    move-exception v0
++
++    const-string v1, "UN1CA-LegacyResolution"
++
++    const-string v2, "init failed"
++
++    invoke-static {v1, v2, v0}, Landroid/util/Log;->e(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
++
++    sput-boolean v7, Lio/mesalabs/unica/LegacyResolution;->sLegacy:Z
++
++    return v7
++.end method
++
++.method public static apply(Ljava/lang/String;)Z
++    .locals 11
++
++    const/4 v10, 0x0
++
++    sget-boolean v0, Lio/mesalabs/unica/LegacyResolution;->sLegacy:Z
++
++    if-nez v0, :cond_0
++
++    return v10
++
++    :cond_0
++    :try_start_0
++    invoke-static {p0}, Ljava/lang/Integer;->parseInt(Ljava/lang/String;)I
++
++    move-result v0
++
++    sget v1, Lio/mesalabs/unica/LegacyResolution;->sWidth:I
++
++    sget v2, Lio/mesalabs/unica/LegacyResolution;->sHeight:I
++
++    move v3, v1
++
++    move v4, v2
++
++    if-nez v0, :cond_1
++
++    div-int/lit8 v3, v1, 0x2
++
++    div-int/lit8 v4, v2, 0x2
++
++    goto :goto_0
++
++    :cond_1
++    const/4 v5, 0x1
++
++    if-ne v0, v5, :goto_0
++
++    mul-int/lit8 v3, v1, 0x3
++
++    div-int/lit8 v3, v3, 0x4
++
++    mul-int/lit8 v4, v2, 0x3
++
++    div-int/lit8 v4, v4, 0x4
++
++    :goto_0
++    invoke-static {}, Landroid/view/WindowManagerGlobal;->getWindowManagerService()Landroid/view/IWindowManager;
++
++    move-result-object v5
++
++    new-instance v6, Landroid/graphics/Point;
++
++    invoke-direct {v6}, Landroid/graphics/Point;-><init>()V
++
++    invoke-interface {v5, v10, v6}, Landroid/view/IWindowManager;->getBaseDisplaySize(ILandroid/graphics/Point;)V
++
++    iget v7, v6, Landroid/graphics/Point;->x:I
++
++    iget v8, v6, Landroid/graphics/Point;->y:I
++
++    if-le v7, v8, :cond_2
++
++    move v7, v8
++
++    :cond_2
++    if-gtz v7, :cond_3
++
++    move v7, v1
++
++    :cond_3
++    invoke-interface {v5, v10}, Landroid/view/IWindowManager;->getBaseDisplayDensity(I)I
++
++    move-result v8
++
++    mul-int/2addr v8, v3
++
++    div-int/2addr v8, v7
++
++    if-ne v3, v1, :cond_4
++
++    invoke-interface {v5, v10}, Landroid/view/IWindowManager;->clearForcedDisplaySize(I)V
++
++    const-string v6, ""
++
++    goto :goto_1
++
++    :cond_4
++    invoke-interface {v5, v10, v3, v4}, Landroid/view/IWindowManager;->setForcedDisplaySize(III)V
++
++    new-instance v6, Ljava/lang/StringBuilder;
++
++    invoke-direct {v6}, Ljava/lang/StringBuilder;-><init>()V
++
++    invoke-virtual {v6, v3}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
++
++    const-string v9, ","
++
++    invoke-virtual {v6, v9}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v6, v4}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v6}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
++
++    move-result-object v6
++
++    :goto_1
++    invoke-interface {v5, v10}, Landroid/view/IWindowManager;->getInitialDisplayDensity(I)I
++
++    move-result v9
++
++    const/4 v7, -0x2
++
++    if-ne v8, v9, :cond_5
++
++    invoke-interface {v5, v10, v7}, Landroid/view/IWindowManager;->clearForcedDisplayDensityForUser(II)V
++
++    goto :goto_2
++
++    :cond_5
++    invoke-interface {v5, v10, v8, v7}, Landroid/view/IWindowManager;->setForcedDisplayDensityForUser(III)V
++
++    :goto_2
++    invoke-static {}, Landroid/app/ActivityThread;->currentApplication()Landroid/app/Application;
++
++    move-result-object v5
++
++    if-eqz v5, :cond_6
++
++    invoke-virtual {v5}, Landroid/content/Context;->getContentResolver()Landroid/content/ContentResolver;
++
++    move-result-object v5
++
++    const-string v7, "display_size_forced"
++
++    invoke-static {v5, v7, v6}, Landroid/provider/Settings$Global;->putString(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;)Z
++
++    :cond_6
++    const-string v5, "UN1CA-LegacyResolution"
++
++    new-instance v7, Ljava/lang/StringBuilder;
++
++    const-string v9, "apply: "
++
++    invoke-direct {v7, v9}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
++
++    invoke-virtual {v7, v3}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
++
++    const-string v9, "x"
++
++    invoke-virtual {v7, v9}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v7, v4}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
++
++    const-string v9, " density="
++
++    invoke-virtual {v7, v9}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v7, v8}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
++
++    invoke-virtual {v7}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
++
++    move-result-object v7
++
++    invoke-static {v5, v7}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
++    :try_end_0
++    .catch Ljava/lang/Exception; {:try_start_0 .. :try_end_0} :catch_0
++
++    const/4 v0, 0x1
++
++    return v0
++
++    :catch_0
++    move-exception v0
++
++    const-string v1, "UN1CA-LegacyResolution"
++
++    const-string v2, "apply failed"
++
++    invoke-static {v1, v2, v0}, Landroid/util/Log;->e(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
++
++    const/4 v0, 0x1
++
++    return v0
++.end method

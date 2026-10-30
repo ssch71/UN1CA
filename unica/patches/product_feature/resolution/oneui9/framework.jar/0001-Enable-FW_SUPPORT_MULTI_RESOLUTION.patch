@@ -1,0 +1,31 @@
+From 7ac358b04075e6478848644dd9d5a9e269374989 Mon Sep 17 00:00:00 2001
+From: ssch71 <s01093450498@gmail.com>
+Date: Fri, 30 Oct 2026 16:49:25 +0900
+Subject: [PATCH] Enable FW_SUPPORT_MULTI_RESOLUTION
+
+---
+ smali_classes6/com/samsung/android/rune/CoreRune.smali | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/smali_classes6/com/samsung/android/rune/CoreRune.smali b/smali_classes6/com/samsung/android/rune/CoreRune.smali
+index c2df16b4..faf2318d 100644
+--- a/smali_classes6/com/samsung/android/rune/CoreRune.smali
++++ b/smali_classes6/com/samsung/android/rune/CoreRune.smali
+@@ -2991,7 +2991,7 @@
+     :goto_b
+     sput-boolean v0, Lcom/samsung/android/rune/CoreRune;->FW_TSP_DEADZONE_LARGE_FLIP_COVER:Z
+ 
+-    sput-boolean v4, Lcom/samsung/android/rune/CoreRune;->FW_SUPPORT_MULTI_RESOLUTION:Z
++    sput-boolean v3, Lcom/samsung/android/rune/CoreRune;->FW_SUPPORT_MULTI_RESOLUTION:Z
+ 
+     sput-boolean v4, Lcom/samsung/android/rune/CoreRune;->FW_DYNAMIC_RESOLUTION_CONTROL:Z
+ 
+@@ -2999,7 +2999,7 @@
+ 
+     sput-boolean v4, Lcom/samsung/android/rune/CoreRune;->FW_RESOLUTION_POLICY_FOR_SHELL_TRANSITION:Z
+ 
+-    sput-boolean v4, Lcom/samsung/android/rune/CoreRune;->FW_MULTI_RESOLUTION_POLICY:Z
++    sput-boolean v3, Lcom/samsung/android/rune/CoreRune;->FW_MULTI_RESOLUTION_POLICY:Z
+ 
+     sput-boolean v4, Lcom/samsung/android/rune/CoreRune;->FW_DENSITY_MAPPING:Z
+ 

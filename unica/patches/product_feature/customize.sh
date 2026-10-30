@@ -269,25 +269,51 @@ fi
 # SEC_PRODUCT_FEATURE_COMMON_CONFIG_DYN_RESOLUTION_CONTROL
 if ! $SOURCE_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL; then
     if $TARGET_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL && [ "$SOURCE_PLATFORM_SDK_VERSION" -ge "37" ]; then
-        # TODO: rebase resolution/ patches on One UI 9.0 smali
-        LOGW "Skipping dynamic resolution control (patches not rebased for One UI 9.0)"
+        if [[ "$(GET_FINGERPRINT_SENSOR_TYPE "$TARGET_FINGERPRINT_CONFIG_SENSOR")" == "optical" ]]; then
+            ABORT "TARGET_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL is not supported on targets with an optical fingerprint sensor"
+        fi
 
-        # Without the resolution switcher the panel stays at its native WQHD+ size,
-        # but the stock density is meant for the FHD+ default. Scale it by 1440/1080
-        # so the UI keeps its stock size.
-        DENSITY_PARTITION="vendor"
-        DENSITY="$(GET_PROP "vendor" "ro.sf.lcd_density")"
-        if [ ! "$DENSITY" ]; then
-            DENSITY_PARTITION="odm"
-            DENSITY="$(GET_PROP "odm" "ro.sf.lcd_density")"
-        fi
-        if [[ "$DENSITY" =~ ^[0-9]+$ ]]; then
-            SET_PROP "$DENSITY_PARTITION" "ro.sf.lcd_density" "$((DENSITY * 4 / 3))"
-            SET_PROP "$DENSITY_PARTITION" "ro.sf.init.lcd_density" "$((DENSITY * 4 / 3))"
+        SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_COMMON_CONFIG_DYN_RESOLUTION_CONTROL" "WQHD,FHD,HD"
+
+        # Charging/LPM images for the WQHD+ panel. The b0q surfaceflinger and
+        # bootanimation are One UI 8 binaries and are not used on One UI 9.
+        for f in battery_error battery_low battery_protection battery_temperature_error \
+                battery_temperature_limit battery_water_usb incomplete_connect \
+                new_vi_0_100 new_vi_1_100 new_vi_2_100 \
+                new_vi_level_0_1 new_vi_level_0_2 new_vi_level_0_3 new_vi_level_0_4 \
+                new_vi_level_1_1 new_vi_level_1_2 new_vi_level_1_3 new_vi_level_1_4 \
+                new_vi_level_2_1 new_vi_level_2_2 new_vi_level_2_3 new_vi_level_2_4 \
+                slow_charging_usb temperature_limit_usb water_protection_usb; do
+            ADD_TO_WORK_DIR "b0qxxx" "system" "system/media/$f.spi" 0 0 644 "u:object_r:system_file:s0"
+        done
+        unset f
+
+        if [ "$TARGET_PLATFORM_SDK_VERSION" -ge "36" ]; then
+            # The composer exposes WQHD/FHD/HD display modes
+            PF_APPLY_PATCH "system" "system/framework/framework.jar" \
+                "$MODPATH/resolution/oneui9/framework.jar/0001-Enable-FW_SUPPORT_MULTI_RESOLUTION.patch"
+            PF_APPLY_PATCH "system" "system/framework/gamemanager.jar" \
+                "$MODPATH/resolution/oneui9/gamemanager.jar/0001-Enable-dynamic-resolution-control.patch"
         else
-            LOGW "ro.sf.lcd_density not found, keeping the default density"
+            # Legacy vendor: a single WQHD+ display mode, SecSettings switches
+            # resolution with forced size/density instead. The stock density is
+            # meant for the FHD+ default, scale it by 1440/1080 for WQHD+.
+            DENSITY_PARTITION="vendor"
+            DENSITY="$(GET_PROP "vendor" "ro.sf.lcd_density")"
+            if [ ! "$DENSITY" ]; then
+                DENSITY_PARTITION="odm"
+                DENSITY="$(GET_PROP "odm" "ro.sf.lcd_density")"
+            fi
+            if [[ "$DENSITY" =~ ^[0-9]+$ ]]; then
+                SET_PROP "$DENSITY_PARTITION" "ro.sf.lcd_density" "$((DENSITY * 4 / 3))"
+                SET_PROP "$DENSITY_PARTITION" "ro.sf.init.lcd_density" "$((DENSITY * 4 / 3))"
+            else
+                LOGW "ro.sf.lcd_density not found, keeping the default density"
+            fi
+            unset DENSITY DENSITY_PARTITION
         fi
-        unset DENSITY DENSITY_PARTITION
+        PF_APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+            "$MODPATH/resolution/oneui9/SecSettings.apk/0001-Enable-dynamic-resolution-control.patch"
     elif $TARGET_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL; then
         if [[ "$(GET_FINGERPRINT_SENSOR_TYPE "$TARGET_FINGERPRINT_CONFIG_SENSOR")" == "optical" ]]; then
             ABORT "TARGET_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL is not supported on targets with an optical fingerprint sensor"
