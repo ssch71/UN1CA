@@ -1,6 +1,7 @@
 #!/system/bin/sh
 # Copyright (c) 2026 Rezoss
 # SPDX-License-Identifier: GPL-3.0-or-later
+# shellcheck disable=SC2034 # Read by the module installer
 SKIPUNZIP=0
 [ "$(getprop ro.product.device)" = dm3q ] || abort "dm3q only"
 sha256sum -c "$MODPATH/stock.sha256" || abort "Restore stock paths first: disable v5/other audio overlays and reboot"

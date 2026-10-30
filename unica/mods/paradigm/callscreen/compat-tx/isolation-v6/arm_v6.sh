@@ -1,4 +1,5 @@
 #!/system/bin/sh
+# shellcheck disable=SC2015 # fail exits, "A && B || fail" is intended
 # Copyright (c) 2026 Rezoss
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Explicit next-boot arming only. No live mounts/restarts/reboot.

@@ -1,4 +1,5 @@
 #!/system/bin/sh
+# shellcheck disable=SC2015 # fail exits, "A && B || fail" is intended
 # Copyright (c) 2026 Rezoss
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Explicit post-install activation for the NEXT boot. Never mounts/restarts.
@@ -16,6 +17,7 @@ META=$(readlink -f /data/adb/metamodule)
 [ "$(sha256sum /vendor/lib64/hw/audio.primary.kalama.so | cut -d ' ' -f 1)" = 4ac2a7b0844088a7f1fae3207ccb8210cef2e1a480092536bb80a25acf21489a ] || fail "Unexpected live HAL"
 [ "$(sha256sum /vendor/lib64/libar-pal.so | cut -d ' ' -f 1)" = 51d2ea15bbc5dfb4361946845e552ecdd80d2842d96504701069781145280bbd ] || fail "Unexpected live PAL"
 (cd "$MODDIR" && sha256sum -c payload.sha256) || fail "Payload hashes differ"
+# shellcheck disable=SC2043 # Keep the list form for more competing modules
 for id in rezoss_callscreen_compat_tx_test; do
     D=/data/adb/modules/$id
     [ ! -d "$D" ] || [ -f "$D/disable" ] || [ -f "$D/remove" ] || fail "Competing module $id"

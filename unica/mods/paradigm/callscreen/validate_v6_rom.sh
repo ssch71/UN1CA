@@ -92,6 +92,7 @@ echo "PASS: competing XML edit rejected before any payload/metadata mutation"
 CS_LOGGED_STAGE=$(sed -n 's/^- Build dm3q Call Screening v6 isolated-codec payload: //p' "$CS_TEST_ROOT/first-build.txt")
 cp "$CS_LOGGED_STAGE/build/module/candidate/vendor/etc/audio/sku_kalama/mixer_paths.xml" "$WORK_DIR/vendor/etc/audio/sku_kalama/mixer_paths.xml"
 find "$WORK_DIR" -type f -exec sha256sum {} + | sort > "$CS_TEST_ROOT/before-copy-failure.sha256"
+# shellcheck disable=SC2317 # Overrides the helper for the sourced script
 if (ADD_TO_WORK_DIR(){ return 23; }; source "$MODPATH/callscreen/integrate_v6_rom.sh") > "$CS_TEST_ROOT/copy-failure.txt" 2>&1; then
     echo "FAIL: ignored a copy helper failure" >&2
     exit 1
@@ -103,6 +104,7 @@ echo "PASS: copy-helper failure propagates even when sourced inside a conditiona
 TARGET_CODENAME=other source "$MODPATH/callscreen/integrate_v6_rom.sh"
 mkdir -p "$CS_TEST_ROOT/disabled-mod/callscreen/compat-tx/isolation-v6"
 touch "$CS_TEST_ROOT/disabled-mod/callscreen/compat-tx/isolation-v6/disable"
+# shellcheck disable=SC2097,SC2098 # Source the real script with a temporary MODPATH
 MODPATH="$CS_TEST_ROOT/disabled-mod" source "$MODPATH/callscreen/integrate_v6_rom.sh"
 echo "PASS: other devices and disabled v6 skip integration"
 echo "Fixture evidence: $CS_TEST_ROOT"
