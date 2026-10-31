@@ -5,7 +5,7 @@
 MODDIR=${0%/*}
 fail() { echo "FAIL: $*"; exit 1; }
 [ "$(id -u)" = 0 ] || fail "Run through the root manager"
-[ "$(getprop ro.product.device)" = dm3q ] || fail "dm3q only"
+case "$(getprop ro.product.device)" in dm3q|dm1q) ;; *) fail "dm3q/dm1q only";; esac
 [ -f "$MODDIR/skip_mount" ] || fail "Missing skip_mount guard"
 for entry in system vendor post-fs-data.sh service.sh metamount.sh boot-completed.sh; do
     [ ! -e "$MODDIR/$entry" ] || fail "Unexpected active overlay/boot entry: $entry"

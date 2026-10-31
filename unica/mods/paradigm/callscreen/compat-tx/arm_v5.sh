@@ -7,7 +7,7 @@ set -eu
 MODDIR=${0%/*}
 fail() { echo "REFUSED: $*"; exit 1; }
 [ "$(id -u)" = 0 ] || fail "Root required"
-[ "$(getprop ro.product.device)" = dm3q ] || fail "dm3q only"
+case "$(getprop ro.product.device)" in dm3q|dm1q) ;; *) fail "dm3q/dm1q only";; esac
 [ -f "$MODDIR/skip_mount" ] || fail "Already armed or missing guard"
 [ -d "$MODDIR/candidate/vendor" ] || fail "Missing staged payload"
 [ ! -e "$MODDIR/system" ] || fail "Unexpected existing system directory"

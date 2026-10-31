@@ -93,7 +93,7 @@ description=Inactive staged candidate. No system/vendor overlay or boot hooks. A
     (payload/'customize.sh').write_text('''#!/system/bin/sh
 # SPDX-License-Identifier: GPL-3.0-or-later
 SKIPUNZIP=0
-[ "$(getprop ro.product.device)" = "dm3q" ] || abort "dm3q only"
+case "$(getprop ro.product.device)" in dm3q|dm1q) ;; *) abort "dm3q/dm1q only";; esac
 EXPECTED=4ac2a7b0844088a7f1fae3207ccb8210cef2e1a480092536bb80a25acf21489a
 ACTUAL=$(sha256sum /vendor/lib64/hw/audio.primary.kalama.so | cut -d ' ' -f 1)
 [ "$ACTUAL" = "$EXPECTED" ] || abort "Wrong or already overlaid audio HAL. Remove competing audio module first."
