@@ -9,7 +9,7 @@ export WORK_DIR="$CS_TEST_ROOT/work"
 export MODPATH="$SRC_DIR/unica/mods/paradigm"
 export TARGET_CODENAME=dm3q
 source "$SRC_DIR/scripts/utils/common_utils.sh"
-python3 - "$SRC_DIR/out/fw/SM-S918B_EUX" "$WORK_DIR" <<'PY'
+python3 - "$SRC_DIR/out/fw/SM-S911N_KOO" "$WORK_DIR" <<'PY'
 from pathlib import Path
 import shutil
 import sys

@@ -5,7 +5,7 @@
 # Never installs a root module, changes a phone, or relaxes SELinux policy.
 (
     set -euo pipefail
-    [[ "${TARGET_CODENAME:-}" == dm3q ]] || exit 0
+    [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q)$ ]] || exit 0
     CS_ROOT="$MODPATH/callscreen"
     CS_V6="$CS_ROOT/compat-tx/isolation-v6"
     for CS_DISABLED in "$CS_ROOT/disable" "$CS_ROOT/compat-tx/disable" "$CS_V6/disable"; do
