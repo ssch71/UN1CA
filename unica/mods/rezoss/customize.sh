@@ -1082,6 +1082,7 @@ unset REZOSS_SCS_POLICY_XML
 LOG "- Build opt-in UN1CA local notification-summary provider"
 LOCAL_SUMMARY_SERVICE_DIR="$MODPATH/local-summary-service"
 LOCAL_SUMMARY_SERVICE_APK="$LOCAL_SUMMARY_SERVICE_DIR/system/priv-app/RezossAI/RezossAI.apk"
+<<<<<<< HEAD
 # EVAL under `set -e` exits before printing anything when the command fails,
 # so run the build inside `if` and dump its output ourselves.
 if REZOSS_AI_BUILD_LOG="$(bash "$LOCAL_SUMMARY_SERVICE_DIR/build.sh" "$LOCAL_SUMMARY_SERVICE_APK" 2>&1)"; then
@@ -1095,6 +1096,14 @@ else
 fi
 unset REZOSS_AI_BUILD_LOG
 LOG "- Build updatable QWEN permission stub (V73 model APK uses the same package)"
+=======
+EVAL "bash \"$LOCAL_SUMMARY_SERVICE_DIR/build.sh\" \"$LOCAL_SUMMARY_SERVICE_APK\""
+ADD_TO_WORK_DIR "$LOCAL_SUMMARY_SERVICE_DIR" "system" "system/priv-app/RezossAI/RezossAI.apk" 0 0 644 "u:object_r:system_file:s0"
+SET_METADATA "system" "system/priv-app/RezossAI" 0 0 755 "u:object_r:system_file:s0"
+SET_METADATA "system" "system/priv-app/RezossAI/RezossAI.apk" 0 0 644 "u:object_r:system_file:s0"
+ADD_TO_WORK_DIR "$LOCAL_SUMMARY_SERVICE_DIR" "system" "system/etc/default-permissions/default-permissions-unica-local-summary.xml" 0 0 644 "u:object_r:system_file:s0"
+LOG "- Build updatable Rezoss AI permission stub (API app uses the same package)"
+>>>>>>> 6bd4db2ea46ea3fe323e073d80268e6675312a40
 QWEN_STUB_DIR="$MODPATH/qwen-llm/system-stub"
 QWEN_STUB_APK="$MODPATH/qwen-llm/system/priv-app/QWEN_LLM_rezoss_stub/QWEN_LLM_rezoss_stub.apk"
 if ! REZOSS_QWEN_BUILD_LOG="$(bash "$QWEN_STUB_DIR/build.sh" "$QWEN_STUB_APK" 2>&1)"; then
@@ -1106,13 +1115,13 @@ ADD_TO_WORK_DIR "$MODPATH/qwen-llm" "system" "system/priv-app/QWEN_LLM_rezoss_st
 SET_METADATA "system" "system/priv-app/QWEN_LLM_rezoss_stub" 0 0 755 "u:object_r:system_file:s0"
 SET_METADATA "system" "system/priv-app/QWEN_LLM_rezoss_stub/QWEN_LLM_rezoss_stub.apk" 0 0 644 "u:object_r:system_file:s0"
 unset QWEN_STUB_APK QWEN_STUB_DIR
-# The optional APK contains V73 model assets on dm3q; legacy builds retain GGUF.
+# The separately installed API app stores the user's endpoint, model, and key.
 # Remove legacy payloads from incremental builds; keep only the bridge.
 DELETE_FROM_WORK_DIR "system" "system/bin/unica-summary-llama"
 DELETE_FROM_WORK_DIR "system" "system/bin/unica-summary-llama-server"
 DELETE_FROM_WORK_DIR "system" "system/etc/unica/local-summary/qwen2.5-0.5b-instruct-q4_k_m.gguf"
 ADD_TO_WORK_DIR "$MODPATH" "system" "system/etc/sysconfig/rezoss-ai-associations.xml" 0 0 644 "u:object_r:system_file:s0"
-LOG "- Install out/archived/QWEN_LLM/QWEN_LLM_rezoss.apk separately to enable inference"
+LOG "- Install out/archived/QWEN_LLM/QWEN_LLM_rezoss.apk, then open Rezoss AI to configure the API"
 LOCAL_SUMMARY_ALLOWLIST="$WORK_DIR/system/system/etc/sysconfig/allowed-system-preload-apps.xml"
 if ! grep -q -F 'package="io.mesalabs.unica.localsummary"' "$LOCAL_SUMMARY_ALLOWLIST"; then
     EVAL "LC_ALL=C patch --batch --fuzz=0 -p1 -d \"$WORK_DIR/system/system/etc/sysconfig\" < \"$LOCAL_SUMMARY_SERVICE_DIR/allowed-system-preload-apps.xml/0001-Allow-UN1CA-local-summary-provider.patch\"" \
