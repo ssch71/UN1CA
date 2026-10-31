@@ -1,0 +1,25 @@
+From bf2caf423b42d7b9bbf5dff52b674331097b38aa Mon Sep 17 00:00:00 2001
+From: ssch71 <ssch71@users.noreply.github.com>
+Date: Sat, 31 Oct 2026 16:44:11 +0900
+Subject: [PATCH] Enable the cover screen Now brief and favorite apps card
+
+The setting and card are gated on ro.product.first_api_level >= 34 on top
+of the AI version and large cover screen checks. Flip5 launched with API 33
+but runs the same One UI 9 cover home, drop the launch API requirement.
+---
+ smali_classes3/aod/ha6.smali | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/smali_classes3/aod/ha6.smali b/smali_classes3/aod/ha6.smali
+index 7fa6aeb..3d9e291 100644
+--- a/smali_classes3/aod/ha6.smali
++++ b/smali_classes3/aod/ha6.smali
+@@ -1692,8 +1692,6 @@
+ 
+     const/16 v3, 0x22
+ 
+-    if-lt v0, v3, :cond_39
+-
+     const/4 v0, 0x1
+ 
+     goto :goto_32
