@@ -1000,8 +1000,41 @@ else
 fi
 if [ -n "$REZOSS_PRODUCT_RRO" ]; then
     LOG "- Using product overlay $REZOSS_PRODUCT_RRO"
-    APPLY_PATCH "product" "$REZOSS_PRODUCT_RRO" \
-        "$MODPATH/rro/framework-res__dm1qksx__auto_generated_rro_product.apk/0002-Add-Now-Nudge-notification-allow-packages.patch"
+    # Insert the array directly before </resources> instead of a context
+    # patch, so it works on any target overlay (S23/Flip5/Fold5, S20/N20...)
+    # regardless of the surrounding arrays.xml content.
+    DECODE_APK "product" "$REZOSS_PRODUCT_RRO" || return 1
+    REZOSS_RRO_ARRAYS="$APKTOOL_DIR/product/$REZOSS_PRODUCT_RRO/res/values/arrays.xml"
+    if [ ! -f "$REZOSS_RRO_ARRAYS" ]; then
+        mkdir -p "$(dirname "$REZOSS_RRO_ARRAYS")"
+        printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n' > "$REZOSS_RRO_ARRAYS"
+    fi
+    if grep -q 'name="config_DefaultNotificationNudgeAllowPackages"' "$REZOSS_RRO_ARRAYS"; then
+        LOG "- Now Nudge allowlist already present, skipping"
+    elif ! grep -q '</resources>' "$REZOSS_RRO_ARRAYS"; then
+        LOGW "Unexpected $REZOSS_RRO_ARRAYS, skipping Now Nudge allowlist"
+    else
+        REZOSS_NUDGE_ARRAY="    <string-array name=\"config_DefaultNotificationNudgeAllowPackages\">"
+        for REZOSS_NUDGE_PKG in \
+            com.google.android.apps.dynamite \
+            com.kakao.talk \
+            jp.naver.line.android \
+            com.sgiggle.production \
+            com.nttdocomo.android.msg \
+            com.kddi.android.cmail \
+            org.thoughtcrime.securesms \
+            com.google.android.apps.messaging \
+            com.samsung.android.messaging \
+            com.whatsapp \
+            com.whatsapp.w4b \
+            org.telegram.messenger \
+            org.telegram.messenger.web; do
+            REZOSS_NUDGE_ARRAY+="\\n        <item>$REZOSS_NUDGE_PKG</item>"
+        done
+        REZOSS_NUDGE_ARRAY+="\\n    </string-array>"
+        sed -i "s|</resources>|$REZOSS_NUDGE_ARRAY\\n</resources>|" "$REZOSS_RRO_ARRAYS"
+    fi
+    unset REZOSS_RRO_ARRAYS REZOSS_NUDGE_ARRAY REZOSS_NUDGE_PKG
 else
     LOGW "No auto-generated framework-res product overlay found; skipping Now Nudge allowlist patch"
 fi
