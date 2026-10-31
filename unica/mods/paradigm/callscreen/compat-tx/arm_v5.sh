@@ -14,8 +14,8 @@ fail() { echo "REFUSED: $*"; exit 1; }
 META=$(readlink -f /data/adb/metamodule)
 [ "$META" = /data/adb/modules/mountify ] || fail "Validated packaging requires Mountify"
 [ ! -e "$META/disable" ] && [ ! -e "$META/remove" ] || fail "Mountify disabled/removing"
-[ "$(sha256sum /vendor/lib64/hw/audio.primary.kalama.so | cut -d ' ' -f 1)" = 4ac2a7b0844088a7f1fae3207ccb8210cef2e1a480092536bb80a25acf21489a ] || fail "Unexpected live HAL"
-[ "$(sha256sum /vendor/lib64/libar-pal.so | cut -d ' ' -f 1)" = 51d2ea15bbc5dfb4361946845e552ecdd80d2842d96504701069781145280bbd ] || fail "Unexpected live PAL"
+[ "$(sha256sum /vendor/lib64/hw/audio.primary.kalama.so | cut -d ' ' -f 1)" = "$(cat "$MODDIR/hal.sha256")" ] || fail "Unexpected live HAL"
+[ "$(sha256sum /vendor/lib64/libar-pal.so | cut -d ' ' -f 1)" = "$(cat "$MODDIR/pal.sha256")" ] || fail "Unexpected live PAL"
 (cd "$MODDIR" && sha256sum -c payload.sha256) || fail "Payload hashes differ"
 # shellcheck disable=SC2043 # Keep the list form for more competing modules
 for id in rezoss_callscreen_compat_tx_test; do

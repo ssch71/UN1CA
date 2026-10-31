@@ -24,13 +24,18 @@ TINYALSA_SHA = '2503734a6b1b18602dea0cc472a1ff8751eeb4af513f10b59407e344784de84c
 # Known-good stock inputs. The HAL is binary-patched at measured offsets and
 # the PAL struct layout is pinned in compat_tx.c, so only exact builds are
 # accepted. mixer_paths.xml only needs the TX controls used below, which are
-# equal across the listed variants (S918B and S911N KSU8GZIF).
+# equal across the listed variants (S918B, S911N KSU8GZIF and F731N).
 PINS = {
-    'vendor/lib64/hw/audio.primary.kalama.so': {'4ac2a7b0844088a7f1fae3207ccb8210cef2e1a480092536bb80a25acf21489a'},
-    'vendor/lib64/libar-pal.so': {'51d2ea15bbc5dfb4361946845e552ecdd80d2842d96504701069781145280bbd'},
+    'vendor/lib64/hw/audio.primary.kalama.so': {'4ac2a7b0844088a7f1fae3207ccb8210cef2e1a480092536bb80a25acf21489a',
+                                                '529035e82943ebd8b47dffa9150b34150e9630e050cb4f82521a4f458272284b'},
+    'vendor/lib64/libar-pal.so': {'51d2ea15bbc5dfb4361946845e552ecdd80d2842d96504701069781145280bbd',
+                                  '3df00e47cf8dffe60d3ccff0fe0166a2a1087a88a5585eb46e59e1942f651a8a'},
     CONFIG+'/mixer_paths.xml': {'bb7aa21698ea6ddcfd4304fd20a77e94524f7f0b647b358fe28c825c2ea5ed71',
-                                '9ece3898dd32f44da5cb9b33c1f4ce3f5b3c7d1d5420a3383136af246d997a49'},
-    CONFIG+'/resourcemanager.xml': {'4de0c8c242cab3bb01ea2dbf32cc1a4483397248c022f0b764c17c8e97e857da'},
+                                '9ece3898dd32f44da5cb9b33c1f4ce3f5b3c7d1d5420a3383136af246d997a49',
+                                'fda2e5a6acfdbefd31ef7ccc6d3bd951b0d7e1dca5f9f26d9e40de2dc90025b4'},
+    # S23 (4-channel handset voice capture) and Flip5 F731N (2-channel).
+    CONFIG+'/resourcemanager.xml': {'4de0c8c242cab3bb01ea2dbf32cc1a4483397248c022f0b764c17c8e97e857da',
+                                    '70278156e0f00f884c92eda47647844cb4a1106aaa5534bc23a36153ca20c57f'},
 }
 UNSUPPORTED = 3  # integrate_v6_rom.sh skips instead of failing the ROM build
 
@@ -48,7 +53,9 @@ def patched_configs(vendor):
     handset = [d for d in tree.findall('./device_profile/in-device') if d.findtext('id') == 'PAL_DEVICE_IN_HANDSET_MIC']
     assert len(handset) == 1
     voice = [u for u in handset[0].findall('usecase') if u.findtext('name') == 'PAL_STREAM_VOICE_CALL']
-    assert len(voice) == 1 and voice[0].findtext('channels') == '4'
+    assert len(voice) == 1 and voice[0].findtext('channels') in ('2', '4')
+    # One silent decimator lane per capture channel (S23: 4, Flip5: 2).
+    lanes = int(voice[0].findtext('channels'))
     assert not tree.findall(f'.//custom-config[@key="{KEY}"]')
     marker = '                <snd_device_name>call-handset-mic</snd_device_name>\n'
     assert rm.count(marker) == 1
@@ -59,13 +66,13 @@ def patched_configs(vendor):
     mixer = (vendor/'etc/audio/sku_kalama/mixer_paths.xml').read_text()
     assert PATH not in mixer and mixer.count('</mixer>') == 1
     controls = ''.join(f'        <ctl name="TX {bank} MUX{i}" value="ZERO" />\n' for bank in ('DMIC','SMIC') for i in range(8))
-    # Keep the four digital capture lanes clocked, sourcing silence rather
+    # Keep the digital capture lanes clocked, sourcing silence rather
     # than referencing main-mic/multi-mic (which enable physical sources).
-    controls += ''.join(f'        <ctl name="TX_AIF1_CAP Mixer DEC{i}" value="1" />\n' for i in range(4))
+    controls += ''.join(f'        <ctl name="TX_AIF1_CAP Mixer DEC{i}" value="1" />\n' for i in range(lanes))
     mixer = mixer.replace('</mixer>', f'    <!-- Call Screening test: digital silence upstream of AI injection. -->\n    <path name="{PATH}">\n{controls}    </path>\n</mixer>')
     route = ET.fromstring(mixer).findall(f'./path[@name="{PATH}"]')
     assert len(route) == 1 and not route[0].findall('path')
-    assert len(route[0].findall('ctl')) == 20
+    assert len(route[0].findall('ctl')) == 16 + lanes
     new_voice = [u for d in ET.fromstring(rm).findall('./device_profile/in-device') if d.findtext('id') == 'PAL_DEVICE_IN_HANDSET_MIC' for u in d.findall('usecase') if u.findtext('name') == 'PAL_STREAM_VOICE_CALL'][0]
     assert new_voice.findtext(f'custom-config[@key="{KEY}"]/snd_device_name') == PATH
     return rm, mixer
