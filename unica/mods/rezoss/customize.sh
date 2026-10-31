@@ -982,9 +982,35 @@ LOG "- Patch VisualCloudCore Galaxy Store model check"
 APPLY_PATCH "system" "system/app/VisualCloudCore/VisualCloudCore.apk" \
     "$MODPATH/visualcloudcore/VisualCloudCore.apk/0001-Use-S25-Ultra-model-for-stub-update-check.patch"
 
-LOG "- Patch product framework overlay doze auto-brightness"
+# Append <$1 name="$2"> with the remaining args as items directly before
+# </resources>, instead of a context patch, so it works on any target overlay
+# (S23/Flip5/Fold5, S20/N20...) regardless of the surrounding arrays.xml.
+REZOSS_RRO_ADD_ARRAY()
+{
+    local FILE="$1"
+    local TYPE="$2"
+    local NAME="$3"
+    shift 3
 
-LOG "- Patch product framework overlay Now Nudge notification allowlist"
+    if grep -q "name=\"$NAME\"" "$FILE"; then
+        LOG "- $NAME already present, skipping"
+        return 0
+    fi
+    if ! grep -q '</resources>' "$FILE"; then
+        LOGW "Unexpected $FILE, skipping $NAME"
+        return 0
+    fi
+
+    local ARRAY="    <$TYPE name=\"$NAME\">"
+    local ITEM
+    for ITEM in "$@"; do
+        ARRAY+="\\n        <item>$ITEM</item>"
+    done
+    ARRAY+="\\n    </$TYPE>"
+    sed -i "s|</resources>|$ARRAY\\n</resources>|" "$FILE"
+}
+
+LOG "- Patch product framework overlay doze auto-brightness and Now Nudge allowlist"
 # The product RRO is named after the device (dm1qksx, dm3qxxx, b5qksx, ...).
 # Prefer the target's own overlay, then fall back to any auto-generated one.
 REZOSS_PRODUCT_RRO=""
@@ -1000,45 +1026,39 @@ else
 fi
 if [ -n "$REZOSS_PRODUCT_RRO" ]; then
     LOG "- Using product overlay $REZOSS_PRODUCT_RRO"
-    # Insert the array directly before </resources> instead of a context
-    # patch, so it works on any target overlay (S23/Flip5/Fold5, S20/N20...)
-    # regardless of the surrounding arrays.xml content.
     DECODE_APK "product" "$REZOSS_PRODUCT_RRO" || return 1
     REZOSS_RRO_ARRAYS="$APKTOOL_DIR/product/$REZOSS_PRODUCT_RRO/res/values/arrays.xml"
     if [ ! -f "$REZOSS_RRO_ARRAYS" ]; then
         mkdir -p "$(dirname "$REZOSS_RRO_ARRAYS")"
         printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n' > "$REZOSS_RRO_ARRAYS"
     fi
-    if grep -q 'name="config_DefaultNotificationNudgeAllowPackages"' "$REZOSS_RRO_ARRAYS"; then
-        LOG "- Now Nudge allowlist already present, skipping"
-    elif ! grep -q '</resources>' "$REZOSS_RRO_ARRAYS"; then
-        LOGW "Unexpected $REZOSS_RRO_ARRAYS, skipping Now Nudge allowlist"
-    else
-        REZOSS_NUDGE_ARRAY="    <string-array name=\"config_DefaultNotificationNudgeAllowPackages\">"
-        for REZOSS_NUDGE_PKG in \
-            com.google.android.apps.dynamite \
-            com.kakao.talk \
-            jp.naver.line.android \
-            com.sgiggle.production \
-            com.nttdocomo.android.msg \
-            com.kddi.android.cmail \
-            org.thoughtcrime.securesms \
-            com.google.android.apps.messaging \
-            com.samsung.android.messaging \
-            com.whatsapp \
-            com.whatsapp.w4b \
-            org.telegram.messenger \
-            org.telegram.messenger.web; do
-            REZOSS_NUDGE_ARRAY+="\\n        <item>$REZOSS_NUDGE_PKG</item>"
-        done
-        REZOSS_NUDGE_ARRAY+="\\n    </string-array>"
-        sed -i "s|</resources>|$REZOSS_NUDGE_ARRAY\\n</resources>|" "$REZOSS_RRO_ARRAYS"
-    fi
-    unset REZOSS_RRO_ARRAYS REZOSS_NUDGE_ARRAY REZOSS_NUDGE_PKG
+
+    REZOSS_RRO_ADD_ARRAY "$REZOSS_RRO_ARRAYS" "integer-array" "config_autoBrightnessDisplayValuesNits_doze" \
+        2 5 12 60 64 82 139 198 331 490
+    REZOSS_RRO_ADD_ARRAY "$REZOSS_RRO_ARRAYS" "integer-array" "config_autoBrightnessLevels_doze" \
+        1 10 30 50 100 500 1000 2000 3000
+
+    REZOSS_RRO_ADD_ARRAY "$REZOSS_RRO_ARRAYS" "string-array" "config_DefaultNotificationNudgeAllowPackages" \
+        com.google.android.apps.dynamite \
+        com.kakao.talk \
+        jp.naver.line.android \
+        com.sgiggle.production \
+        com.nttdocomo.android.msg \
+        com.kddi.android.cmail \
+        org.thoughtcrime.securesms \
+        com.google.android.apps.messaging \
+        com.samsung.android.messaging \
+        com.whatsapp \
+        com.whatsapp.w4b \
+        org.telegram.messenger \
+        org.telegram.messenger.web
+
+    unset REZOSS_RRO_ARRAYS
 else
-    LOGW "No auto-generated framework-res product overlay found; skipping Now Nudge allowlist patch"
+    LOGW "No auto-generated framework-res product overlay found; skipping overlay arrays"
 fi
 unset REZOSS_PRODUCT_RRO
+unset -f REZOSS_RRO_ADD_ARRAY
 
 # =============================================================================
 # Notification Highlights / Galaxy AI Stack
