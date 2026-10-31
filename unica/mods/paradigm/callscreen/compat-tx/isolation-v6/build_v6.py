@@ -7,6 +7,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import sys
 from pathlib import Path
 import shutil
 import subprocess
@@ -18,13 +19,24 @@ ROOT = HERE.parents[5]
 CONFIG = 'vendor/etc/audio/sku_kalama'
 KEY = 'rezoss_cs_isolated'
 PATH = 'rezoss-call-screen-isolated-mic'
+TINYALSA = 'system/system/lib64/libtinyalsa.so'
 TINYALSA_SHA = '2503734a6b1b18602dea0cc472a1ff8751eeb4af513f10b59407e344784de84c'
+# Known-good stock inputs. The HAL is binary-patched at measured offsets and
+# the PAL struct layout is pinned in compat_tx.c, so only exact builds are
+# accepted. mixer_paths.xml only needs the TX controls used below, which are
+# equal across the listed variants (S918B and S911N KSU8GZIF).
 PINS = {
-    'vendor/lib64/hw/audio.primary.kalama.so': '4ac2a7b0844088a7f1fae3207ccb8210cef2e1a480092536bb80a25acf21489a',
-    'vendor/lib64/libar-pal.so': '51d2ea15bbc5dfb4361946845e552ecdd80d2842d96504701069781145280bbd',
-    CONFIG+'/mixer_paths.xml': 'bb7aa21698ea6ddcfd4304fd20a77e94524f7f0b647b358fe28c825c2ea5ed71',
-    CONFIG+'/resourcemanager.xml': '4de0c8c242cab3bb01ea2dbf32cc1a4483397248c022f0b764c17c8e97e857da',
+    'vendor/lib64/hw/audio.primary.kalama.so': {'4ac2a7b0844088a7f1fae3207ccb8210cef2e1a480092536bb80a25acf21489a'},
+    'vendor/lib64/libar-pal.so': {'51d2ea15bbc5dfb4361946845e552ecdd80d2842d96504701069781145280bbd'},
+    CONFIG+'/mixer_paths.xml': {'bb7aa21698ea6ddcfd4304fd20a77e94524f7f0b647b358fe28c825c2ea5ed71',
+                                '9ece3898dd32f44da5cb9b33c1f4ce3f5b3c7d1d5420a3383136af246d997a49'},
+    CONFIG+'/resourcemanager.xml': {'4de0c8c242cab3bb01ea2dbf32cc1a4483397248c022f0b764c17c8e97e857da'},
 }
+UNSUPPORTED = 3  # integrate_v6_rom.sh skips instead of failing the ROM build
+
+def unsupported(reason):
+    print('Unsupported firmware: '+reason, file=sys.stderr)
+    raise SystemExit(UNSUPPORTED)
 
 def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -62,17 +74,24 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--ndk', type=Path, default=Path.home()/'Android/Sdk/ndk/28.2.13676358')
-    a = p.parse_args()
-    assert os.environ.get('SRC_DIR'), 'Source buildenv.sh dm3q first'
-    out = a.output.resolve()
-    assert out.is_relative_to(Path('/tmp')) and not out.exists(), 'Use a new /tmp output directory'
-    fw = ROOT/'out/fw/SM-S918B_EUX'
-    for rel, expected in PINS.items():
-        assert sha(fw/rel) == expected, 'Unsupported source '+rel
-    assert sha(fw/'system/system/lib64/libtinyalsa.so') == TINYALSA_SHA
     spec = importlib.util.spec_from_file_location('v4_builder', HERE.parent/'build_candidate.py')
     old = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(old)
+    old.device_arguments(p)
+    a = old.resolve_device(p.parse_args())
+    assert os.environ.get('SRC_DIR'), 'Source buildenv.sh <target> first'
+    out = a.output.resolve()
+    assert out.is_relative_to(Path('/tmp')) and not out.exists(), 'Use a new /tmp output directory'
+    fw = a.vendor_fw
+    stock = {}
+    for rel, accepted in PINS.items():
+        if not (fw/rel).is_file():
+            unsupported(f'{a.device}: missing {fw/rel}')
+        stock[rel] = sha(fw/rel)
+        if stock[rel] not in accepted:
+            unsupported(f'{a.device}: {rel} {stock[rel]}')
+    if not (a.system_fw/TINYALSA).is_file() or sha(a.system_fw/TINYALSA) != TINYALSA_SHA:
+        unsupported(f'{a.device}: {a.system_fw/TINYALSA}')
     # Also hook stop so a stopped capture is not mistaken for a running one.
     functions = [*old.FUNCTIONS, 'stop']
     old.FUNCTIONS = functions
@@ -101,7 +120,8 @@ author=Rezoss
 description=Inactive until arm_v6.sh. Dedicated ZERO-source route and kernel readback; audio repair unverified.
 ''')
     (module/'skip_mount').touch()
-    (module/'stock.sha256').write_text(''.join(v+'  /'+k+'\n' for k,v in PINS.items())+TINYALSA_SHA+'  /system/lib64/libtinyalsa.so\n')
+    (module/'device').write_text(a.device+'\n')
+    (module/'stock.sha256').write_text(''.join(v+'  /'+k+'\n' for k,v in stock.items())+TINYALSA_SHA+'  /system/lib64/libtinyalsa.so\n')
     for file in ('arm_v6.sh','action.sh','customize.sh'):
         shutil.copy2(HERE/file,module/file)
         (module/file).chmod(0o755)
@@ -112,7 +132,7 @@ description=Inactive until arm_v6.sh. Dedicated ZERO-source route and kernel rea
         assert not (module/unsafe).exists()
     report = {
         'status':'INACTIVE HOST-TESTED CANDIDATE; NOT INSTALLED OR DEVICE-AUDIO-VERIFIED',
-        'source_pins':PINS,'dynamic_string_edits':edits,
+        'device':a.device,'source_pins':stock,'dynamic_string_edits':edits,
         'tinyalsa_sha256':TINYALSA_SHA,
         'payload':{str(p.relative_to(module)):sha(p) for p in payload},
         'source':{p.name:sha(p) for p in (HERE/'compat_tx.c',HERE/'sources.c',HERE/'build_v6.py')},

@@ -59,15 +59,42 @@ def patch_hal(data):
     require(all(a == b or i in allowed for i, (a, b) in enumerate(zip(data, output))), 'Unexpected byte change')
     return bytes(output), [{'offset':hex(off), 'from':old[:-1].decode(), 'to':new[:-1].decode()} for off, old, new in edits]
 
+def firmware_dir(var):
+    """Resolve out/fw/<MODEL>_<CSC> from a MODEL/CSC/IMEI build variable."""
+    parts = os.environ.get(var, '').split('/')
+    require(len(parts) >= 2 and parts[0] and parts[1], var+' is not set; source buildenv.sh <target> first')
+    return Path(os.environ.get('FW_DIR') or ROOT/'out/fw')/(parts[0]+'_'+parts[1])
+
+def device_arguments(parser):
+    """Arguments shared by every builder; defaults come from the build config."""
+    parser.add_argument('--device', default=os.environ.get('TARGET_CODENAME'),
+                        help='Target codename the module is built for (default: $TARGET_CODENAME)')
+    parser.add_argument('--vendor-fw', type=Path,
+                        help='Firmware dir providing vendor/ (default: $FW_DIR/<TARGET_FIRMWARE model_csc>)')
+    parser.add_argument('--system-fw', type=Path,
+                        help='Firmware dir providing system/ (default: $FW_DIR/<SOURCE_FIRMWARE model_csc>)')
+
+def resolve_device(args):
+    require(args.device, 'Pass --device or set TARGET_CODENAME')
+    args.vendor_fw = args.vendor_fw or firmware_dir('TARGET_FIRMWARE')
+    args.system_fw = args.system_fw or firmware_dir('SOURCE_FIRMWARE')
+    return args
+
+def device_guard(var, action):
+    """Shell check against the codename recorded in the module at build time."""
+    return ('[ "$(getprop ro.product.device)" = "$(cat "$'+var+'/device")" ] || '
+            +action+' "Built for $(cat "$'+var+'/device") only"')
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True, help='New directory under /tmp')
     parser.add_argument('--ndk', type=Path, default=Path.home()/'Android/Sdk/ndk/28.2.13676358')
-    args = parser.parse_args()
-    require(os.environ.get('SRC_DIR'), 'Source buildenv.sh dm3q first')
+    device_arguments(parser)
+    args = resolve_device(parser.parse_args())
+    require(os.environ.get('SRC_DIR'), 'Source buildenv.sh <target> first')
     out = args.output.resolve()
     require(out.is_relative_to(Path('/tmp')) and not out.exists(), 'Output must be new and under /tmp')
-    vendor = ROOT/'out/fw/SM-S918B_EUX/vendor'
+    vendor = args.vendor_fw/'vendor'
     original = vendor/'lib64/hw/audio.primary.kalama.so'
     require(digest((vendor/'lib64/libar-pal.so').read_bytes()) == PAL_SHA, 'Unsupported PAL library')
     patched, edits = patch_hal(original.read_bytes())
@@ -90,10 +117,11 @@ versionCode=2
 author=Rezoss
 description=Inactive staged candidate. No system/vendor overlay or boot hooks. Action performs read-only checks only. No audio fix activated.
 ''')
+    (payload/'device').write_text(args.device+'\n')
     (payload/'customize.sh').write_text('''#!/system/bin/sh
 # SPDX-License-Identifier: GPL-3.0-or-later
 SKIPUNZIP=0
-case "$(getprop ro.product.device)" in dm3q|dm1q) ;; *) abort "dm3q/dm1q only";; esac
+'''+device_guard('MODPATH', 'abort')+'''
 EXPECTED=4ac2a7b0844088a7f1fae3207ccb8210cef2e1a480092536bb80a25acf21489a
 ACTUAL=$(sha256sum /vendor/lib64/hw/audio.primary.kalama.so | cut -d ' ' -f 1)
 [ "$ACTUAL" = "$EXPECTED" ] || abort "Wrong or already overlaid audio HAL. Remove competing audio module first."
