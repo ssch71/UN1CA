@@ -976,6 +976,32 @@ LOG "- Patch AODService SDK clock item stretch font data"
 APPLY_PATCH "system" "system/priv-app/AODService_v80/AODService_v80.apk" \
     "$REZOSS_AOD_PATCH_DIR/0009-Normalize-AOD-SDK-clock-item-stretch-font-data.patch" || return 1
 
+# The cover screen "Now brief and favorite apps" card requires
+# ro.product.first_api_level >= 34 on top of the AI version and LARGESCREEN
+# subdisplay checks. Flip5 launched with API 33, so drop only that check.
+# Done here because the AOD APK above replaces whatever the target patched.
+if [[ "$TARGET_CODENAME" == "b5q" ]]; then
+    LOG "- Patch AODService cover screen Now brief launch API gate"
+    python3 - "$REZOSS_AOD_DECODE" << 'PY' || LOGW "Cover screen Now brief gate not found, skipping"
+import pathlib, re, sys
+gate = re.compile(r'(const-string (v\d+), "ro\.product\.first_api_level"\n'
+                  r'(?:[^\n]*\n){1,8}?'
+                  r'\s*const/16 (v\d+), 0x22\n\s*\n)'
+                  r'\s*if-lt v\d+, \3, :cond_\w+\n\n')
+hits = []
+for f in pathlib.Path(sys.argv[1]).glob("smali*/**/*.smali"):
+    t = f.read_text()
+    if "LARGESCREEN" in t and "SEC_FLOATING_FEATURE_COMMON_CONFIG_AI_VERSION" in t:
+        n, c = gate.subn(r"\1", t)
+        if c:
+            hits.append((f, n, c))
+if len(hits) != 1 or hits[0][2] != 1:
+    sys.exit(1)
+hits[0][0].write_text(hits[0][1])
+print("Patched " + str(hits[0][0].relative_to(sys.argv[1])))
+PY
+fi
+
 unset REZOSS_AOD_TEMP REZOSS_AOD_DECODE REZOSS_AOD_PATCH_DIR
 
 LOG "- Patch VisualCloudCore Galaxy Store model check"
