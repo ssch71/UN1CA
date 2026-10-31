@@ -80,12 +80,13 @@ def patched_configs(vendor):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--output', type=Path, required=True)
-    p.add_argument('--ndk', type=Path, default=Path.home()/'Android/Sdk/ndk/28.2.13676358')
+    p.add_argument('--ndk', type=Path)
     spec = importlib.util.spec_from_file_location('v4_builder', HERE.parent/'build_candidate.py')
     old = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(old)
     old.device_arguments(p)
     a = old.resolve_device(p.parse_args())
+    compiler = old.ndk_compiler(a.ndk or old.default_ndk())
     assert os.environ.get('SRC_DIR'), 'Source buildenv.sh <target> first'
     out = a.output.resolve()
     assert out.is_relative_to(Path('/tmp')) and not out.exists(), 'Use a new /tmp output directory'
@@ -112,7 +113,6 @@ def main():
     config.mkdir(parents=True)
     (config/'resourcemanager.xml').write_text(rm)
     (config/'mixer_paths.xml').write_text(mixer)
-    compiler = a.ndk/'toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang'
     flags = ['-std=c11','-D_GNU_SOURCE','-Wall','-Wextra','-Werror','-O2','-Wl,-z,relro,-z,now,-z,max-page-size=16384']
     definitions = ['-Dpal_stream_'+s+'=cs__stream_'+s for s in functions]
     subprocess.run([str(compiler),*flags,'-fPIC','-shared','-Wl,-soname,libcs-pal.so',*definitions,

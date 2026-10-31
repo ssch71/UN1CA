@@ -33,6 +33,10 @@
         LOGW "Call Screening v6 has no pinned audio HAL/PAL for $TARGET_CODENAME, skipping"
         exit 0
     fi
+    if [[ "$CS_RC" == 4 ]]; then
+        LOGW "Call Screening v6 needs the Android NDK (ANDROID_NDK_HOME), skipping"
+        exit 0
+    fi
     [[ "$CS_RC" == 0 ]] || exit 1
     CS_PAYLOAD="$CS_STAGE/build/module/candidate"
     # Check ALL destinations before replacing any. Resume/repeated module

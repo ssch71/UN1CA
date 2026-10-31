@@ -70,6 +70,29 @@ def firmware_dir(var):
     require(len(parts) >= 2 and parts[0] and parts[1], var+' is not set; source buildenv.sh <target> first')
     return Path(os.environ.get('FW_DIR') or ROOT/'out/fw')/(parts[0]+'_'+parts[1])
 
+NDK_COMPILER = 'toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang'
+NO_TOOLCHAIN = 4  # integrate_v6_rom.sh skips instead of failing the ROM build
+
+def default_ndk():
+    """First NDK that has the aarch64 API 33 clang: env vars, then SDK dirs."""
+    candidates = [os.environ.get(v) for v in ('ANDROID_NDK_HOME', 'ANDROID_NDK_ROOT', 'ANDROID_NDK_LATEST_HOME', 'ANDROID_NDK')]
+    for sdk in (os.environ.get('ANDROID_HOME'), os.environ.get('ANDROID_SDK_ROOT'),
+                str(Path.home()/'Android/Sdk'), '/usr/local/lib/android/sdk'):
+        if sdk and (Path(sdk)/'ndk').is_dir():
+            candidates += sorted((str(p) for p in (Path(sdk)/'ndk').iterdir()), reverse=True)
+    for ndk in candidates:
+        if ndk and (Path(ndk)/NDK_COMPILER).is_file():
+            return Path(ndk)
+    return None
+
+def ndk_compiler(ndk):
+    compiler = ndk/NDK_COMPILER if ndk else None
+    if not compiler or not compiler.is_file():
+        import sys
+        print('Android NDK not found (set ANDROID_NDK_HOME or pass --ndk)', file=sys.stderr)
+        raise SystemExit(NO_TOOLCHAIN)
+    return compiler
+
 def device_arguments(parser):
     """Arguments shared by every builder; defaults come from the build config."""
     parser.add_argument('--device', default=os.environ.get('TARGET_CODENAME'),
@@ -93,7 +116,7 @@ def device_guard(var, action):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True, help='New directory under /tmp')
-    parser.add_argument('--ndk', type=Path, default=Path.home()/'Android/Sdk/ndk/28.2.13676358')
+    parser.add_argument('--ndk', type=Path, default=default_ndk())
     device_arguments(parser)
     args = resolve_device(parser.parse_args())
     require(os.environ.get('SRC_DIR'), 'Source buildenv.sh <target> first')
@@ -110,7 +133,7 @@ def main():
     libs = payload/'candidate/vendor/lib64'
     (libs/'hw').mkdir(parents=True)
     (libs/'hw/audio.primary.kalama.so').write_bytes(patched)
-    compiler = args.ndk/'toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang'
+    compiler = ndk_compiler(args.ndk)
     definitions = ['-Dpal_stream_'+s+'=cs__stream_'+s for s in FUNCTIONS]
     subprocess.run([str(compiler), '-std=c11', '-D_GNU_SOURCE', '-Wall', '-Wextra', '-Werror', '-O2',
                     '-fPIC', '-shared', '-Wl,-z,relro,-z,now,-z,max-page-size=16384',
