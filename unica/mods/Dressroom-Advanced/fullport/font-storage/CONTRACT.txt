@@ -1,0 +1,43 @@
+Native provider host: com.samsung.android.app.dressroom.
+Authority: io.mesalabs.unica.dressroomadvanced.settings.
+Store: files/dressroom_advanced_profiles_v1.json in the host's private per-user /data.
+Writes use AtomicFile; unreadable/unknown schemas fail without replacing data.
+Only DressRoom may write. Known Samsung runtime packages may read.
+NativeSettings.read(context, scope, identity) and write(context, scope, profile).
+Scopes: clock, widgets, extras. Upstream read/commit/readWidgets/commitWidgets/
+readExtras/commitExtras calls are retained, as are font-picker and mask URI APIs.
+Clock identity: wallpaperId:type:font:layoutScreen:layoutOrientation. Widget
+identity excludes type/font. Extras are per Android user. scene mismatch does
+not reuse a stale profile. All values retain their exact Bundle primitive type.
+Drafts live in editor memory. Only call write after Samsung Apply succeeds and
+with the new committed wallpaper ID. Never write from sliders or on Cancel.
+Caller must freeze all three scopes before async Apply so slider movement cannot
+mutate pending settings. On wallpaper ID transition, caller binds frozen settings
+to the final ID; the provider intentionally never guesses wallpaper identity.
+DisplayFontResolver resolves explicit unica_font:*.xml through the SamsungSans
+bank descriptor and its exact filename. It does not choose an arbitrary asset.
+currentDisplay calls Samsung Typeface.semGetFontPathOfCurrentFontStyle(Context,1),
+the same API used by Settings' actual Font Style selection, then resolves the
+DroidSans.ttf inside that returned directory exactly as Typeface.setFlipFonts.
+It falls back to explicit theme_font, then existing DEFAULT; current_xml is not
+proof that a font was applied to Display. If native source is unavailable,
+Samsung's already-applied DEFAULT Typeface is retained with no invented axes.
+Source.capabilities exposes only axes present in fvar; cleanAxes
+clamps supported coordinates. Source.typeface returns the existing native style
+on IO/typeface error. Per-digit stretch remains gated by Samsung eligibility in
+parent integration, never by the existence of an arbitrary height list.
+FontAxes.java is an unmodified upstream copy; package it only once.
+Imported font picker requires original FontFiles + FontPickerActivity, with the
+Activity component redirected to DressRoom (parent owns UI adaptation).
+Mask/font files and dependencies remain original upstream APIs. Do not activate
+LSPosed or any Reflect.hook/RuntimeInterception infrastructure.
+
+The native authority intentionally differs from the upstream module authority,
+so APK provider installation does not collide. Enabling the original LSPosed
+hooks still conflicts with native rendering and save behavior; do not run both.
+Samsung current Display API ignores its legacy context/style arguments in the
+inspected S26 One UI 9 framework; it resolves the owner's sans.loc exactly as
+Samsung's own Typeface.setFlipFonts does. Per-user provider profiles remain
+isolated by Android's provider routing. Font IO permissions and refresh after a
+Display-font change need on-device validation. Unresolved bytes retain existing
+DEFAULT rendering and expose no invented fvar axis controls.

@@ -1,0 +1,183 @@
+Temporary complete-YUV/native-depth diagnostic -- 2026-11-08
+
+Built trial APK:
+  out/archived/portrait-yuv-depth-20261108/SamsungCamera.yuv-depth.experimental.apk
+  SHA256 ea8842e0718d3918e9cdf962ec50f075673a814da09a1daca00405150431e773
+  Exact installed-baseline hash, matching signer and validation are retained in
+  that folder's apk-verification.json. Only classes5.dex changes;6228 other
+  payload entries remain identical. No native library/provider replacement,
+  feature flag, manifest or normal Camera business logic was changed.
+  Built only: not installed and no new camera/depth runtime test is claimed.
+
+Deployment
+  This is Samsung Camera, not a separately installable camera app. Its existing
+  Settings entry is required for privileged hidden-camera access. The previous
+  ROM rejected adb updates with AR Emoji's duplicate permission. Do not remove
+  apps/permissions to bypass that. Use the previously validated temporary APK
+  bind-mount/rollback route, verifying the CURRENT installed path/hash, matching
+  signer and zygote view before launch. Do not use the older deployment scripts
+  unchanged: their APK hashes and filenames describe earlier diagnostic builds.
+  No full ROM build is needed. Normal unarmed Camera behavior stays unchanged.
+
+Capture after deployment
+  python3 target/dm3q/camera/diagnostics/portrait-pair-probe/arm-inapp.py \
+    --serial R5CW72R7SDF --save-yuv
+  Open Camera -> Settings normally and leave it foreground for32 seconds, phone
+  stationary, rear cameras aimed at a detailed well-lit subject both lenses can
+  focus on. Around1..1.5m worked for previous captures;3m is not a requirement.
+  This is a new explicit controlled-yuv profile; old markers never save chroma.
+  Uses the advertised640x480 output from physical54(10x) and52(3x), not full
+  sensor-resolution captures. Complete real Y/U/V planes are normalized from
+  their positions/row strides/pixel strides into tightly packed NV21.
+  Maximum12 YUV files (six pairs, two per phase),460800bytes each, plus PGMs.
+  No neutral chroma, synthesized pixels or assumed UV plane is substituted.
+  Distortion/rotate-and-crop/OIS/video stabilization and prior AF/exposure/crop/
+  timing metadata are recorded. Missing result fields stay explicitly unknown.
+  Image crop, each plane's layout, payload size and SHA256 accompany every YUV.
+
+Collection
+  python3 target/dm3q/camera/diagnostics/portrait-pair-probe/collect-geometry.py \
+    --serial R5CW72R7SDF
+  Retains only the latest run in a fresh host archive and checks YUV sizes/hash.
+  Logical result timestamp/frame and both physical results associate each pair;
+  there is no old two-frame offset or pairing by nearest arrival time.
+
+Map/alignment/depth trial after capture
+  /tmp/portrait-v3-analysis-20261107/bin/python \
+    target/dm3q/camera/diagnostics/portrait-pair-probe/test-yuv-depth.py \
+    CAPTURE_ARCHIVE --serial R5CW72R7SDF \
+    --tools out/archived/portrait-crop-sync-20261108-183209 --project-id 49 \
+    --calibration out/archived/portrait-controls-v3-20261107/TripleZTCalibration_t1t2.bin \
+    --run-native-depth
+  Optional --timestamp chooses another complete pair. Otherwise the first
+  timestamp-associated autofocus pair is selected. Requires existing host venv
+  with numpy/OpenCV, exact device/calibration/library identity and complete YUV.
+  Creates a unique remote staging directory, verifies transfer hashes, runs
+  native-map-probe in its own process and exports actual full float32 maps.
+  Recovered map coordinates are applied using cv2.remap; auxiliary padding is
+  read from native output, never assumed to be zero. Rectified54/52 PNGs and
+  side-by-side image are retained. No pixel input is passed to map-setup APIs.
+  Before staging, reject physical offset crops or unknown/nonzero rotate-crop.
+  Cross-check helper-reported buffer/crop dimensions and actual native crop
+  configuration against the matched capture. A mismatch is an unsupported
+  geometry contract, not an image-alignment failure. Provider internal IFE/
+  residual crops still require vendor result evidence; full SCALER_CROP_REGION
+  alone does not prove that those internal transforms are identity.
+
+  SIFT ratio matches are compared with factory-derived epilines in the shared
+  map domain. The Shift translation convention remains an explicit hypothesis.
+  All-match residuals and scene-derived subset scores are separate; an empirical
+  F never replaces factory calibration. Repeated/planar patterns can confound
+  matches, so this gate alone does not establish calibrated Portrait depth.
+  Native depth is attempted ONLY when:
+    at least20 ratio matches,80percent within1.5px, p90<=3px;
+    observed distortion correction/rotate-and-crop/OIS/video stabilization all0;
+    full physical/image crops and stationary lens state;
+    both physical sensor timestamps known and within2ms;
+    observed SyncMode enable word1 and independently verified optical sync.
+  These are conservative diagnostic gates, not established native engine limits.
+  Any failed/unknown gate is reported in alignment-and-depth.json; depth is
+  skipped. Equal returned timestamps alone cannot pass optical sync. No current
+  capture has independent optical-sync verification, so normal depth stays gated.
+
+Native depth ABI and output
+  native-depth-probe uses the stock public InitEx(1,4), SetCaliData,
+  SetCameraImageInfo, CalcDisparityData and GetDisparityData APIs. Exact-engine
+  Offscreen plane offsets16/pitch48 and public param orientation/face fields
+  were traced in REA. Format0x802 is the semi-planar VU input branch; both Y and
+  UV pointers reference actual complete NV21 captures. No fabricated face list.
+  Isolated process has a60-second alarm/core dumps off. ABI errors may crash or
+  fail that helper; they cannot become a successful camera/depth verdict.
+  Native return codes/stdout/stderr are retained. Only successful0x701 output
+  with bounded dimensions, valid pitch/readable buffer is exported as depth.pgm.
+  Codes are8-bit proprietary disparity, not calibrated physical distance.
+  A color overlay assumes full-frame alignment to the10x image; its filename
+  and report explicitly mark that alignment unvalidated. Inspect real edges/
+  depth ordering before declaring depth usable or changing any ROM flags.
+
+Rebuild
+  generate-inapp-patch.py produces a validated temporary patch without changing
+  ROM patch0004 unless --write-patch is explicitly supplied. build-yuv-apk.py
+  consumes that validation and a fresh installed Camera copy, preserves all
+  nonhelper classes, signs with the matching ROM certificate and checks payload
+  identity, ZIP integrity and16KiB alignment. Source smali is not hand-edited.
+  Compile each C helper with NDK aarch64-linux-android30-clang -std=c11
+  -Wall -Wextra -Werror -O2 SOURCE.c -ldl -lm -o NEW_EXECUTABLE.
+
+The failed wide seamless patches and SUPPORT_PORTRAIT_SEAMLESS_ZOOM remain
+disabled. This test does not enable10x Portrait, publish provider camera pairs
+or claim a matched S26U plugin stack. Real capture/depth evidence is still due.
+
+Native depth and provider-contract investigation (2026-11-08, after v4e)
+  Three isolated real-buffer attempts reached CalcDisparityData and returned5;
+  initialization/calibration succeeded and handles released. No usable depth
+  was exported. Passing measured main ISO2312, Qualcomm device mode1 and normal
+  capture mode1 did not resolve the failure. Process-local engine logging is
+  enabled without changing properties or Camera/provider configuration.
+
+  Explicit investigative override, only for the isolated helper:
+    add --run-native-depth --exploratory-native-depth --project-id 49
+    optionally --apply-capture-metadata
+  Capture metadata requires the latest helper rebuilt from native-depth-probe.c.
+  The override
+  retains all blockers and never sets geometry/depth validated. A successful
+  runner exit means an audit was saved; inspect native_depth_exit_code and
+  depth-runtime.jsonl for engine success. It does not mean depth succeeded.
+
+  Exact CamX/provider consumers establish:
+    SyncMode is two int32 words in an8-byte returned payload. The enable
+    consumer checks word0==1; saved v4e[0,1] does not satisfy that condition.
+    crop_regions has four16-byte rectangles in order: userCropRegion,
+    dzWindowNoMargin,pipelineCropRegion,ifeLimitCropRegion. Bokeh translation
+    preserves logical userCropRegion but can populate all three later fields
+    with the same physical fullFOV. They are not independent crop measurements.
+  test-yuv-depth.py now records this decoded contract separately from optical
+  validation. Unknown or malformed layouts stay unknown. Unverified timestamp
+  equality cannot become an implicit synchronization pass.
+
+  The saved inventory does not advertise SyncMode as an allowed request,
+  physical-request or session key. Do not invent an app setter as a fix.
+  Next instrumentation must observe the provider's translated request and
+  CamX sync enable decision, plus actual per-camera sensor/IFE/output crops.
+  Request hardware synchronization only through an established supported
+  internal route; result metadata alone does not establish that route.
+
+  Native failure tracing found return5 paths in correspondence filtering and
+  correction estimation, including insufficient surviving points. These are
+  candidate failures, not a runtime-proven attribution. Trace the specific
+  failing callee/return before changing calibration, distortion or thresholds.
+  Never bypass matching checks or choose a warp from one planar target.
+
+  Pair switching requires separate validated contexts keyed by actual main/
+  auxiliary IDs, per-unit calibration, crop domain, orientation and engine ABI.
+  First demonstrate static54+52 image/depth and discrete capture-boundary
+  changes with drained old buffers. Then validate continuous preview/capture
+  alignment. A10x lens cannot supply3x/5x framing; those intermediate views
+  require the3x lens and its correctly transformed depth path.
+  Evidence and staged transition specification:
+    out/archived/portrait-static-depth-20261108-190840/
+    out/archived/portrait-transition-contract-20261108-190945/REPORT.txt
+
+Crop/sync diagnostic v4e (2026-11-08)
+  Adds pre-correction/pixel array dimensions and cropping type to inventory.
+  Records actual returned vendor keys containing crop/sync/sensormode/pixelshift/
+  fov separately in logical and physical results, without logical fallback.
+  At most40 selected keys,128 array items and256 text characters per value;
+  omission/truncation is explicit. No guessed vendor request keys are set.
+  Uses the existing v4d requests, queue, focus and sample limits. New metadata
+  logging has compiled/built but is not yet tested on the device.
+  audit-geometry-timing.py now reports rolling-row exposure-midpoint bounds.
+  Those bounds rely on reported timing semantics, not external optical timing;
+  they must not be used to shift timestamps or manufacture synchronized pairs.
+  Ready temporary APK and evidence:
+    out/archived/portrait-crop-sync-20261108-183209/REPORT.txt
+  The isolated native property readers return device4112/submodel3; static
+  factory dispatch selects Diamond, whose project getter returns49. New C
+  helpers accept explicit48/49, verify the observed field and use the stock
+  image-info-before-calibration order. No project is selected by numeric lens
+  magnification. Compare both profiles on the same saved frames: all7,077,888
+  map coordinates are bit-identical to the earlier default48 run. This corrects
+  the reference configuration without curing optical alignment.
+  Diamond's uncropped dimension getter supplies role2/role3, but leaves role5
+  outputs untouched. A dedicated10x+3x input-info path is still needed for a
+  production integration; copying the wide auxiliary dimensions is incorrect.

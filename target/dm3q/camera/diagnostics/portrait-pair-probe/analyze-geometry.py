@@ -23,6 +23,9 @@ def distribution(values):
 
 def analyze(rows):
     begin = next(row for row in reversed(rows) if row.get("event") == "begin")
+    main, aux = str(begin.get("main", "54")), str(begin.get("aux", "52"))
+    if (main, aux) not in (("54", "52"), ("52", "56")):
+        raise ValueError("Unsupported diagnostic pair")
     rows = [row for row in rows if row.get("run_id") == begin["run_id"]]
     cameras = {r["id"]: r for r in rows if r["event"] == "camera"}
     frames = defaultdict(dict)
@@ -35,18 +38,18 @@ def analyze(rows):
     phases = {}
     for phase in sorted({key[0] for key in frames}):
         pairs = [pair for (p, _), pair in sorted(frames.items())
-                 if p == phase and "54" in pair and "52" in pair]
+                 if p == phase and main in pair and aux in pair]
         deltas, centers = [], []
         streams = defaultdict(list)
         for pair in pairs:
-            a, b = pair["54"], pair["52"]
+            a, b = pair[main], pair[aux]
             ta, tb = number(a.get("timestamp_ns")), number(b.get("timestamp_ns"))
             if ta is not None and tb is not None:
                 deltas.append((ta - tb) / 1e6)
                 ea, eb = number(a.get("exposure_ns")), number(b.get("exposure_ns"))
                 if ea is not None and eb is not None:
                     centers.append((ta - tb + (ea - eb) / 2) / 1e6)
-            for id in ("54", "52"):
+            for id in (main, aux):
                 streams[id].append(pair[id])
         details = {}
         for id, samples in streams.items():
@@ -69,15 +72,15 @@ def analyze(rows):
                 "sensor_frame_interval_ms": distribution([(b-a)/1e6 for a, b in zip(timestamps, timestamps[1:])]),
                 "exposure_ns": distribution([v for r in samples if (v := number(r.get("exposure_ns"))) is not None]),
                 "rolling_shutter_skew_ns": distribution([v for r in samples if (v := number(r.get("rolling_shutter_skew_ns"))) is not None])}
-        phases[phase] = {"paired_result_samples": len(pairs), "sensor_54_minus_52_ms": distribution(deltas),
-                         "exposure_midpoint_54_minus_52_ms": distribution(centers), "streams": details}
+        phases[phase] = {"paired_result_samples": len(pairs), "sensor_"+main+"_minus_"+aux+"_ms": distribution(deltas),
+                         "exposure_midpoint_"+main+"_minus_"+aux+"_ms": distribution(centers), "streams": details}
     saved = []
     for row in rows:
         if row["event"] == "saved_luma":
             result = logical.get(number(row.get("timestamp_ns")))
             saved.append({**row, "matched_result_frame": result.get("frame") if result else None,
                           "matched_result_phase": result.get("phase") if result else None})
-    return {"run_id": begin["run_id"], "version": begin.get("version", "legacy"), "phases": phases,
+    return {"run_id": begin["run_id"], "version": begin.get("version", "legacy"), "main": main, "aux": aux, "phases": phases,
             "saved_luma": saved, "complete": any(r["event"] == "summary" for r in rows),
             "errors": [r for r in rows if r["event"] in ("error", "device_error", "configure_failed", "capture_failed")],
             "optical_framing_validated": False, "depth_validated": False,

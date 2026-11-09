@@ -60,9 +60,9 @@ def main():
     modified = original.replace(anchor, replacement)
     header = ("From: UN1CA <unica@local>\nSubject: [PATCH] Add opt-in in-app Portrait pair diagnostic\n\n"
               "Run only after an explicit diagnostic extra or a consumed app-private\n"
-              "cache marker. Test logical20 physical54+52 for up to32 seconds in the\n"
-              "real Camera process. Controlled profile tests per-physical AF and timing.\n"
-              "bounded grayscale samples only with a second explicit marker opt-in.\n"
+              "cache marker. Test logical20 physical54+52 or opt-in52+56 for up to32\n"
+              "seconds in Camera. Controlled profile tests per-physical AF and timing.\n"
+              "Bounded grayscale/complete YUV samples require explicit profile opt-in.\n"
               "Preserve onResume registers and normal control flow. Helper classes\n"
               "use a separate classes5.dex. No native/feature/permission changes.\n\n")
     patch = header + "".join(difflib.unified_diff(original.splitlines(True), modified.splitlines(True),

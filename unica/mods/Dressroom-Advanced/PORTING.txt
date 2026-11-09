@@ -1,0 +1,190 @@
+Dressroom-Advanced native ROM port
+=================================
+
+Author: @BlueOutside (https://github.com/BlueOutside)
+Module: https://github.com/BlueOutside/Dressroom-Advanced
+Reference: 1.1.5, 5bb66521ee7d82d51f30a1238e18dd153b263c54
+Native adaptation: Rezoss, November 2026
+Scope: dm3q / One UI 9 / Android SDK 37
+
+Status
+------
+The full native feature integration is wired into the ROM build. The prior
+preliminary height dialog is superseded. The upstream Advanced panel and
+Widgets/Extras panel are included, rather than just the old UN1CA controls.
+
+Source compilation, strict ordered patch application, public callback linkage,
+272 host checks, and temporary builds of DressRoom, AODService, SystemUI and
+SpriteWallpaper have passed. These are offline results. No full ROM build,
+device installation, flash, visual comparison, Object Capture inference or
+lockscreen/AOD runtime test has been performed. This is a device-test candidate,
+not a claim of complete observed parity with the LSPosed module.
+
+The initial port source is preserved outside the active mod at:
+ out/archived/dressroom-full-port-20261109/initial-port-source
+Backups of changed integration files are alongside it under backups/.
+
+Menu and feature ownership
+--------------------------
+* Clock panel: Advanced tab with Layout, Effects, Depth and Date pages.
+  Includes position/size, supported Samsung per-digit stretch, font import,
+  real variable-font axes, shadow/glass controls, date and weather controls.
+* Widgets: grid columns/rows, orientation, size, placement and depth policy.
+  Native widget identities and application-widget sizing are preserved.
+* Extras: keep charging, fullscreen artwork, AOD stretch retention, rear card
+  count and custom text card. Extras default to Samsung behavior until enabled.
+* Attribution: small clickable '"Dressroom-Advanced" by BlueOutside' text in
+  the Advanced and widget/Extras menus; opens the upstream repository.
+* Fixed calls are patched into Samsung methods and resources. Original method
+  bodies remain behind explicit native wrappers. There is no LSPosed library,
+  interception engine, framework-wide hook or runtime hook installation.
+* Upstream hook-discovery/installation and hook-specific performance machinery
+  are replaced by build-time mappings and direct native callbacks. This port
+  targets the inspected One UI 9 APKs, not every upstream-supported platform.
+
+Fonts
+-----
+UN1CA Font Selector remains the font-bank backend. Display > Font still owns
+its normal selection. The optional 'Use Display font' control reads Samsung's
+actual applied font using Typeface.semGetFontPathOfCurrentFontStyle(Context,1),
+then its DroidSans.ttf; it does not treat the font-bank selection as proof that
+that font was applied. Samsung's applied default Typeface is the fallback.
+
+The existing clock picker continues to expose unica_font: XML entries. Their
+font bytes resolve through SamsungSans.apk's exact XML mapping. Imports and
+Display fonts do not acquire Samsung HEGT stretching. Per-digit controls remain
+restricted to Samsung's actual dedicated stretch fonts.
+
+Weight, width and other variable controls follow physical fvar capabilities.
+Unsupported axes are omitted. A font package alone does not prove which of its
+faces is selected; unresolved package faces keep native rendering and expose no
+guessed variable axes. Font-source identity prevents axes saved for one
+Display font from being transferred to a different applied Display font.
+Sources and generated Typefaces have bounded caches.
+
+AOD consistency
+---------------
+Only one native normalizer owns lockscreen/AOD font data in the full port.
+AOD reads the lockscreen font identity, path, weight/corner data and supported
+native heights. Saved independent heights are scoped by wallpaper, screen,
+orientation, clock type and font. The SDK item converter follows the same
+normalizer. Ordinary fonts cannot become stretchable because a height list
+happens to exist.
+
+The Keep stretch option scopes HEGT suppression to AOD transitions and restores
+the controller axis list even on exceptions. Media expansion and return retain
+upstream completion handling; weight and other transition axes remain native.
+
+Storage and Apply/Cancel
+------------------------
+No companion APK is required. A provider hosted inside DressRoom serves:
+ content://io.mesalabs.unica.dressroomadvanced.settings
+
+Profiles live in DressRoom's private, per-user encrypted app data:
+ /data/user/<user>/com.samsung.android.app.dressroom/files/
+   dressroom_advanced_profiles_v1.json
+
+Masks and imported fonts also remain private and are served through checked
+provider file descriptors. Known Samsung runtime packages may read; only the
+DressRoom host may write. JSON is not world-readable. No new root service or
+permissive SELinux policy is introduced.
+
+Editor drafts stay in memory. Apply freezes independent snapshots; clock,
+widgets and Extras commit in one AtomicFile JSON transaction only after
+Samsung reports successful native save completion. Cancel does not commit.
+The committed wallpaper ID is resolved after Apply. Samsung's own wallpaper save
+is separate from the JSON transaction: if the latter fails, its previous
+profiles remain and an error is reported; the native wallpaper save has already
+completed. Failed/unknown/corrupt
+profile databases are preserved rather than silently overwritten.
+
+Before first unlock, unavailable encrypted profiles use native defaults.
+Runtime clocks refresh after ACTION_USER_UNLOCKED and provider changes.
+
+Depth and live wallpaper
+------------------------
+DressRoom Object Capture produces the subject masks. Clock/widget clipping,
+blur paths, weather crop rebinding and source validation use the upstream
+algorithms through fixed APK callbacks. The new implementation is independent
+of the canceled UN1CA pidnet DepthEffectController.
+
+SpriteWallpaper is Samsung's com.samsung.android.wallpaper.live package.
+Its command, bitmap drawing and motion paths are patched explicitly. Static
+images and supported Samsung bitmap/live-photo/weather sources can provide
+subject mapping and bounded motion. Arbitrary video/procedural wallpapers do
+not expose a stable image/mask and remain unsupported, as upstream does.
+AOD clipping suspends when wallpaper is hidden. No inference, motion or crop
+quality claim is made without device testing.
+
+Existing patch interactions
+---------------------------
+Retained and active:
+ * DressRoom 0001: Ambient Weather gate.
+ * DressRoom 0002: UN1CA Font Selector/ClockFontBank integration.
+ * AOD 0001: font bank; 0002/0003: font synchronization and startup backfill.
+ * AOD 0007: same clock style as lockscreen.
+ * VisualCloudCore and unrelated weather/framework/device fixes.
+ * Cleanup of the canceled old pidnet compositor only.
+
+Replaced when this mod is enabled:
+ * DressRoom 0003: old height slider/widget-size UI.
+ * AOD 0004/0005/0006/0009: old normalizer, broad height and SDK overrides.
+ * AOD 0008: old fixed expanded grid and resizing overrides.
+Those source patches remain available for the disabled-port/non-target fallback;
+they are not applied alongside the full port. The preliminary 0005/0010 addon
+patches are archived and no longer referenced by active integration.
+
+Other-mod conflicts and limitations
+----------------------------------
+* Native Dynamic Island: the inspected patch stack does not replace the new
+  methods; combined SystemUI patching/rebuild passed. Both features can present
+  charging/media information, so enabling both can produce duplicate visual
+  information. Rear Now Bar and fullscreen artwork behavior still needs device
+  testing together with Island. Island's master switch/stock fallback is intact.
+* External Dressroom-Advanced LSPosed, other clock/depth/widget/Now Bar hooks:
+  competing owners of the same rendering paths. Do not enable them together
+  with this native port. The provider authority is deliberately distinct from
+  upstream's module APK, avoiding an authority collision.
+* LockStar/ClockFace/theme engines: choices that replace Samsung's clock provider
+  or editor can bypass this exact native integration. Their runtime compatibility
+  is unverified; retaining a menu does not prove compatibility.
+* Galaxy Store APK updates can replace the modified APK at runtime and remove
+  the port. A build-time Samsung APK change must pass exact preflight or receive
+  a reviewed mapping update; fuzzy application is not used to guess an ABI.
+* Fullscreen artwork/extra rear cards/depth add graphics or inference work.
+  Power, thermal, animation smoothness, first-unlock and AOD behavior require
+  hardware testing. SystemUI/AOD/Sprite errors can crash those processes.
+
+Build order and source regeneration
+-----------------------------------
+The mod loader visits Dressroom-Advanced before rezoss. integrate.sh is therefore
+called by rezoss/customize.sh after the retained font dependencies, for:
+ dressroom, aod, systemui, wallpaper
+A disable marker skips the native stages and selects the legacy source stack.
+Use a clean target when switching implementations; do not reuse an already
+patched decode. Existing-target detection fails closed.
+
+Sources and mappings are in fullport/. Shipped implementation patches are
+precompiled smali additions; a ROM build does not require compiling Java again.
+prepare.py generates exact callsite patches, validates all in order on a /tmp
+copy, checks public bridge signatures and selects a contiguous new DEX.
+No source firmware or out/target smali is hand-edited by these generators.
+
+Verification commands from the checkout:
+ source buildenv.sh dm3q
+ bash -n unica/mods/Dressroom-Advanced/integrate.sh
+ bash -n unica/mods/rezoss/customize.sh
+ unica/mods/Dressroom-Advanced/fullport/tests/run.sh /path/to/org-json.jar
+ unica/mods/Dressroom-Advanced/build.sh /tmp/NEW-native-build
+ python3 unica/mods/Dressroom-Advanced/fullport/prepare.py \
+   dressroom /tmp/EXACT-decoded-with-retained-font-patches \
+   /tmp/NEW-generated-patches --implementation
+
+Before editing a patch/customize.sh, back it up. Source edits require rebuilding
+and copying the reviewed build export (implementation patches and
+public-callbacks.txt) together after backing up the existing artifacts;
+SOURCES.sha256 records the Java inputs used for the shipped implementation.
+Full build and device tests are still required before release.
+
+Upstream license and release credit requirements are in LICENSE.upstream and
+PROVENANCE.txt; copies are embedded in each modified APK.

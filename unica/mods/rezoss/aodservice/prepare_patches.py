@@ -17,7 +17,7 @@ def unique(values, description):
     return values[0]
 
 
-def prepare(decoded, templates, output):
+def prepare(decoded, templates, output, native_full=False):
     owners = []
     for path in decoded.glob('smali*/**/*.smali'):
         if path.parent.name != 'aod':
@@ -50,6 +50,8 @@ def prepare(decoded, templates, output):
     patches = sorted(templates.glob('*.patch'))
     if len(patches) != 9:
         raise ValueError(f'Expected nine AOD patches, found {len(patches)}')
+    if native_full:
+        patches = [p for p in patches if p.name[:4] in ("0001", "0002", "0003", "0007")]
     generated = []
     for patch in patches:
         content = patch.read_text()
@@ -86,9 +88,10 @@ def main():
     parser.add_argument('decoded', type=Path)
     parser.add_argument('templates', type=Path)
     parser.add_argument('output', type=Path)
+    parser.add_argument('--native-full', action='store_true', help='Keep font-bank, identity synchronization and lockscreen style; native port owns normalization/widgets')
     args = parser.parse_args()
     try:
-        prepare(args.decoded, args.templates, args.output)
+        prepare(args.decoded, args.templates, args.output, args.native_full)
     except (ValueError, OSError) as error:
         parser.exit(1, f'AOD adaptation stopped safely: {error}\n')
 

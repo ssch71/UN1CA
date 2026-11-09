@@ -1,0 +1,195 @@
+Samsung Memory ROM integration and three-finger gestures
+2026-11-09 / dm3q only
+
+Source placement
+Everything belongs to unica/mods/rezoss/memory. There is no standalone mods/memory
+module. The parent rezoss/customize.sh sources memory/integrate.sh after its base
+overlays. Backups of the previous module and parent script are retained locally
+in out/archived/memory-gesture-port-20261109/.
+
+Gesture behavior
+Three fingers swipe DOWN  -> Memory screen capture
+Three fingers swipe RIGHT -> Memory voice capture
+Three fingers swipe LEFT  -> Memory camera capture
+Swipe up, taps, pinches, other finger counts and continuous repeats do not launch
+Memory. A gesture that exceeds three fingers or is cancelled cannot launch a
+Memory action. Only one launch is allowed per input stream.
+
+Memory's existing memory_three_finger_gesture secure setting enables all three
+mappings. It is off when absent; the integration does not set it automatically.
+Memory normally sets it during completed onboarding, or from its gesture switch.
+The original Memory switch description mentions screen capture only; the signed
+APK has not been modified to describe the additional left/right mappings.
+
+Home Up retains priority whenever the launcher's effective multi-finger master
+state is enabled OR home_up_multi_finger_gesture_enabled is 1. Disable Home Up's
+multi-finger gestures to use Memory's path. The bridge observes both secure keys,
+so changes do not require reboot or launcher restart. It never writes Home Up
+configuration or rewrites saved gesture actions. An already-started Memory input
+stream cannot fall through into stale Home Up actions when settings change.
+
+Implementation
+The existing One UI Home MultiFingerGestureDetector recognizes the swipe. Four
+method-local hooks in two classes add the independent Memory enable/dispatch
+path, without changing original .locals counts or removing original controls:
+  GestureInputHandler.isMultiFingerGestureEnabled
+  MultiFingerGestureInputHandler.hasAnyMultiFingerGestureEnabled
+  MultiFingerGestureInputHandler.onMotionEvent
+  MultiFingerGestureInputHandler.handleMultiFingerGestureEvent
+The detector itself is unchanged. Existing dominant-axis/swipe thresholds,
+SystemGestureUseCase gating, navigation-region rejection, immersive/keypad rules
+and excluded-app checks remain. There is an additional unlocked-user and unlocked
+keyguard check before dispatch and again before the posted activity launch.
+Recognized actions use the existing input monitor to cancel the underlying touch
+stream, matching the launcher's pilferPointers mechanism. No new global monitor,
+background app service, launcher icon, companion APK or Home Up patch is added.
+
+Screen -> exported feature.capture.ScreenCaptureViewerActivity.
+Voice -> exported feature.main.MainActivity with action ADD_MEMORY_VOICE.
+Camera -> exported feature.main.MainActivity with action ADD_MEMORY_CAMERA.
+The latter two are Memory's own declared launcher shortcut actions. Voice uses
+that path because ExternalVoiceCaptureActivity requires the custom signature/
+privileged permission EXTERNAL_VOICE_CAPTURE; no permission bypass is added.
+
+Supported scope
+Main display, full gesture navigation (NaviMode.NO_BUTTON). The existing outer
+navigation/display and safety gates are preserved. Three-button navigation is
+not supported by this patch. Read-only live inspection showed SystemUI bound to
+One UI Home's TouchInteractionService while Nova was default, with the swipe-up
+input monitor active. That establishes the lifecycle candidate, not working
+patched capture. Home Up uninstall behavior remains a device-test requirement.
+
+Artifact and packaging guards
+Memory 1.0.00.46 / versionCode 100046000, original Samsung-signed APK retained.
+SHA-256 28c74ddee923b8de0cf3abe816aa44a8135f6b5259d54d275d9c30f04f0bb5e8.
+Installed as /system/priv-app/Memory/Memory.apk from .00/.01 chunks under 50 MB.
+Its six-permission privapp XML is installed under /system/etc/permissions/.
+Required samsungkeystoreutils.jar and its library XML must already exist.
+No dangerous/runtime permissions are silently pregranted.
+
+One UI Home 18.0.07.53 / versionCode 1800705053.
+Expected unmodified APK SHA-256:
+4630968289288d355aa3f8884ef45679ced56c0b3c0925d96a9a77ca6fcf47cf.
+Clean firmware, staged target and inspected device copies matched this hash.
+No other active launcher smali patches were found in unica/target/platform.
+Integration rejects a different APK, an earlier launcher decode from another mod,
+or a required-library/chunk mismatch before staging payloads.
+
+prepare-launcher.sh decodes only code into a new /tmp directory, strictly dry-runs
+and applies patches/0001-Add-independent-Memory-capture-gestures.patch with fuzz=0,
+assembles classes3.dex and new classes6.dex, and retains the original APK container.
+Only classes3.dex is replaced and classes6.dex added; AndroidManifest.xml,
+resources.arsc, all resource names, assets, native libraries and other DEX remain
+byte-for-byte unchanged. It signs with the build's normal aosp/unica platform key
+and verifies signature, alignment and ZIP integrity before staging. External
+launcher oat/.prof/.bprof files are removed through DELETE_FROM_WORK_DIR because
+they describe the old DEX. No common multi-device build scripts were changed.
+
+Reproduce offline checks (no device writes)
+  source buildenv.sh dm3q
+  bash unica/mods/rezoss/memory/tests/run.sh
+  bash unica/mods/rezoss/memory/build.sh /tmp/rezoss-memory-launcher-pristine
+  bash unica/mods/rezoss/memory/prepare-launcher.sh ORIGINAL_LAUNCHER.apk NEW_OUTPUT.apk
+  bash unica/mods/rezoss/memory/tests/integration.sh ORIGINAL_LAUNCHER.apk NEW_OUTPUT.apk
+  bash -n unica/mods/rezoss/customize.sh unica/mods/rezoss/memory/*.sh
+The pristine decode used above is generated from the exact original APK using
+project Apktool with --no-debug-info. Helper generation never edits decoded input;
+all changes are emitted as a patch. Previous patch revisions are backed up before
+regeneration. Helpers live in their own classes6.dex, avoiding pressure on the
+existing gesture DEX's method table. Compile-only launcher stubs are not packaged.
+
+Completed validation
+- 41 host gesture-policy checks (mapping, Home Up priority, ownership, repeat,
+  cancellation, excess-finger rejection and switch changes during gestures).
+- Original-container packaging regression test and overwrite rejection.
+- Exact project decode, zero-fuzz patch dry-run/application, DEX assembly and
+  temporary full Apktool rebuild. The final package uses the original-container
+  workflow to preserve obfuscated resource filenames.
+- Signed final APK passes apksigner, zipalign -c -p 4 and unzip -tq.
+- 4,265 original non-signature entries other than classes3.dex were verified
+  byte-for-byte unchanged in the signed output.
+- Isolated staging uses real ADD_TO_WORK_DIR, SET_METADATA and DELETE_FROM_WORK_DIR
+  helpers; only the separately validated expensive launcher-build call is mocked.
+  Memory reconstruction, six permission entries, metadata, stale-profile cleanup,
+  disabled/unsupported target skips and compatibility rejection paths pass.
+- Parent customize.sh differs from the pre-task backup only by the integration
+  source line; unrelated dirty camera/Settings/Dressroom work was left untouched.
+
+Artifacts
+out/archived/memory-gesture-port-20261109/TouchWizHome-Memory-signed.apk
+out/archived/memory-gesture-port-20261109/helper-build-final.log
+out/archived/memory-gesture-port-20261109/dex-only-build-final.log
+out/archived/memory-gesture-port-20261109/integration-test.log
+The signed APK is an offline validation artifact, not authorization to install it
+as a user update. Runtime validation should use the intended ROM packaging path.
+
+Remaining requirements and limits
+At initial offline validation, no full ROM build, phone installation, flash,
+reboot or live gesture test had been performed. Subsequent device results are
+recorded below. Longer-term boot/launcher stability, actual
+screen/voice/camera saving, rotation, Nova, Home Up on/off/uninstalled and permission
+prompts still require device validation. Protected-screen restrictions are not
+bypassed. The original native Memory-specific gesture handler remains unidentified.
+This integration intentionally supplies a launcher path instead.
+
+The earlier dependency investigation remains applicable: the default Memory AI
+model uses SCS_SPAC_GEMMA_4_31B_MEMORY, but the inspected phone exposes no matching
+IntelliVoice SpacClientService. Moneta ActiveMemoryProvider and Galaxy Agent were
+also absent. No AI backend port was attempted here. Three optional native names
+(libLttEngine_RR.so, libsdk-jni.vexfwk.samsung.so, libapex_jni.media.samsung.so) are
+absent from target and donor; inspected code uses available newer alternatives.
+No additional native-library copy is currently justified. Detailed original
+analysis is retained in out/archived/memory-1.0.00.46-investigation/REPORT.txt.
+
+Rollback
+Place a disable marker at unica/mods/rezoss/memory/disable before a clean ROM build
+to skip both Memory packaging and launcher gestures. This does not uninstall a
+user-installed Memory APK or change any phone setting. Removing that marker
+restores integration. Do not mix the patched launcher with a different baseline.
+
+Runtime diagnosis after first flashed build (2026-11-09)
+The installed launcher contains the four hooks and its helper DEX matches the
+validated artifact. The whole-APK hash differs due to rebuilding/reassembly; the
+helper is not missing. Active Memory still has a /data/app user installation
+without SYSTEM/PRIVILEGED flags and without WRITE_SECURE_SETTINGS, despite the
+original APK and privileged XML being present under /system. The exact reason
+for retained user classification is not established. Its certificate matches
+the platform signer. Both memory_three_finger_gesture and the Home Up marker
+read null. Therefore the new global Memory path is off at this snapshot.
+
+A fresh ActivityTaskManager trace shows the working home-screen screen capture
+was launched by com.teslacoilsw.launcher (Nova), not the global Memory bridge.
+This accounts for a home-screen-only capture without demonstrating a detector
+range bug. Global left/right actions have not yet been exercised with the
+Memory enable setting active.
+
+Added signature-permissions-com.samsung.android.app.memory.xml granting only
+WRITE_SECURE_SETTINGS to a matching-platform-signed existing user installation.
+The normal signature check remains; no uninstall/data reset is needed. This
+complements the existing privileged XML and is staged by integrate.sh. The
+fixture verifies both XML contents and metadata. The device still needs this
+policy applied through a ROM rebuild/reboot, or an explicitly authorized live
+development-permission grant followed by enabling Memory's setting for testing.
+No live permission/setting change was made during the read-only diagnosis.
+Logs: out/archived/memory-gesture-runtime-20261109/.
+
+Authorized live gesture validation (2026-11-09)
+After explicit user approval, granted Memory WRITE_SECURE_SETTINGS with pm grant
+and set secure memory_three_finger_gesture to 1 for user 0. Verified the permission
+is granted and the setting reads 1. Before the test, the permission was absent
+and the setting was null; no APK replacement or reboot was performed.
+
+The user confirmed down/right/left work inside Settings. Retained launch logs
+independently show the voice and camera actions originating from
+com.sec.android.app.launcher, with background activity starts allowed. Memory
+then launches Samsung Camera for the camera action. The retained log window
+does not independently capture the down action; that result is user-confirmed.
+The original Samsung Memory APK works with the patched launcher's global path.
+No additional detector or horizontal-gesture patch is justified by this test.
+
+The approved permission and enabled gesture setting remain on the phone.
+The new signature-permission XML is source-validated but not yet deployed by
+this session; automatic permission grant after a future ROM update still needs
+verification. Screen/voice/camera saving, AI processing, rotation and Home Up
+coexistence have not been validated by this gesture-launch test.
+Evidence: out/archived/memory-gesture-runtime-20261109/working-global-gestures-logcat.txt
