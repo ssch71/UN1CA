@@ -1,0 +1,145 @@
+Dressroom Advanced: runtime fixes and upstream comparison
+=========================================================
+Date: 2026-11-10
+Upstream author: @BlueOutside (https://github.com/BlueOutside)
+https://github.com/BlueOutside/Dressroom-Advanced
+Reference: 1.1.5 / 5bb66521ee7d82d51f30a1238e18dd153b263c54
+Remote HEAD checked this date: same revision.
+Target: dm3q, DressRoom 3.0.10.38, AODService 8.9.66.1.
+
+Device evidence and limits
+-------------------------
+The user reports normal boot, failure to arrange widgets, no outside-dismiss,
+and a subject-mask-upload timeout on Apply. Read-only logcat confirms Object
+Capture selected ArcSoft and detected one subject; it also records a missing
+widget editor owner when opening Advanced. The retained log buffer does not
+contain the reported mask timeout. No device installation, reboot or flash
+was performed for these fixes. Source/build results do not establish visual
+parity, provider-specific widget rendering, AOD retention or inference quality.
+
+Fixes in this candidate
+----------------------
+1. Masks: the provider now receives file-close callbacks on a dedicated HandlerThread.
+   Previously it posted to DressRoom's main Looper while Apply synchronously
+   waited for the mask on that same thread. This port-specific deadlock was
+   reproduced with the production provider and simulated Android close dispatch.
+   Upstream's provider was in a separate app process. Hash/size validation,
+   atomic publication, bounded failure reporting and retry cleanup remain.
+2. Widgets: stock item gestures reach Samsung's native handler. With Custom grid
+   enabled, dragging a widget changes its real GridItem cell coordinates, and
+   pinching changes its width/height in cells. Occupied cells and grid boundaries
+   constrain placement; this is not arbitrary overlapping pixel placement.
+   Pinching from the boundary rim changes the existing saved group scale
+   (50-200%); dragging the rim or empty space moves the group. Use the grid
+   columns/rows controls to add available cells. Per-item pinch is an addition
+   beyond the upstream module's group drag/scale controls.
+   An attached-preview registry recovers the correct Activity's widget owner
+   before opening Advanced; it does not fabricate a blank editor owner.
+3. Outside-dismiss: Advanced requests outside events from Samsung's floating
+   panel window and calls Samsung's normal hidePanel(false). Embedded layouts
+   also observe outside taps without replacing Samsung's normal gesture handling.
+   Drags/multitouch do not count as embedded outside taps. Window flags are
+   restored on tab changes, dismissal, detach and session cleanup. Widget gesture
+   interception defers while the clock Advanced panel is visible.
+4. Fonts: restoration checks the native Samsung stretch predicate AND the saved
+   font ID/path, and excludes Display/import fonts. Stale height arrays cannot
+   grant a different font stretch capability. Default native ID0 is valid.
+5. Restored parity mappings: wallpaper-source change/setter callbacks, checkpoint
+   before configuration changes, refresh after rotation, and date-visibility
+   callbacks on six concrete AOD clock styles. These reuse existing helpers.
+6. The pre-existing blur patch fix that isolates semSetBlurInfo conversion in a
+   private helper is preserved; it prevents clobbering live null/Throwable caller
+   registers. Unrelated source modifications remain untouched.
+
+Why the first Samsung font stretches
+-----------------------------------
+Upstream also restricts dynamic per-digit stretching to supported native fonts.
+Its README explicitly distinguishes imported-font axes from Samsung stretching.
+The exact Samsung native predicate accepts IDs0,800-805,812,813. The first default
+native clock choice can therefore be stretch-capable despite its plain thumbnail.
+The user confirmed Use Display font was OFF. That observation alone is not proof
+of an incorrect override: depth can retain the native font's current shape.
+Mask occlusion can put an ordinary clock behind a subject without stretching it.
+No arbitrary-font stretching was enabled. Use Display font and UN1CA's font bank
+remain available; variable controls still follow the selected file's real axes.
+
+Current intentional differences from upstream
+--------------------------------------------
+* Fixed APK callbacks replace LSPosed interception and dynamic version discovery.
+  This targets the inspected dm3q SDK37 APKs, rather than the module's wider ABI set.
+* Use Display font adds Samsung/UN1CA's applied display font as a clock backend.
+  Imported TTF/OTF/TTC selection and per-font axes are retained.
+* Profiles/fonts/masks belong to DressRoom's private encrypted data. Clock,
+  Widgets and Extras commit together in atomic JSON after successful native Apply.
+  Upstream uses its separate app/provider and separate profile commits.
+* New individual widget drag/pinch gestures extend the upstream group controls.
+* External-module settings and imported files are not automatically migrated.
+  Legacy preference/orientation/fold migrations and fold-specific delayed
+  wallpaper rebinding are not ported. dm3q has no fold screen.
+* Upstream glyph-font request reuse and text-path memoization optimizations
+  are absent. This is a potential performance difference, not evidence of a
+  missing visible effect. Direct callbacks remove hook-installation machinery.
+* Runtime parity remains unproven: only hardware testing can establish actual
+  editor/lockscreen/AOD visuals, wallpaper motion, media transitions and power use.
+
+Existing-mod interactions
+-------------------------
+DressRoom Ambient Weather gate and UN1CA font-bank patch are retained. AOD font
+synchronization/backfill and lockscreen clock-style synchronization are retained.
+Old competing height/normalization and fixed widget-grid overrides remain skipped
+in the native-full path. VisualCloudCore/Ambient Weather fixes are unchanged.
+Dynamic Island can duplicate charging/media information with enabled Extras.
+External clock/depth/widget/Now Bar hooks can compete with the native port;
+LockStar/ClockFace and replacement clock providers remain device-unverified.
+
+Validation and reproduction
+---------------------------
+Run the fullport/tests/run.sh host suite, optionally supplying an org.json JAR.
+It includes the production-provider close-dispatch regression, font-restore
+policy, bounded grid/collision cases, and existing blur-register regression.
+For direct APK validation use exact retained-font-patched decodes, fullport/
+prepare.py --implementation, zero-fuzz patch application, project Apktool3 and
+ZIP integrity checks. Generated helper patches, callback index and SOURCES.sha256
+must be published together from the same reviewed build export.
+
+Temporary validation and source backups:
+ out/archived/dressroom-runtime-fixes-20261110/
+ /tmp/dressroom-runtime-apk-validation-20261110/
+Final results are recorded in the archived RESULT.txt after validation completes.
+
+Completed host validation
+-------------------------
+DressRoom, AODService, SystemUI and SpriteWallpaper temporary APK rebuilds and
+ZIP integrity checks passed. All 212 external static callbacks resolve. The
+combined host suite passed. The shipped implementation patch, public callback
+index and fullport/SOURCES.sha256 were updated from the same reviewed export;
+the wallpaper-only helper patch was byte-identical and retained. These revised
+APKs have not been deployed to the phone.
+
+Changed source locations (relative to this mod)
+----------------------------------------------
+ fullport/font-storage/src/dev/denver/dressroomadvanced/SettingsProvider.java
+ fullport/editor-runtime/src/dev/denver/dressroomadvanced/NativeClockPanel.java
+ fullport/editor-runtime/src/dev/denver/dressroomadvanced/NativeEditor.java
+ fullport/editor-runtime/src/dev/denver/dressroomadvanced/DressroomModule.java
+ fullport/editor-runtime/generate.py
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/EditorWidgets.java
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/WidgetItemGestures.java
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/WidgetCellBounds.java
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/NativeWidgets.java
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/WidgetPanel.java
+ fullport/clock-runtime/src/dev/denver/dressroomadvanced/NativeClockRuntime.java
+ fullport/clock-runtime/src/dev/denver/dressroomadvanced/RuntimeClockData.java
+ fullport/clock-runtime/src/dev/denver/dressroomadvanced/StretchRestorePolicy.java
+ fullport/clock-runtime/generate.py
+ fullport/depth-wallpaper/generate.py (pre-existing fix retained)
+ fullport/tests/run.sh and focused regression-test subdirectories
+ fullport/patches/0001-Native-runtime.patch
+ fullport/patches/public-callbacks.txt
+ fullport/SOURCES.sha256
+
+Subsequent device feedback
+--------------------------
+After rebuilding the above candidate, the user reported depth visible only in
+the preview and4x2 retaining a single-row boundary. DEPTH-GRID-FIXES.txt records
+the device evidence, subsequent rendering/boundary corrections and validation.

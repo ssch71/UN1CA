@@ -5,6 +5,8 @@ import android.view.View;
 import java.util.List;
 public final class NativeEditor {
     private NativeEditor() {}
+    public static void touch(Activity activity,android.view.MotionEvent event) { DressroomModule.get().nativeOutsideTouch(activity,event); }
+    public static boolean floatingTouch(View root,android.view.MotionEvent event) { return DressroomModule.get().nativeOutsideTouch(root,event); }
     public static void session(Activity activity) { DressroomModule.get().nativeSession(activity); }
     public static void close(Activity activity) { DressroomModule.get().nativeClose(activity); }
     public static void opened(boolean opened,Object controller) {
@@ -15,6 +17,13 @@ public final class NativeEditor {
     public static void bound(Object helper) {
         try { Object clock=Reflect.field(helper,"a"); if(clock instanceof View view) DressroomModule.get().nativeRendererBound(view); }
         catch(Exception failure) { DressroomModule.note("Clock binding",failure); }
+    }
+    public static void sourceChanged() { DressroomModule.get().nativeWallpaperSourceChanged(); }
+    public static void configurationBefore(Activity activity, android.content.res.Configuration next) {
+        DressroomModule.get().nativeConfigurationBefore(activity, next);
+    }
+    public static void configurationAfter(Activity activity) {
+        DressroomModule.get().nativeConfigurationAfter(activity);
     }
     public static boolean beforeSave(Object mediator) { return DressroomModule.get().nativeBeforeSave(mediator); }
     public static void completed(Object mediator) { DressroomModule.get().nativeSaveCompleted(mediator); }

@@ -25,6 +25,14 @@ if [[ ! -f "$WORK_DIR/system/system/framework/samsungkeystoreutils.jar" ]] ||
     return 1
 fi
 
+# Samsung skips system APKs absent from this list, even with valid permissions.
+REZOSS_MEMORY_PRELOAD_CONFIG="$WORK_DIR/system/system/etc/sysconfig/allowed-system-preload-apps.xml"
+if [[ ! -f "$REZOSS_MEMORY_PRELOAD_CONFIG" ]] ||
+        [[ "$(grep -c '^[[:space:]]*</config>[[:space:]]*$' "$REZOSS_MEMORY_PRELOAD_CONFIG")" != 1 ]]; then
+    LOGE "Samsung Memory requires a valid system-preload allowlist"
+    return 1
+fi
+
 # Check all chunks before changing the working tree. Never rebuild or resign this APK.
 MEMORY_SHA256="28c74ddee923b8de0cf3abe816aa44a8135f6b5259d54d275d9c30f04f0bb5e8"
 if [[ "$(cat "$REZOSS_MEMORY_ROOT/system/system/priv-app/Memory/Memory.apk.00" \
@@ -46,6 +54,10 @@ SET_METADATA "system" "system/priv-app/Memory" 0 0 755 "u:object_r:system_file:s
 ADD_TO_WORK_DIR "$REZOSS_MEMORY_ROOT" "system" "system/priv-app/Memory/Memory.apk" 0 0 644 "u:object_r:system_file:s0" || return 1
 ADD_TO_WORK_DIR "$REZOSS_MEMORY_ROOT" "system" "system/etc/permissions/privapp-permissions-com.samsung.android.app.memory.xml" 0 0 644 "u:object_r:system_file:s0" || return 1
 ADD_TO_WORK_DIR "$REZOSS_MEMORY_ROOT" "system" "system/etc/permissions/signature-permissions-com.samsung.android.app.memory.xml" 0 0 644 "u:object_r:system_file:s0" || return 1
+if ! grep -q 'package="com.samsung.android.app.memory"' "$REZOSS_MEMORY_PRELOAD_CONFIG"; then
+    LOG "- Allowing Samsung Memory system preload"
+    sed -i '/^[[:space:]]*<\/config>[[:space:]]*$/i\    <allowed-system-preload package="com.samsung.android.app.memory"/>' "$REZOSS_MEMORY_PRELOAD_CONFIG" || return 1
+fi
 
 LOG "- Adding Memory three-finger down/screen, right/voice, left/camera gestures"
 ADD_TO_WORK_DIR "$REZOSS_MEMORY_STAGE" "system" "$REZOSS_MEMORY_LAUNCHER" 0 0 644 "u:object_r:system_file:s0" || return 1
@@ -59,4 +71,4 @@ for REZOSS_MEMORY_PROFILE in "$REZOSS_MEMORY_LAUNCHER.prof" "$REZOSS_MEMORY_LAUN
     fi
 done
 
-unset MEMORY_SHA256 REZOSS_MEMORY_ROOT REZOSS_MEMORY_LAUNCHER REZOSS_MEMORY_STAGE REZOSS_MEMORY_PROFILE
+unset MEMORY_SHA256 REZOSS_MEMORY_ROOT REZOSS_MEMORY_LAUNCHER REZOSS_MEMORY_STAGE REZOSS_MEMORY_PROFILE REZOSS_MEMORY_PRELOAD_CONFIG

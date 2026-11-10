@@ -28,6 +28,11 @@ final class EditorWidgets {
     private final ThreadLocal<Boolean> nativePreview = ThreadLocal.withInitial(() -> false);
     private final ThreadLocal<Boolean> largePicker = ThreadLocal.withInitial(() -> false);
     private final ThreadLocal<Boolean> nativeLifecycle = ThreadLocal.withInitial(() -> false);
+    private final java.util.WeakHashMap<Object, Boolean> previewManagers = new java.util.WeakHashMap<>();
+    private final WidgetItemGestures itemGestures = new WidgetItemGestures();
+    private final java.util.WeakHashMap<Object, Boolean> previewCandidates = new java.util.WeakHashMap<>();
+    private float groupPinchSpan;
+    private boolean groupPinching;
     private Bundle dragStart;
     private android.view.MotionEvent dragDown;
     private float dragX, dragY, dragModelX, dragModelY;
@@ -126,6 +131,7 @@ final class EditorWidgets {
     }
 
     void reset() {
+        clearManagerPreviews();
         rotationGuide.clear();
         nativeRotationCapability = null;
         cancelScalePreview();
@@ -139,6 +145,9 @@ final class EditorWidgets {
         layoutDrafts.clear();
         dirtyLayouts.clear();
         depthPolicies.clear();
+        itemGestures.clear();
+        groupPinchSpan = 0;
+        groupPinching = false;
         dragStart = null;
         dragging = false;
         legacyScaleReady = false;
@@ -160,6 +169,7 @@ final class EditorWidgets {
                 || !current.equals(scene)
                 || draft.getInt(LayoutOrientation.FIELD) != orientation
                 || ScreenIdentity.value(draft) != screen) {
+            clearManagerPreviews();
             if (!current.equals(scene)) depthPolicies.clear();
             String key = current + ":" + orientation + ":" + screen;
             Bundle previous = layoutDrafts.get(key);
@@ -182,6 +192,7 @@ final class EditorWidgets {
     }
 
     void layoutChanging() {
+        clearManagerPreviews();
         cancelScalePreview();
         if (draft == null) return;
         String key = scene + ":" + ScreenIdentity.draft(draft);
@@ -261,6 +272,7 @@ final class EditorWidgets {
     }
 
     void committed() {
+        clearManagerPreviews();
         dirty = false;
         dirtyLayouts.clear();
     }
@@ -419,8 +431,11 @@ final class EditorWidgets {
         dirty = true;
         adoptDepthPolicy(next);
         try {
+            Object activeGrid = grid();
+            syncManagerPreview(Reflect.call(activeGrid, "getWidgetSizeManager"));
             if (structural) {
                 Object model = data();
+                restoreModel(model);
                 Reflect.call(model, "setEditableAlign", draft.getBoolean("layout"));
                 module.widgetEngine.refreshChecked(grid());
                 module.widgetEngine.reflow(grid());
@@ -443,6 +458,8 @@ final class EditorWidgets {
             draft = previous;
             dirty = wasDirty;
             adoptDepthPolicy(previous);
+            try { syncManagerPreview(Reflect.call(grid(), "getWidgetSizeManager")); restoreModel(data()); }
+            catch (Exception rollback) { e.addSuppressed(rollback); }
             applyPolicy();
             try {
                 module.widgetEngine.refresh(grid());
@@ -726,6 +743,7 @@ final class EditorWidgets {
 
     void open(Context context) {
         try {
+            recoverPreview(context);
             if (owner.get() == null || ui.get() == null)
                 throw new IllegalStateException(
                         "Open the lockscreen editor with widgets available first.");
@@ -738,15 +756,21 @@ final class EditorWidgets {
     }
 
     void nativeCreate(Object item) throws ReflectiveOperationException {
+        previewCandidates.put(item, Boolean.TRUE);
         if (!isMain(item)) return;
+        if(owner.get()!=item)clearManagerPreviews();
         owner = new WeakReference<>(item);
         Context c = (Context) Reflect.field(item, "b");
         host = new WeakReference<>(c);
         ui = new WeakReference<>(Reflect.field(item, "i"));
         settings(c);
         restoreModel(OneUi9WidgetEditor.data(item));
+        Object activeGrid=grid();
+        if(activeGrid!=null)syncManagerPreview(Reflect.call(activeGrid,"getWidgetSizeManager"));
     }
     void nativeCreated(Object item, View root) {
+        previewCandidates.put(item, Boolean.TRUE);
+        if (item != owner.get()) try { nativeCreate(item); } catch (Exception error) { module.report("Widget owner rebind", error); }
         if (item != owner.get()) return;
         applyEffects();
         previewLayoutWatch.bind(root, (v,l,t,r,b,ol,ot,or,ob) -> { if(item == owner.get()) applyEffects(); });
@@ -764,7 +788,15 @@ final class EditorWidgets {
     void nativeCellMetrics(Object owner, Object grid, Object size, Object profile) throws ReflectiveOperationException {
         if(draft == null || (!draft.getBoolean("layout") && draft.getFloat("scale",1)==1) || !(Boolean)Reflect.call(profile,"isLockScreen")) return;
         Object manager=Reflect.call(Reflect.field(owner,"c"),"getValue");
-        WidgetEditorBinding.metrics(size,grid,manager);
+        syncManagerPreview(manager);
+        Reflect.call(manager,"init",Reflect.call(manager,"getWidgetDisplayType"));
+        if(draft.getBoolean("layout")) {
+            boolean vertical=(Boolean)Reflect.call(Reflect.call(data(),"getWidgetAlignType"),"isVertical");
+            int[] dimensions=WidgetLayout.dimensions(draft.getInt("columns"),draft.getInt("rows"),draft.getBoolean("vertical"),vertical);
+            // Samsung's size manager may still carry 4x1. The same draft determines both
+            // the visible editor boundary and the plugin's native grid-cell capacity.
+            WidgetBoundaryMetrics.apply(size,grid,manager,dimensions[0],dimensions[1]);
+        } else WidgetEditorBinding.metrics(size,grid,manager);
     }
     void nativePlacement(Object model,Object assist,Object profile,Object screen) throws ReflectiveOperationException {
         if(draft != null && (Boolean)Reflect.call(profile,"isLockScreen") && (draft.getBoolean("layout") || draft.getInt("anchor")!=0)) placeLegacy(model,assist,screen);
@@ -783,10 +815,11 @@ final class EditorWidgets {
         boolean target=(Boolean)Reflect.call(align,"isVertical");if(target==vertical())return true;
         Bundle next=new Bundle(draft);orient(next,target);
         if(!WidgetLayout.fits(next.getInt("columns"),next.getInt("rows"),new int[0][])||!module.widgetEngine.fits(grid(),next))return false;
-        rotationPrevious=draft;rotationWasDirty=dirty;draft=WidgetPreferences.clean(next);dirty=true;return true;
+        rotationPrevious=draft;rotationWasDirty=dirty;draft=WidgetPreferences.clean(next);dirty=true;syncManagerPreview(Reflect.call(grid(),"getWidgetSizeManager"));return true;
     }
     boolean nativeRotateAfter(boolean result) {
         if(rotationPrevious!=null){if(!result){draft=rotationPrevious;dirty=rotationWasDirty;}else queueClockDepthRefresh();rotationPrevious=null;}
+        try { syncManagerPreview(Reflect.call(grid(),"getWidgetSizeManager")); } catch(Exception failure){module.report("Widget rotated preview",failure);}
         return result;
     }
     Object nativeTrimmed(Object policy)throws ReflectiveOperationException {
@@ -795,16 +828,39 @@ final class EditorWidgets {
     }
     private boolean replayingTouch;
     int nativeTouch(android.app.Activity activity,android.view.MotionEvent event)throws Exception {
-        if(replayingTouch||owner.get()==null||draft==null)return -1;
+        if(replayingTouch || itemGestures.replaying()) return -1;
+        if(owner.get()==null || draft==null) recoverPreview(activity);
+        if(owner.get()==null||draft==null)return -1;
         View root=OneUi9WidgetEditor.root(owner.get());if(root==null||!root.isShown())return -1;
+        int itemResult=itemGestures.touch(activity,event,this);
+        if(itemResult>=0)return itemResult;
+        if(itemResult==-2)return -1;
         int action=event.getActionMasked();
         if(action==android.view.MotionEvent.ACTION_DOWN){
             Rect bounds=new Rect();if(!root.getGlobalVisibleRect(bounds)||!bounds.contains(Math.round(event.getRawX()),Math.round(event.getRawY())))return -1;
             if(dragDown!=null)dragDown.recycle();dragDown=android.view.MotionEvent.obtain(event);
-            dragStart=new Bundle(settings(root.getContext()));dragging=false;dragWasDirty=dirty;
+            dragStart=new Bundle(settings(root.getContext()));dragging=false;dragWasDirty=dirty;groupPinching=false;groupPinchSpan=0;
             dragX=event.getRawX();dragY=event.getRawY();dragModelX=((Number)Reflect.call(data(),"getX")).floatValue();dragModelY=((Number)Reflect.call(data(),"getY")).floatValue();return 1;
         }
         if(dragStart==null)return -1;
+        if(action==android.view.MotionEvent.ACTION_POINTER_DOWN && event.getPointerCount()==2){
+            groupPinchSpan=(float)Math.hypot(event.getX(0)-event.getX(1),event.getY(0)-event.getY(1));
+            groupPinching=true;dragging=true;return 1;
+        }
+        if(groupPinching){
+            if(action==android.view.MotionEvent.ACTION_MOVE && event.getPointerCount()>=2 && groupPinchSpan>1){
+                float span=(float)Math.hypot(event.getX(0)-event.getX(1),event.getY(0)-event.getY(1));
+                Bundle next=new Bundle(dragStart);
+                next.putFloat("scale",WidgetLayout.finite(dragStart.getFloat("scale",1)*span/groupPinchSpan,1,.5f,2));
+                update(next,false);
+            }
+            if(action==android.view.MotionEvent.ACTION_CANCEL){update(new Bundle(dragStart),false);dirty=dragWasDirty;}
+            if(action==android.view.MotionEvent.ACTION_UP || action==android.view.MotionEvent.ACTION_CANCEL){
+                dragStart=null;dragging=false;groupPinching=false;groupPinchSpan=0;
+                if(dragDown!=null){dragDown.recycle();dragDown=null;}
+            }
+            return 1;
+        }
         if(action==android.view.MotionEvent.ACTION_MOVE&&!dragging&&Math.hypot(event.getRawX()-dragX,event.getRawY()-dragY)>android.view.ViewConfiguration.get(root.getContext()).getScaledTouchSlop()){dragging=true;lastDrag=0;}
         if(!dragging){
             if(action==android.view.MotionEvent.ACTION_UP||action==android.view.MotionEvent.ACTION_CANCEL){
@@ -818,5 +874,67 @@ final class EditorWidgets {
             else if(action==android.view.MotionEvent.ACTION_CANCEL){update(new Bundle(dragStart),false);dirty=dragWasDirty;}
         }finally{if(action==android.view.MotionEvent.ACTION_UP||action==android.view.MotionEvent.ACTION_CANCEL){dragStart=null;dragging=false;if(dragDown!=null){dragDown.recycle();dragDown=null;}}}
         return 1;
+    }
+
+    Object gestureGrid() throws ReflectiveOperationException { return grid(); }
+    boolean gestureBoundary(float x,float y) throws ReflectiveOperationException {
+        View root=owner.get()==null?null:OneUi9WidgetEditor.root(owner.get());
+        if(root==null)return false;
+        Rect r=new Rect();if(!root.getGlobalVisibleRect(r)||!r.contains(Math.round(x),Math.round(y)))return false;
+        float margin=12*root.getResources().getDisplayMetrics().density;
+        return x-r.left<margin || r.right-x<margin || y-r.top<margin || r.bottom-y<margin;
+    }
+    void gestureItemChanged(Object grid) throws ReflectiveOperationException {
+        dirty=true;
+        // Samsung's editor serializes holder StateFlow through getModuleInfo -> WidgetData.
+        Reflect.call(owner.get(),"c");
+        module.widgetEngine.refreshChecked(grid);
+        recalculate();applyEffects();
+    }
+    private static android.app.Activity activityOf(Context context) {
+        for(int i=0;i<16 && context!=null;i++){
+            if(context instanceof android.app.Activity a)return a;
+            if(!(context instanceof android.content.ContextWrapper wrapper))break;
+            Context next=wrapper.getBaseContext();if(next==context)break;context=next;
+        }
+        return null;
+    }
+    private void recoverPreview(Context context) throws ReflectiveOperationException {
+        android.app.Activity activity=activityOf(context);
+        Object current=owner.get();
+        if(current!=null){
+            View view=OneUi9WidgetEditor.root(current);
+            if(isMain(current) && view!=null && view.isAttachedToWindow() && activity!=null && activityOf((Context)Reflect.field(current,"b"))==activity) return;
+        }
+        if(activity==null)return;
+        for(Object item:new java.util.ArrayList<>(previewCandidates.keySet())){
+            if(item==null || !isMain(item))continue;
+            if(activityOf((Context)Reflect.field(item,"b"))!=activity)continue;
+            View view=OneUi9WidgetEditor.root(item);
+            if(view==null || !view.isAttachedToWindow())continue;
+            nativeCreate(item);return;
+        }
+    }
+
+    private void syncManagerPreview(Object manager) throws ReflectiveOperationException {
+        if(manager==null || draft==null)return;
+        boolean first=!previewManagers.containsKey(manager);
+        previewManagers.put(manager,Boolean.TRUE);
+        module.widgetEngine.nativePreview(manager,draft);
+        Class<?> target=Class.forName(NativeWidgets.class.getName(),true,manager.getClass().getClassLoader());
+        if(target!=NativeWidgets.class){
+            target.getMethod("preview",Object.class,Bundle.class).invoke(null,manager,new Bundle(draft));
+            if(first)android.util.Log.i(DressroomModule.TAG,"Widget preview synchronized with plugin helper classloader");
+        }
+    }
+    private void clearManagerPreviews() {
+        for(Object manager:new java.util.ArrayList<>(previewManagers.keySet())){
+            module.widgetEngine.nativePreview(manager,null);
+            try{
+                Class<?> target=Class.forName(NativeWidgets.class.getName(),false,manager.getClass().getClassLoader());
+                if(target!=NativeWidgets.class)target.getMethod("preview",Object.class,Bundle.class).invoke(null,manager,null);
+            }catch(Exception failure){module.report("Widget preview scope cleanup",failure);}
+        }
+        previewManagers.clear();
     }
 }

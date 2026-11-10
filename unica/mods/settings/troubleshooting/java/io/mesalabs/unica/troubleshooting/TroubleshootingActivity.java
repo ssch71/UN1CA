@@ -16,8 +16,7 @@ import java.util.concurrent.*;
 
 /** User-reviewed diagnostics. AI output is plain text and never becomes an action request. */
 public final class TroubleshootingActivity extends Activity {
-    private AskAiChat chat;private ChatHistory chatHistory=new ChatHistory();
-    private final android.window.OnBackInvokedCallback back=()->{if(chat!=null)closeChat();else finish();};
+    private final android.window.OnBackInvokedCallback back=()->finish();
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private final ArrayList<View> cards=new ArrayList<>();
     private LinearLayout content,page;private ScrollView rootScroll;
@@ -25,11 +24,11 @@ public final class TroubleshootingActivity extends Activity {
     private String reviewSource="";private boolean setupReview;
     private String setupStatus="Run a read-only check of PIF and TEE settings.",setupReport="";
     private String scanStatus="Tap Scan installed modules to begin.",logStatus="Collect or import a log to find crashes and app failures.",activeSection="scan";
-    private JSONObject lsposedState=new JSONObject();private boolean analyzing;private ActionRow cancelAnalysis;
+    private JSONObject lsposedState=new JSONObject();
     private final ArrayList<String> analysisParts=new ArrayList<>(),analysisTitles=new ArrayList<>();
     private final Set<Integer> expandedAnalysis=new HashSet<>();private JSONArray modules=new JSONArray(),apps=new JSONArray();
     private String status="Scan installed modules to check for overlaps.",warning="",raw="",source="",analysis="";
-    private boolean busy,scanned;private volatile boolean cancelled;private AiClient ai;private Bundle config;private LogTools.Selection selection;
+    private boolean busy,scanned;private volatile boolean cancelled;private LogTools.Selection selection;
     private final ArrayList<ActionRow> controls=new ArrayList<>();
     private boolean owner(){return android.os.Process.myUid()==1000;}
     @Override public void onCreate(Bundle state){super.onCreate(state);setTitle("Troubleshooting");if(getActionBar()!=null)getActionBar().setDisplayHomeAsUpEnabled(true);
@@ -38,17 +37,12 @@ public final class TroubleshootingActivity extends Activity {
         scanned=getPreferences(0).getBoolean("scanned",false);try{modules=new JSONArray(getPreferences(0).getString("modules","[]"));apps=new JSONArray(getPreferences(0).getString("apps","[]"));}catch(JSONException ignored){}
         if(getPreferences(0).getInt("scan_schema",0)!=5){modules=new JSONArray();apps=new JSONArray();scanned=false;}
         try{lsposedState=new JSONObject(getPreferences(0).getString("lsposed_state","{}"));}catch(JSONException ignored){}
-        if(getLastNonConfigurationInstance() instanceof ChatHistory)chatHistory=(ChatHistory)getLastNonConfigurationInstance();
-        draw();if(state!=null&&state.getBoolean("ask_ai_open"))openChat();
+        draw();
     }
-    @Override public Object onRetainNonConfigurationInstance(){return chatHistory;}
-    @Override protected void onSaveInstanceState(Bundle state){state.putBoolean("ask_ai_open",chat!=null);super.onSaveInstanceState(state);}
-    @Override public boolean onOptionsItemSelected(MenuItem item){if(item.getItemId()==android.R.id.home){if(chat!=null)closeChat();else finish();return true;}return super.onOptionsItemSelected(item);}
-    @Override public void onBackPressed(){if(chat!=null)closeChat();else super.onBackPressed();}
-    @Override protected void onDestroy(){cancelled=true;getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(back);if(chat!=null)chat.close();if(ai!=null)ai.close();worker.shutdownNow();super.onDestroy();}
-    @Override protected void onResume(){super.onResume();if(chat!=null)chat.background();else if(content!=null)background();}
-    private void openChat(){if(busy||chat!=null)return;chat=new AskAiChat(this,chatHistory,this::closeChat);}
-    private void closeChat(){if(chat==null)return;chat.close();chat=null;setTitle("Troubleshooting");setContentView(rootScroll);draw();}
+    @Override public boolean onOptionsItemSelected(MenuItem item){if(item.getItemId()==android.R.id.home){finish();return true;}return super.onOptionsItemSelected(item);}
+    @Override protected void onDestroy(){cancelled=true;getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(back);worker.shutdownNow();super.onDestroy();}
+    @Override protected void onResume(){super.onResume();if(content!=null)background();}
+    private void openChat(){if(busy)return;PrivateLm.open(this);}
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
     private void ui(Runnable work){runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())work.run();});}
     private boolean dark(){return (getResources().getConfiguration().uiMode&0x30)==0x20;}
@@ -149,14 +143,13 @@ public final class TroubleshootingActivity extends Activity {
         setupProgress=progress("setup");setupStatusView=text(setupStatus,15);
         if(!setupReport.isEmpty()){
             button("View setup results","Configuration, runtime evidence and verification steps",()->info("PIF and TEE setup",setupReport));
-            button("Explain setup results with AI","Review the report before using your active backend",this::explainSetup);
+            button("Explain setup results with AI","Review the report before copying it into PrivateLM",this::explainSetup);
         }
-        card("Ask aI");button("Ask aI","Chat with your active AI backend · paste or attach a log",this::openChat);
-        card("Analyze logs");text("Find system crashes, app crashes and apps that fail to open. Uses your active AI backend.",15);
+        card("Ask Ai");button("Ask Ai","Chat with PrivateLM AI, paste or attach the log, generate image, so on",this::openChat);
+        card("Analyze logs");text("Find system crashes, app crashes and apps that fail to open. Review selected details, then copy them into PrivateLM.",15);
         button("Collect recent device log","Read recent logs from this device",this::collect);button("Import log file","Choose a text log to review",this::importLog);
         logProgress=progress("logs");logStatusView=text(logStatus,15);
-        if(!raw.isEmpty()){text("Source: "+source+" · "+raw.length()+" characters. Original retained in this screen until it closes.",13);button("Save original log",this::saveOriginal);button("Review crash details and backend",this::prepareAnalysis);}
-        cancelAnalysis=button("Cancel analysis",()->{cancelled=true;if(ai!=null)ai.close();setStatus("Analysis cancellation requested.");});cancelAnalysis.setVisibility(busy&&analyzing?View.VISIBLE:View.GONE);cancelAnalysis.setEnabled(true);
+        if(!raw.isEmpty()){text("Source: "+source+" · "+raw.length()+" characters. Original retained in this screen until it closes.",13);button("Save original log",this::saveOriginal);button("Review crash details for PrivateLM",this::prepareAnalysis);}
         if(!analysis.isEmpty()){text("AI findings — verify before acting",17).setTypeface(null,Typeface.BOLD);text(analysis,14);
             for(int i=0;i<analysisParts.size();i++){
                 final int index=i;final TextView details=text(analysisParts.get(i),15);details.setMaxLines(expandedAnalysis.contains(i)?Integer.MAX_VALUE:5);
@@ -168,7 +161,7 @@ public final class TroubleshootingActivity extends Activity {
     }
     private ProgressBar progress(String section){ProgressBar bar=new ProgressBar(this);bar.setIndeterminate(true);bar.setVisibility(busy&&activeSection.equals(section)?View.VISIBLE:View.GONE);page.addView(bar,new LinearLayout.LayoutParams(dp(32),dp(32)));return bar;}
     private void setStatus(String message){status=message;if(activeSection.equals("setup")){setupStatus=message;if(setupStatusView!=null)setupStatusView.setText(message);}else if(activeSection.equals("logs")){logStatus=message;if(logStatusView!=null)logStatusView.setText(message);}else{scanStatus=message;if(scanStatusView!=null)scanStatusView.setText(message);}}
-    private void busyViews(){if(setupProgress!=null)setupProgress.setVisibility(busy&&activeSection.equals("setup")?View.VISIBLE:View.GONE);for(ActionRow control:controls)control.setEnabled(!busy);if(cancelAnalysis!=null){cancelAnalysis.setVisibility(busy&&analyzing?View.VISIBLE:View.GONE);cancelAnalysis.setEnabled(true);}if(scanProgress!=null)scanProgress.setVisibility(busy&&activeSection.equals("scan")?View.VISIBLE:View.GONE);if(logProgress!=null)logProgress.setVisibility(busy&&activeSection.equals("logs")?View.VISIBLE:View.GONE);}
+    private void busyViews(){if(setupProgress!=null)setupProgress.setVisibility(busy&&activeSection.equals("setup")?View.VISIBLE:View.GONE);for(ActionRow control:controls)control.setEnabled(!busy);if(scanProgress!=null)scanProgress.setVisibility(busy&&activeSection.equals("scan")?View.VISIBLE:View.GONE);if(logProgress!=null)logProgress.setVisibility(busy&&activeSection.equals("logs")?View.VISIBLE:View.GONE);}
     private String relatedMods(JSONObject module){
         String evidence=module.optString("evidence");LinkedHashSet<String> names=new LinkedHashSet<>();JSONArray duplicates=module.optJSONArray("duplicates");if(duplicates!=null)for(int i=0;i<duplicates.length();i++)names.add(duplicates.optJSONObject(i).optString("feature"));
         if(evidence.contains("HMA"))names.add("HMA");if(evidence.contains("PIF"))names.add("PIF");if(evidence.contains("Boot property"))names.add("Prophide");if(evidence.contains("TEE"))names.add("TEE Simulator");if(evidence.contains("AI backend"))names.add("AI backend");if(evidence.contains("UN1CA Settings"))names.add("UN1CA Settings");
@@ -177,7 +170,7 @@ public final class TroubleshootingActivity extends Activity {
     private interface Work {void run()throws Exception;}
     private void run(String section,String message,Work task){
         if(busy)return;busy=true;activeSection=section;setStatus(message);busyViews();
-        worker.execute(()->{try{task.run();}catch(Exception e){ui(()->{setStatus("Unable to complete: "+describe(e));history("Failed: "+describe(e));});}finally{ui(()->{busy=false;analyzing=false;draw();});}});
+        worker.execute(()->{try{task.run();}catch(Exception e){ui(()->{setStatus("Unable to complete: "+describe(e));history("Failed: "+describe(e));});}finally{ui(()->{busy=false;draw();});}});
     }
     private static String describe(Exception e){Throwable root=e;while(root.getCause()!=null)root=root.getCause();String m=root.getMessage();return m==null?root.getClass().getSimpleName():m;}
     private void scan(){run("scan","Scanning installed modules…",()->{
@@ -220,7 +213,6 @@ public final class TroubleshootingActivity extends Activity {
     }
     private void importLog(){activeSection="logs";Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE);try{startActivityForResult(intent,41);}catch(ActivityNotFoundException e){setStatus("No document picker available");draw();}}
     @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);
-        if(request==43){if(chat!=null&&result==RESULT_OK&&data!=null&&data.getData()!=null)chat.file(data.getData());return;}
         if(request==42&&result==RESULT_OK&&data!=null&&data.getData()!=null){Uri uri=data.getData();String original=raw;run("logs","Saving original log…",()->{try(OutputStream out=getContentResolver().openOutputStream(uri,"wt")){if(out==null)throw new IOException("Cannot write selected document");out.write(original.getBytes("UTF-8"));}ui(()->{setStatus("Original log saved. It may contain sensitive information.");});});return;}
         if(request==41&&result==RESULT_OK&&data!=null&&data.getData()!=null){Uri uri=data.getData();run("logs","Reading selected log…",()->{String value;try(InputStream in=getContentResolver().openInputStream(uri)){value=LogTools.read(in,LogTools.MAX_IMPORT);}if(value.indexOf('\0')>=0)throw new IOException("Select a plain text log; extract compressed or binary files first");ui(()->{raw=value;source="Imported file (device provenance unverified)";analysis="";analysisParts.clear();analysisTitles.clear();expandedAnalysis.clear();setStatus("File imported. Review crash details before analysis.");});});}}
     private void collect(){run("logs","Collecting recent logcat…",()->{
@@ -242,18 +234,16 @@ public final class TroubleshootingActivity extends Activity {
         String report=SetupChecks.collect(this);ui(()->{setupReport=report;setStatus("Check completed. Review configuration and runtime results below.");});
     });}
     private void explainSetup(){run("setup","Preparing setup report for review…",()->{
-        if(ai!=null)ai.close();ai=new AiClient(this);Bundle destination=ai.config();if(!destination.getBoolean("ready"))throw new IOException("Active AI backend is not ready.");
-        LogTools.Selection selected=LogTools.reviewed(setupReport,new LogTools.Selection());selected.totalLines=setupReport.split("\n").length;selected.selectedLines=selected.totalLines;for(int i=0;i<selected.chunks.size();i++)selected.titles.add("PIF and TEE setup results");
-        ui(()->{config=destination;selection=selected;reviewSource="This device — PIF and TEE setup report";setupReview=true;setStatus("Report ready. Review the selected sections before analysis.");preview();});
+        LogTools.Selection selected=LogTools.reviewed(LogTools.redact(setupReport),new LogTools.Selection());selected.totalLines=setupReport.split("\n").length;selected.selectedLines=selected.totalLines;for(int i=0;i<selected.chunks.size();i++)selected.titles.add("PIF and TEE setup results");
+        ui(()->{selection=selected;reviewSource="This device — PIF and TEE setup report";setupReview=true;setStatus("Report ready. Review the selected sections before analysis.");preview();});
     });}
     private void prepareAnalysis(){run("logs","Finding crashes and app failures…",()->{
         LogTools.Selection selected=LogTools.select(LogTools.redact(raw));
         if(selected.chunks.isEmpty()){ui(()->{setStatus("No system crash, app crash, app-start failure or app-not-responding report found. Nothing was sent for analysis.");});return;}
-        if(ai!=null)ai.close();ai=new AiClient(this);Bundle destination=ai.config();if(!destination.getBoolean("ready"))throw new IOException("Active AI backend is not ready. Prepare its model or API settings first.");
-        ui(()->{config=destination;selection=selected;reviewSource=source;setupReview=false;setStatus("Found "+selected.chunks.size()+" crash log sections. Review and select what to analyze.");preview();});
+        ui(()->{selection=selected;reviewSource=source;setupReview=false;setStatus("Found "+selected.chunks.size()+" crash log sections. Review and select what to analyze.");preview();});
     });}
     private void preview(){
-        boolean online=config.getBoolean("online");String destination=(online?"Online — ":"On device — ")+config.getString("model")+"\n"+(online?config.getString("endpoint")+"\n":"")+reviewSource+"\n"+selection.coverage();
+        String destination="PrivateLM — choose the model and local or cloud mode in the app.\n"+reviewSource+"\n"+selection.coverage();
         LinearLayout list=new LinearLayout(this);list.setOrientation(1);list.setPadding(dp(12),0,dp(12),0);
         ArrayList<CheckBox> selected=new ArrayList<>();ArrayList<EditText> editors=new ArrayList<>();
         for(int i=0;i<selection.chunks.size();i++){
@@ -263,9 +253,9 @@ public final class TroubleshootingActivity extends Activity {
             ActionRow expand=new ActionRow(name+" — section "+(index+1),setupReview?"Tap to expand or collapse setup details":"Tap to expand or collapse crash details",()->{boolean show=editor.getMaxLines()==5;editor.setMaxLines(show?Integer.MAX_VALUE:5);});list.addView(expand);list.addView(editor);
         }
         ScrollView scroll=new ScrollView(this);scroll.addView(list);
-        AlertDialog dialog=new AlertDialog.Builder(this).setTitle(online?"Review before sending online":setupReview?"Review setup report":"Review crash details").setView(scroll)
-            .setMessage(destination+"\n\nExpand a section to review or edit it. Uncheck sections you do not want analyzed. Redaction may miss sensitive information.")
-            .setPositiveButton(online?"Send selected sections":"Analyze selected sections",null).setNegativeButton("Cancel",null).create();
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle(setupReview?"Review setup report for PrivateLM":"Review crash details for PrivateLM").setView(scroll)
+            .setMessage(destination+"\n\nExpand a section to review or edit it. Uncheck sections you do not want analyzed. Redaction may miss sensitive information. Copy and open places the selected text on your clipboard; paste it into PrivateLM yourself. Nothing is submitted for inference here. If you select a cloud provider in PrivateLM, sending the message shares it with that provider.")
+            .setPositiveButton("Copy and open PrivateLM",null).setNegativeButton("Cancel",null).create();
         dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
             LogTools.Selection reviewed=new LogTools.Selection();reviewed.totalLines=selection.totalLines;reviewed.selectedLines=0;reviewed.truncated=selection.truncated;
             for(int i=0;i<selected.size();i++)if(selected.get(i).isChecked()){
@@ -273,19 +263,7 @@ public final class TroubleshootingActivity extends Activity {
                 for(String chunk:part.chunks){if(reviewed.chunks.size()==LogTools.MAX_CHUNKS){reviewed.truncated=true;break;}reviewed.chunks.add(chunk);reviewed.selectedLines+=chunk.split("\n").length;reviewed.titles.add(i<selection.titles.size()?selection.titles.get(i):"Crash details");}
             }
             if(reviewed.chunks.isEmpty()){Toast.makeText(this,"Select at least one non-empty log section",Toast.LENGTH_SHORT).show();return;}
-            dialog.dismiss();analyze(reviewed,config);
+            if(PrivateLm.copyAndOpen(this,reviewSource,reviewed))dialog.dismiss();
         }));dialog.show();
     }
-    private void analyze(LogTools.Selection sections,Bundle destination){cancelled=false;analyzing=true;analysisParts.clear();analysisTitles.clear();expandedAnalysis.clear();run("logs","Analyzing selected crash details…",()->{
-        String summary=(destination.getBoolean("online")?"Online — ":"On device — ")+destination.getString("model")+"\n"+sections.coverage();
-        for(int i=0;i<sections.chunks.size();i++){
-            if(cancelled||Thread.currentThread().isInterrupted())throw new InterruptedIOException("Analysis cancelled");
-            final int index=i;ui(()->setStatus("Analyzing log section "+(index+1)+" of "+sections.chunks.size()+"…"));
-            String findings;boolean failed=false;
-            try{findings=ai.analyze(sections.chunks.get(i),destination);}catch(Exception e){findings="Not analyzed: "+describe(e);failed=true;}
-            String result=findings;ui(()->{analysis=summary;analysisParts.add(result);analysisTitles.add((index<sections.titles.size()?sections.titles.get(index):"Crash details")+" — section "+(index+1));});
-            if(failed){ui(()->setStatus("Analysis stopped. Some selected log sections were not analyzed."));return;}
-        }
-        ui(()->setStatus("Analysis finished. Expand a result below to read it. Suggested causes require verification."));
-    });}
 }

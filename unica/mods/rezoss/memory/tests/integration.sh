@@ -52,6 +52,12 @@ fi
 [[ "$MEMORY_TEST_BUILDS" == 0 ]]
 touch "$WORK_DIR/system/system/framework/samsungkeystoreutils.jar" \
     "$WORK_DIR/system/system/etc/permissions/samsungkeystoreutils.xml"
+if source "$MEMORY_TEST_SOURCE/integrate.sh"; then
+    echo "FAIL: missing preload allowlist accepted" >&2; exit 1
+fi
+[[ "$MEMORY_TEST_BUILDS" == 0 ]]
+mkdir -p "$WORK_DIR/system/system/etc/sysconfig"
+printf '<config>\n</config>\n' > "$WORK_DIR/system/system/etc/sysconfig/allowed-system-preload-apps.xml"
 mkdir -p "$APKTOOL_DIR/system/priv-app/TouchWizHome_2017/TouchWizHome_2017.apk"
 if source "$MEMORY_TEST_SOURCE/integrate.sh"; then
     echo "FAIL: prior launcher decode accepted" >&2; exit 1
@@ -78,6 +84,8 @@ root = Path(sys.argv[1])
 memory = root / "system/system/priv-app/Memory/Memory.apk"
 assert hashlib.sha256(memory.read_bytes()).hexdigest() == "28c74ddee923b8de0cf3abe816aa44a8135f6b5259d54d275d9c30f04f0bb5e8"
 assert sorted(p.name for p in memory.parent.iterdir()) == ["Memory.apk"]
+preloads = E.parse(root / "system/system/etc/sysconfig/allowed-system-preload-apps.xml")
+assert len(preloads.findall('./allowed-system-preload[@package="com.samsung.android.app.memory"]')) == 1
 xml = root / "system/system/etc/permissions/privapp-permissions-com.samsung.android.app.memory.xml"
 permissions = E.parse(xml).findall("./privapp-permissions/permission")
 assert len(permissions) == 6

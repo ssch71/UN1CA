@@ -199,6 +199,7 @@ final class WidgetPanel {
                         (next, value) -> next.putInt("rows", value),
                         true);
                 note("Grid capacity: " + b.getInt("columns") + " × " + b.getInt("rows") + ".");
+                note("Drag an individual widget to an empty cell. Pinch a widget to resize it in whole cells. Increase the grid to make more room.");
             }
         } else note("Custom grid is unavailable for this editor/provider combination.");
         slider(
@@ -219,7 +220,7 @@ final class WidgetPanel {
                 (next, index) -> next.putInt("anchor", index),
                 false);
         int anchor = b.getInt("anchor");
-        note("Drag in the preview. Attached groups move along the clock edge.");
+        note("Drag the boundary edge or empty space to move the group. Pinch from the boundary edge to resize the group. Attached groups move along the clock edge.");
         if (anchor >= 1 && anchor <= 4) {
             slider(
                     "Gap from clock",

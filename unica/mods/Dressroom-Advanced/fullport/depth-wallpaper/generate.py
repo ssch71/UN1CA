@@ -52,6 +52,57 @@ def sdk_wrap(text, operation, proto):
 '''
     return text + wrapper
 
+def blur_submissions(s, expected, suffix):
+    pattern = re.compile(r'    invoke-virtual \{([vp]\d+), ([vp]\d+)\}, Landroid/view/View;->semSetBlurInfo\(Landroid/view/SemBlurInfo;\)V')
+    if len(pattern.findall(s)) != expected: raise ValueError(f'Blur callsite count changed in {suffix}')
+    owner = re.search(r'^\.class .* (L[^;]+;)$', s, re.M)[1]
+    helper = 'nativeDepthSetBlurInfo(Landroid/view/View;Landroid/view/SemBlurInfo;)V'
+    if helper in s: raise ValueError(f'Blur helper already exists in {suffix}')
+    # The caller's blur argument may be a live null used by throw or
+    # catch handlers. Keep every caller register unchanged, including
+    # on exceptional edges, by isolating conversion in a new method.
+    return pattern.sub(lambda m: f'    invoke-static {{{m[1]}, {m[2]}}}, {owner}->{helper}', s) + f'''
+.method private static {helper}
+    .locals 1
+
+    invoke-static {{p0, p1}}, {BASE}NativeDepth;->widgetBlur(Landroid/view/View;Ljava/lang/Object;)Ljava/lang/Object;
+
+    move-result-object v0
+
+    check-cast v0, Landroid/view/SemBlurInfo;
+
+    invoke-virtual {{p0, v0}}, Landroid/view/View;->semSetBlurInfo(Landroid/view/SemBlurInfo;)V
+
+    return-void
+.end method
+'''
+
+def depth_draw_methods(text):
+    for name in ('draw', 'dispatchDraw'):
+        if re.search(r'\.method .* ' + name + r'\(Landroid/graphics/Canvas;\)V', text):
+            raise ValueError(f'AbsClockView now overrides {name}; reassess before integrating')
+    for name, access in [('draw', 'public'), ('dispatchDraw', 'protected')]:
+        text += f'''
+# Both normal drawing and ViewGroup SKIP_DRAW recording must apply depth.
+.method {access} {name}(Landroid/graphics/Canvas;)V
+    .locals 2
+    invoke-static {{p0, p1}}, {BASE}NativeDepth;->beforeDraw(Landroid/view/View;Landroid/graphics/Canvas;)I
+    move-result v0
+    :try_start_native_depth
+    invoke-super {{p0, p1}}, Lcom/samsung/android/clockpack/plugins/clock/ClockView;->{name}(Landroid/graphics/Canvas;)V
+    :try_end_native_depth
+    .catchall {{:try_start_native_depth .. :try_end_native_depth}} :catch_native_depth
+    invoke-static {{p0, p1, v0}}, {BASE}NativeDepth;->afterDraw(Landroid/view/View;Landroid/graphics/Canvas;I)V
+    invoke-static {{p0}}, {BASE}NativeClockRuntime;->drawn(Landroid/view/View;)V
+    return-void
+    :catch_native_depth
+    move-exception v1
+    invoke-static {{p0, p1, v0}}, {BASE}NativeDepth;->afterDraw(Landroid/view/View;Landroid/graphics/Canvas;I)V
+    throw v1
+.end method
+'''
+    return text
+
 def generate(root, kind):
     changes = {}
     def edit(suffix, fn):
@@ -86,29 +137,7 @@ def generate(root, kind):
                 edit(suffix, lambda s, op=op, proto=proto: sdk_wrap(s, op, proto))
     elif kind == 'aod':
         absclock = 'com/samsung/android/uniform/widget/clock/AbsClockView.smali'
-        def adddraw(s):
-            if re.search(r'\.method .* draw\(Landroid/graphics/Canvas;\)V', s):
-                raise ValueError('AbsClockView now overrides draw; reassess before integrating')
-            return s + f'''
-# Native depth clips the whole clock once, retaining normal draw/layer semantics.
-.method public draw(Landroid/graphics/Canvas;)V
-    .locals 2
-    invoke-static {{p0, p1}}, {BASE}NativeDepth;->beforeDraw(Landroid/view/View;Landroid/graphics/Canvas;)I
-    move-result v0
-    :try_start_native_depth
-    invoke-super {{p0, p1}}, Lcom/samsung/android/clockpack/plugins/clock/ClockView;->draw(Landroid/graphics/Canvas;)V
-    :try_end_native_depth
-    .catchall {{:try_start_native_depth .. :try_end_native_depth}} :catch_native_depth
-    invoke-static {{p0, p1, v0}}, {BASE}NativeDepth;->afterDraw(Landroid/view/View;Landroid/graphics/Canvas;I)V
-    invoke-static {{p0}}, {BASE}NativeClockRuntime;->drawn(Landroid/view/View;)V
-    return-void
-    :catch_native_depth
-    move-exception v1
-    invoke-static {{p0, p1, v0}}, {BASE}NativeDepth;->afterDraw(Landroid/view/View;Landroid/graphics/Canvas;I)V
-    throw v1
-.end method
-'''
-        edit(absclock, adddraw)
+        edit(absclock, depth_draw_methods)
         anchor = '    invoke-static {v7, v13}, Laod/e70;->a(Landroid/view/SemBlurInfo$Builder;Landroid/graphics/Path;)V'
         # v1's iterator/weather liveness ends here; next use is an unconditional overwrite.
         # p0 is unchanged in b(), although its register is >15; move-object/from16 is required.
@@ -117,11 +146,7 @@ def generate(root, kind):
         edit('aod/tx0.smali', lambda s: method(s,'c()V', lambda b: entry(b,
             f'    invoke-static {{p0}}, {BASE}NativeDepth;->clearBlur(Ljava/lang/Object;)V')))
         for suffix, expected in [('aod/e70.smali',3),('com/samsung/android/app/facewidget/complication/ComplicationWidgetHostViewContainer.smali',2),('com/samsung/android/app/facewidget/complication/BlurEffectManager.smali',1)]:
-            def submit(s, expected=expected):
-                pattern = re.compile(r'    invoke-virtual \{([vp]\d+), ([vp]\d+)\}, Landroid/view/View;->semSetBlurInfo\(Landroid/view/SemBlurInfo;\)V')
-                if len(pattern.findall(s)) != expected: raise ValueError(f'Blur callsite count changed in {suffix}')
-                return pattern.sub(lambda m: f'    invoke-static {{{m[1]}, {m[2]}}}, {BASE}NativeDepth;->widgetBlur(Landroid/view/View;Ljava/lang/Object;)Ljava/lang/Object;\n\n    move-result-object {m[2]}\n\n    check-cast {m[2]}, Landroid/view/SemBlurInfo;\n\n'+m[0], s)
-            edit(suffix, submit)
+            edit(suffix, lambda s, expected=expected: blur_submissions(s, expected, suffix))
     elif kind == 'wallpaper':
         def engine(s):
             def transform(b):

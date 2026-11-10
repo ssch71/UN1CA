@@ -16,9 +16,12 @@ Widgets/Extras panel are included, rather than just the old UN1CA controls.
 Source compilation, strict ordered patch application, public callback linkage,
 272 host checks, and temporary builds of DressRoom, AODService, SystemUI and
 SpriteWallpaper have passed. These are offline results. No full ROM build,
-device installation, flash, visual comparison, Object Capture inference or
-lockscreen/AOD runtime test has been performed. This is a device-test candidate,
-not a claim of complete observed parity with the LSPosed module.
+device installation or flash was performed by the agent. On November 10 the
+user reported normal boot and editor failures; fixes are documented in
+RUNTIME-REVIEW.txt. After rebuilding, the user reported preview-only depth
+and a stale widget boundary; the subsequent corrections are documented in
+DEPTH-GRID-FIXES.txt. The latest candidate still needs device testing.
+Complete visual parity with the LSPosed module remains unverified.
 
 The initial port source is preserved outside the active mod at:
  out/archived/dressroom-full-port-20261109/initial-port-source

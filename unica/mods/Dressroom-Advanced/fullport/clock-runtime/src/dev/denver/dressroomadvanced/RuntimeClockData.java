@@ -40,7 +40,7 @@ public final class RuntimeClockData {
 
         int type = ((Number) Reflect.call(provider, "getConsideredThemeClockType")).intValue();
         int id = ((Number) Reflect.call(font, "getFontType")).intValue();
-        if (type <= 0 || id <= 0) return null;
+        if (type <= 0 || id < 0 || !NativeClockRuntime.nativeStretchFont(font, id)) return null;
         String path = "";
         try {
             Object rawPath = Reflect.call(font, "getFontPath");
@@ -60,8 +60,10 @@ public final class RuntimeClockData {
             query.putInt("font", id);
             if (!path.isEmpty()) query.putString("fontPath", path);
             Bundle settings = SettingsBridge.read(context, query);
-            List<Float> values = manualHeights(settings);
-            if (settings == null) return null; // Provider may still be starting after an update.
+            if (settings == null) return null;
+            List<Float> values = StretchRestorePolicy.eligible(true, id,
+                    settings.getInt("font", -1), path, settings.getString("fontPath", ""),
+                    !FontAxisSettings.nativeStretch(settings)) ? manualHeights(settings) : null;
             entry = new Entry(type, id, path, orientation, screen, values);
             sources.put(provider, entry);
         }

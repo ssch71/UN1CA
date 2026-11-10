@@ -77,9 +77,30 @@ public final class NativeClockRuntime {
             catch(ReflectiveOperationException failure){throw new IllegalStateException("Samsung stretch predicate changed",failure);}
         }
     };
-    private static boolean nativeStretchFont(Object font,int id) {
+    static boolean nativeStretchFont(Object font,int id) {
         try{return Boolean.TRUE.equals(stretchPredicates.get(font.getClass()).invoke(null,id));}catch(Exception ignored){return false;}
     }
+    /** Samsung capability, rather than a nonempty/stale saved height list, owns eligibility. */
+    static boolean nativeStretchFont(Object font) {
+        if (font == null) return false;
+        try { return nativeStretchFont(font, ((Number) Reflect.call(font, "getFontType")).intValue()); }
+        catch (Exception | LinkageError unavailable) { return false; }
+    }
+
+    private static List<Float> savedHeights(Bundle settings, Object font) {
+        if (!nativeStretchFont(font)) return null;
+        try {
+            int id = ((Number) Reflect.call(font, "getFontType")).intValue();
+            if (settings == null) return null;
+            Object path = Reflect.call(font, "getFontPath");
+            String selectedPath = path instanceof String ? (String) path : "";
+            if (!StretchRestorePolicy.eligible(true, id, settings.getInt("font", -1),
+                    selectedPath, settings.getString("fontPath", ""),
+                    !FontAxisSettings.nativeStretch(settings))) return null;
+            return RuntimeClockData.manualHeights(settings);
+        } catch (Exception | LinkageError unavailable) { return null; }
+    }
+
     public static Object lockFont(android.content.Context context,Object original) {
         if(context==null||original==null)return original;
         try {
@@ -105,21 +126,22 @@ public final class NativeClockRuntime {
             Bundle settings=DepthEffects.isEditorClock(clock)?DressroomModule.get().fontSettings(clock):INSTANCE.read(clock,requested);
             if(settings==null) INSTANCE.profiles.remove(clock); else INSTANCE.profiles.put(clock,settings);
             VariableFonts.configure(INSTANCE.module,clock,settings); VariableFonts.forget(clock);
-            return SavedStretch.font(requested,RuntimeClockData.manualHeights(settings));
+            return SavedStretch.font(requested,savedHeights(settings,requested));
         } catch(Exception failure) { return requested; }
     }
     public static List<Float> normalized(View clock,Object requested,List<Float> normalized) {
         try {
             if(DepthEffects.isEditorClock(clock)&&DressroomModule.get().nativeManual(clock)) {
-                if(FontAxisSettings.nativeStretch(DressroomModule.get().fontSettings(clock))) return (List<Float>)Reflect.call(requested,"getFontHeights");
+                if(nativeStretchFont(requested) && FontAxisSettings.nativeStretch(DressroomModule.get().fontSettings(clock))) return (List<Float>)Reflect.call(requested,"getFontHeights");
             }
-            List<Float> saved=RuntimeClockData.manualHeights(INSTANCE.read(clock,requested));return saved==null?normalized:saved;
+            List<Float> saved=savedHeights(INSTANCE.read(clock,requested),requested);return saved==null?normalized:saved;
         }
         catch(Exception ignored) { return normalized; }
     }
     public static int stretchable(View clock,List<?> values) {
         Bundle saved=profile(clock);
-        if(RuntimeClockData.manualHeights(saved)==null) return -1;
+        try { if(savedHeights(saved,ClockBinding.of(clock).font(clock))==null) return -1; }
+        catch(ReflectiveOperationException | RuntimeException unavailable) { return -1; }
         if(values==null || values.isEmpty()) return 0;
         for(Object value:values) if(!(value instanceof Number n)||!Float.isFinite(n.floatValue())||n.floatValue()<=0) return 0;
         return 1;
@@ -217,8 +239,8 @@ public final class NativeClockRuntime {
                 finishMediaReturn(clock);
                 return;
             }
-            List<Float> heights = SavedStretch.heights(profile.getFloatArray("manualHeights"));
             Object original = ClockBinding.of(clock).font(clock);
+            List<Float> heights = savedHeights(profile, original);
             if (original == null || heights == null) {
                 finishMediaReturn(clock);
                 return;
@@ -306,7 +328,7 @@ public final class NativeClockRuntime {
                     Object current = ClockBinding.of(view).font(view);
                     if (current != null) {
                         java.util.List<Float> heights =
-                                SavedStretch.heights(settings.getFloatArray("manualHeights"));
+                                savedHeights(settings, current);
                         Object restored = SavedStretch.font(current, heights);
                         if (restored != current) Reflect.call(view, "setFontType", restored);
                         fontRetries.remove(view);

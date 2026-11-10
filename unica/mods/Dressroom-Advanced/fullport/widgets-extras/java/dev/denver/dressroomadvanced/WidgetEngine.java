@@ -22,6 +22,7 @@ final class WidgetEngine {
     private final Set<Object> grids = Collections.newSetFromMap(new WeakHashMap<>());
     private final ThreadLocal<Boolean> nativeMetrics = ThreadLocal.withInitial(() -> false);
     private final ThreadLocal<Object> nativeArrangement = new ThreadLocal<>();
+    private final java.util.Map<Object, Bundle> previewManagers = new WeakHashMap<>();
     private Bundle runtime;
     private int runtimeOrientation;
     private int runtimeWallpaper = -1;
@@ -94,7 +95,14 @@ final class WidgetEngine {
         }
     }
 
+    void nativePreview(Object manager, Bundle draft) {
+        if (draft == null) { previewManagers.remove(manager); invalidate(); }
+        else previewManagers.put(manager, new Bundle(draft));
+    }
+
     private Bundle config(Object manager) throws ReflectiveOperationException {
+        Bundle preview = previewManagers.get(manager);
+        if (preview != null) return preview;
         return settings((Context) Reflect.field(manager, "context"));
     }
 

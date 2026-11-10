@@ -24,7 +24,16 @@ public final class DressroomModule {
     }
     void log(int level,String tag,String message) { android.util.Log.println(level,tag,message); }
     void log(int level,String tag,String message,Throwable failure) { android.util.Log.println(level,tag,message+": "+failure); }
+    boolean nativeAdvancedShown(android.app.Activity activity) {
+        NativeClockPanel current=panel.get();
+        return current!=null && current.shownFor(activity);
+    }
+    boolean nativeOutsideTouch(Object source,android.view.MotionEvent event) {
+        NativeClockPanel current=panel.get();
+        return current!=null && current.outsideTouch(source,event);
+    }
     void nativeSession(android.app.Activity activity) {
+        if (editorActivity.get()==activity) return;
         beginEditor(); editorActivity=new java.lang.ref.WeakReference<>(activity);
         editorContext=activity;
     }
@@ -41,6 +50,26 @@ public final class DressroomModule {
         Object focus=editorBinding.focusedScene(owner);scene=String.valueOf(focus);
         wallpaperSourceBinding=new WallpaperSourceBinding(owner.getClass().getClassLoader(),false);
         attach(owner); applyEditorDepth((View)editorBinding.renderer(owner));
+    }
+    void nativeWallpaperSourceChanged() {
+        if (editorActivity.get() != null) queueWallpaperSourceCheck();
+    }
+    void nativeConfigurationBefore(android.app.Activity activity, android.content.res.Configuration next) {
+        if (editorActivity.get() != activity || next == null) return;
+        if (next.orientation != editorOrientation || editorScreen != ScreenIdentity.current()) {
+            try { checkpointLayout(); }
+            catch (Exception failure) { report("Editor layout checkpoint before rotation unavailable", failure); }
+        }
+    }
+    void nativeConfigurationAfter(android.app.Activity activity) {
+        if (editorActivity.get() != activity) return;
+        Object owner = activeClockController.get();
+        if (owner != null) try {
+            Object renderer = editorBinding.renderer(owner);
+            if (renderer instanceof View clock) clock.postOnAnimation(() -> {
+                if (editorActivity.get() == activity) applyEditorDepth(clock);
+            });
+        } catch (Exception failure) { report("Rotated editor refresh unavailable", failure); }
     }
     boolean nativeBeforeSave(Object mediator) {
         try {
@@ -437,6 +466,8 @@ public final class DressroomModule {
         restoredSelections.clear();
         previewDepthProfiles.clear();
         saving.cancel();
+        NativeClockPanel previousPanel=panel.get();
+        if(previousPanel!=null) previousPanel.releaseOutside();
         panel.clear();
         manualRenderer.clear();
         savedManualRenderers.clear();

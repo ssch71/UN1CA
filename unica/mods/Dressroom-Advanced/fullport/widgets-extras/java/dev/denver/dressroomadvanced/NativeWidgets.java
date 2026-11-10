@@ -32,6 +32,7 @@ public final class NativeWidgets {
         DressroomModule m=owner();if(m.editorWidgets!=null)try{m.editorWidgets.nativeRestore(store,model,profile);}catch(Exception e){m.report("Widget restore",e);}
     }
     public static void restoreModel(Object store,Object profile,Object model) {restore(store,model,profile);}
+    public static void preview(Object manager,android.os.Bundle draft){owner().widgetEngine.nativePreview(manager,draft);}
     public static int columnOverride(Object manager){return owner().widgetEngine.nativeDimension(manager,-1,true);}
     public static int rowOverride(Object manager){return owner().widgetEngine.nativeDimension(manager,-1,false);}
     public static int biggerOverride(Object manager){return owner().widgetEngine.nativeBigger(manager,false)?1:-1;}
@@ -74,5 +75,5 @@ public final class NativeWidgets {
     public static int rotateBefore(Object rotation,Object align){try{return owner().editorWidgets==null||owner().editorWidgets.nativeRotateBefore(rotation,align)?-1:0;}catch(Exception e){owner().report("Widget rotation",e);return 0;}}
     public static boolean rotateResult(boolean original){return owner().editorWidgets==null?original:owner().editorWidgets.nativeRotateAfter(original);}
     public static Object trimmed(Object policy){try{return owner().editorWidgets==null?null:owner().editorWidgets.nativeTrimmed(policy);}catch(Exception e){return null;}}
-    public static int touch(android.app.Activity activity,android.view.MotionEvent event){try{return owner().editorWidgets==null?-1:owner().editorWidgets.nativeTouch(activity,event);}catch(Exception e){owner().report("Widget drag",e);return -1;}}
+    public static int touch(android.app.Activity activity,android.view.MotionEvent event){try{if(owner().nativeAdvancedShown(activity))return -1;return owner().editorWidgets==null?-1:owner().editorWidgets.nativeTouch(activity,event);}catch(Exception e){owner().report("Widget drag",e);return -1;}}
 }

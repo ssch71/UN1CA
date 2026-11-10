@@ -37,6 +37,41 @@ activity='com/samsung/android/app/dressroom/presentation/preview/activity/EditMa
 # session starts immediately after native super; close runs before native body can clobber p0.
 edit(activity,lambda s:before(s,'onCreate(Landroid/os/Bundle;)V',f'    invoke-static/range {{p0 .. p0}}, {BASE}->session(Landroid/app/Activity;)V'))
 edit(activity,lambda s:before(s,'onDestroy()V',f'    invoke-static/range {{p0 .. p0}}, {BASE}->close(Landroid/app/Activity;)V'))
+edit(activity,lambda s:before(s,'dispatchTouchEvent(Landroid/view/MotionEvent;)Z',f'    invoke-static/range {{p0 .. p1}}, {BASE}->touch(Landroid/app/Activity;Landroid/view/MotionEvent;)V'))
+# This shared Samsung LinearLayout also serves TabLayout. The helper checks exact
+# root identity and Advanced visibility, leaving every unrelated instance alone.
+def floatingTouch(s):
+ if ' dispatchTouchEvent(Landroid/view/MotionEvent;)Z' in s:raise ValueError('Floating root ABI changed')
+ return s+f'''\n.method public dispatchTouchEvent(Landroid/view/MotionEvent;)Z
+    .locals 1
+    invoke-static {{p0, p1}}, {BASE}->floatingTouch(Landroid/view/View;Landroid/view/MotionEvent;)Z
+    move-result v0
+    if-eqz v0, :native_advanced_floating_dispatch
+    const/4 v0, 0x1
+    return v0
+    :native_advanced_floating_dispatch
+    invoke-super {{p0, p1}}, Landroid/widget/LinearLayout;->dispatchTouchEvent(Landroid/view/MotionEvent;)Z
+    move-result v0
+    return v0
+.end method
+'''
+edit('com/google/android/material/tabs/f',floatingTouch)
+
+# Add after the existing EditMainActivity onDestroy mapping; before p8/a save mapping.
+# Wrappers preserve p0/p1 across Samsung bodies that overwrite parameter registers.
+edit(activity,lambda s:wrap(s,'onConfigurationChanged(Landroid/content/res/Configuration;)V',f'''    invoke-static {{p0, p1}}, {BASE}->configurationBefore(Landroid/app/Activity;Landroid/content/res/Configuration;)V
+    invoke-virtual {{p0, p1}}, L{activity};->@ORIGINAL@
+    invoke-static {{p0}}, {BASE}->configurationAfter(Landroid/app/Activity;)V
+    return-void''',0))
+edit('o6/e0',lambda s:wrap(s,'c1(Lcom/samsung/android/app/dressroom/data/profile/wallpaper/EditorData;)V',f'''    invoke-virtual {{p0, p1}}, Lo6/e0;->@ORIGINAL@
+    invoke-static {{}}, {BASE}->sourceChanged()V
+    return-void''',0))
+wallpaperData='com/samsung/android/app/dressroom/data/profile/wallpaper/EditorData'
+for signature in ['setOriginalUri(Landroid/net/Uri;)V','setUri(Landroid/net/Uri;)V','setWallpaperSubType(I)V','setWallpaperParentSubType(I)V']:
+ edit(wallpaperData,lambda s,signature=signature:wrap(s,signature,f'''    invoke-virtual {{p0, p1}}, L{wallpaperData};->@ORIGINAL@
+    invoke-static {{}}, {BASE}->sourceChanged()V
+    return-void''',0))
+
 edit('p8/a',lambda s:wrap(s,'i()V',f'''    invoke-static {{p0}}, {BASE}->beforeSave(Ljava/lang/Object;)Z
     move-result v0
     if-eqz v0, :native_advanced_save_return

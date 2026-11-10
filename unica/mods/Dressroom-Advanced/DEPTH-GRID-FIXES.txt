@@ -1,0 +1,98 @@
+Depth after Done and custom-grid boundary fixes, 2026-11-10
+==========================================================
+Author: @BlueOutside (https://github.com/BlueOutside)
+Upstream: https://github.com/BlueOutside/Dressroom-Advanced
+Native adaptation: unica/mods/Dressroom-Advanced
+
+User reproduction
+-----------------
+After rebuilding the ROM, normal-image subject depth works in the editor but
+not after Done. Selecting a 4x2 grid leaves a 4x1-height boundary.
+
+Read-only device evidence
+-------------------------
+The current lockscreen wallpaper ID92 matches a saved clock profile with
+depthEnabled=true and a stored depthMaskRef. The referenced 84,406-byte mask
+exists and its SHA256 matches the reference. Successful native Apply/atomic
+profile-commit messages are present. This verifies persistence; it does not
+prove that the runtime renderer loaded or drew the mask.
+
+Installed AODService8.9.66.1 SHA256:
+ c4e4cb691666c7777e5858ea2f0d4c3cbe2c9bf64d4655f881af1da6c6ee2456
+This is byte-identical to the artifact inspected for the depth draw method.
+REA package evidence: ev_e61a1a2b996fa0eb9c7cf671b5d74dce7ca4daacf2ee11c8abd0999f3b0cbd26
+REA draw method evidence: ev_14be11bfd4c4eee27692e6fbae317ba21f1efb30760c86711ebe7ada14117440
+
+Depth correction
+----------------
+The native port wrapped AbsClockView.draw(Canvas) but omitted dispatchDraw(Canvas).
+Android can render a FrameLayout's children directly through dispatchDraw when
+recording a container display list. The editor DepthFrameLayout already covered
+that path, and upstream intercepted both paths. The generator now emits both
+methods with balanced success/exception cleanup. The existing nested-draw guard
+prevents applying the mask twice. Original Samsung method bodies/registers are
+unchanged; both added wrappers use locals2.
+
+This is a proven missing integration path and a strong explanation of the
+preview/runtime difference. The exact draw path executed by this device was
+not traced, so visual repair still requires testing the rebuilt candidate.
+
+Grid correction
+---------------
+The editor's metrics callback could read the provider's stale committed4x1 grid
+and overwrite its draft4x2 model. Structural edits also needed to restore the
+model before native recalculation. Custom-grid boundaries now derive columns
+and rows from the same draft used for native capacity. Scale-only changes
+continue to use Samsung's native capacity. Production boundary sizing is
+centralized in WidgetBoundaryMetrics.
+
+A preview Bundle is scoped to the exact active size-manager object; a separate
+plugin helper is synchronized only when its loaded Class differs. Separate
+helper ClassLoaders were a possible confounder, not an observed runtime cause.
+A log records that conditional branch if used. Preview overrides clear on
+Apply, cancel/reset, owner changes and layout transitions; committed settings
+are still written only after successful native Apply.
+
+Changed sources
+---------------
+ fullport/depth-wallpaper/generate.py
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/EditorWidgets.java
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/WidgetEngine.java
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/WidgetEditorBinding.java
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/NativeWidgets.java
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/WidgetBoundaryMetrics.java
+ fullport/tests/run.sh and focused draw/boundary regression tests
+Generated helper patch, public callback index and SOURCES.sha256 must accompany
+these sources; rebuild validation and publication are recorded in RESULT.txt.
+
+Verification
+------------
+ bash unica/mods/Dressroom-Advanced/fullport/tests/run.sh /path/to/org-json.jar
+
+Production boundary tests cover4x1 ->4x2 ->2x4 ->reset with a stale provider.
+Production draw-scope tests cover direct/nested drawing and exception cleanup.
+Previous font, profile-store, mask-upload, grid bounds and blur-register tests
+remain included. Actual Android display lists, AOD visuals and gesture rendering
+are not established by host doubles.
+
+After the normal ROM rebuild, verify a still-image depth profile after Done,
+lockscreen/AOD transitions and unlock/relock. With Custom grid enabled, change
+4x1 to4x2 and verify the boundary grows, an item can move into the second row,
+and normal Apply/reopen retains the arrangement. Verify Cancel and stock-grid
+restoration as well. This candidate has not been installed or flashed by Codex.
+
+Evidence, APK trials and backups:
+ out/archived/dressroom-depth-grid-20261110/
+ out/archived/dressroom-runtime-fixes-20261110/widgets-grid-boundary-backup/
+ /tmp/dressroom-depth-grid-apk-validation-20261110/
+
+The font integration, font eligibility/axes, AOD font synchronization and
+Ambient Weather patches retain their existing ownership. External depth/clock
+hooks still compete; this correction does not change that compatibility limit.
+
+Completed host validation
+-------------------------
+All four temporary APK rebuilds, ZIP integrity checks, zero-fuzz ordered patch
+applications and public callback checks passed. Combined host regressions passed.
+The shipped implementation patch, public callback index and source hashes have
+been regenerated together. No corrected APK has been deployed by Codex.

@@ -78,6 +78,16 @@ for sig,cb,regs in [('onAttachedToWindow()V','attached','p0'),('setDozing(Z)V','
  edit(clock,lambda s,sig=sig,cb=cb,regs=regs:wrap(s,sig,f'''    invoke-virtual {{{regs}}}, {C}->@ORIGINAL@
     invoke-static {{p0}}, {B}->{cb}(Landroid/view/View;)V
     return-void''',0))
+# Date visibility is overridden on concrete clock styles, not AbsClockView.
+# Match every exact declaration so later Samsung visibility updates cannot undo Hide date.
+for path in sorted(a.decoded.glob('smali*/com/samsung/android/uniform/widget/clock/*.smali')):
+ text=path.read_text()
+ if not re.search(r'^\.method public setDateVisibility\(I\)V$',text,re.M):continue
+ suffix=path.relative_to(a.decoded).as_posix().split('/',1)[1][:-6]
+ owner='L'+suffix+';'
+ edit(suffix,lambda s,owner=owner:wrap(s,'setDateVisibility(I)V',f'''    invoke-virtual {{p0, p1}}, {owner}->@ORIGINAL@
+    invoke-static {{p0}}, {B}->date(Landroid/view/View;)V
+    return-void''',0))
 edit(clock,lambda s:wrap(s,'setMediaExpanded(Z)V',f'''    invoke-static {{p0, p1}}, {B}->mediaBefore(Landroid/view/View;Z)V
     invoke-virtual {{p0, p1}}, {C}->@ORIGINAL@
     invoke-static {{p0, p1}}, {B}->mediaAfter(Landroid/view/View;Z)V

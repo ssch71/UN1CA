@@ -4,15 +4,22 @@
 set -euo pipefail
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 WORK=$(mktemp -d /tmp/dressroom-native-algorithms.XXXXXX)
-NAMES=(FontAxes BlurOpacity WidgetLayout WallpaperMotionPacket CaptureInstanceState DepthSourcePolicy IdentityLocks DeferredRefresh LatestDepthWork)
+NAMES=(FontAxes BlurOpacity WidgetLayout WallpaperMotionPacket CaptureInstanceState DepthSourcePolicy IdentityLocks DeferredRefresh LatestDepthWork StretchRestorePolicy WidgetCellBounds WidgetBoundaryMetrics Reflect)
 SOURCES=()
 for NAME in "${NAMES[@]}"; do
     mapfile -t MATCHES < <(find "$ROOT" -path "$ROOT/tests" -prune -o -type f -name "$NAME.java" -print)
     [[ ${#MATCHES[@]} -eq 1 ]] || { echo "Ambiguous algorithm source: $NAME" >&2; exit 1; }
     SOURCES+=("${MATCHES[0]}")
 done
-javac --release 17 -d "$WORK" "${SOURCES[@]}" "$ROOT/tests/upstream/"*.java
-for TEST in "$ROOT/tests/upstream/"*Test.java; do
+TESTS=("$ROOT/tests/upstream/"*Test.java
+    "$ROOT/clock-runtime/tests/StretchRestorePolicyTest.java"
+    "$ROOT/widgets-extras/tests/dev/denver/dressroomadvanced/WidgetCellBoundsTest.java"
+    "$ROOT/widgets-extras/tests/dev/denver/dressroomadvanced/WidgetBoundaryMetricsTest.java")
+javac --release 17 -d "$WORK" "${SOURCES[@]}" "${TESTS[@]}"
+for TEST in "${TESTS[@]}"; do
     java -cp "$WORK" "dev.denver.dressroomadvanced.$(basename "$TEST" .java)"
 done
 if [[ $# -gt 0 ]]; then "$ROOT/font-storage/tests/run.sh" "$1"; fi
+
+"$ROOT/font-storage/tests/mask-upload/run.sh"
+python3 -m unittest discover -s "$ROOT/depth-wallpaper/tests" -p 'test_*.py'
