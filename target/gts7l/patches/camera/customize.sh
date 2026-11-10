@@ -1,4 +1,6 @@
+# shellcheck disable=SC2034
 MODEL=$(echo -n "$TARGET_FIRMWARE" | cut -d "/" -f 1)
+# shellcheck disable=SC2034
 REGION=$(echo -n "$TARGET_FIRMWARE" | cut -d "/" -f 2)
 
 if ! grep -q "Camera End" "$WORK_DIR/vendor/ueventd.rc"; then

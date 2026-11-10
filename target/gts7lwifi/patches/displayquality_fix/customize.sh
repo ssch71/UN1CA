@@ -1,3 +1,4 @@
+# shellcheck disable=SC2034
 SKIPUNZIP=1
 
 # X810/gts9pwifi (A16) SemDisplayQualityManagerService.<init> -> SemDisplayQualityAidlClient.<init>

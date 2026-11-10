@@ -83,7 +83,7 @@ LOG "- MinsOS version: $MINSOS_VERSION"
 _BRAND="$SRC_DIR/target/$TARGET_CODENAME/branding"
 _replace_brand() { # <source asset> <target path in the mod source> <description>
     [ -f "$1" ] || ABORT "! MinsOS branding asset missing: ${1##*/}"
-    [ -f "$2" ] || ABORT "! branding target missing: ${2#$SRC_DIR/}"
+    [ -f "$2" ] || ABORT "! branding target missing: ${2#$SRC_DIR/}"[ -f "$2" ] || ABORT "! branding target missing: ${2#"$SRC_DIR"/}"
     cp -f "$1" "$2" || ABORT "! failed to copy ${1##*/}"
     cmp -s "$1" "$2" || ABORT "! ${1##*/} did not land in ${2##*/}"
     LOG "- Replaced $3 with MinsOS"
