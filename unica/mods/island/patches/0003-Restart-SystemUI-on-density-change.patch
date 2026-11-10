@@ -1,0 +1,85 @@
+From: ssch71
+Subject: [PATCH] island: Restart SystemUI when the display density changes
+
+---
+diff --git a/smali_classes6/dev/android/dynamicisland/island/window/IslandWindow$Root.smali b/smali_classes6/dev/android/dynamicisland/island/window/IslandWindow$Root.smali
+--- a/smali_classes6/dev/android/dynamicisland/island/window/IslandWindow$Root.smali
++++ b/smali_classes6/dev/android/dynamicisland/island/window/IslandWindow$Root.smali
+@@ -15,12 +15,14 @@
+ 
+ 
+ # instance fields
++.field private static sDensityDpi:I
++
+ .field private final listener:Ldev/android/dynamicisland/island/window/IslandWindow$Listener;
+ 
+ 
+ # direct methods
+ .method constructor <init>(Landroid/content/Context;Ldev/android/dynamicisland/island/window/IslandWindow$Listener;)V
+-    .registers 3
++    .registers 4
+ 
+     .line 385
+     invoke-direct {p0, p1}, Landroid/widget/FrameLayout;-><init>(Landroid/content/Context;)V
+@@ -28,6 +30,23 @@
+     .line 386
+     iput-object p2, p0, Ldev/android/dynamicisland/island/window/IslandWindow$Root;->listener:Ldev/android/dynamicisland/island/window/IslandWindow$Listener;
+ 
++    sget v0, Ldev/android/dynamicisland/island/window/IslandWindow$Root;->sDensityDpi:I
++
++    if-nez v0, :cond_known
++
++    invoke-virtual {p0}, Ldev/android/dynamicisland/island/window/IslandWindow$Root;->getResources()Landroid/content/res/Resources;
++
++    move-result-object v0
++
++    invoke-virtual {v0}, Landroid/content/res/Resources;->getConfiguration()Landroid/content/res/Configuration;
++
++    move-result-object v0
++
++    iget v0, v0, Landroid/content/res/Configuration;->densityDpi:I
++
++    sput v0, Ldev/android/dynamicisland/island/window/IslandWindow$Root;->sDensityDpi:I
++
++    :cond_known
+     .line 387
+     return-void
+ .end method
+@@ -58,11 +77,36 @@
+ .end method
+ 
+ .method protected onConfigurationChanged(Landroid/content/res/Configuration;)V
+-    .registers 2
++    .registers 4
+ 
+     .line 391
+     invoke-super {p0, p1}, Landroid/widget/FrameLayout;->onConfigurationChanged(Landroid/content/res/Configuration;)V
+ 
++    iget v0, p1, Landroid/content/res/Configuration;->densityDpi:I
++
++    sget v1, Ldev/android/dynamicisland/island/window/IslandWindow$Root;->sDensityDpi:I
++
++    if-eqz v1, :cond_store
++
++    if-eq v0, v1, :cond_store
++
++    const-string v0, "UN1CA-Island"
++
++    const-string v1, "Display density changed, restarting SystemUI to rebuild the island"
++
++    invoke-static {v0, v1}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
++
++    invoke-static {}, Landroid/os/Process;->myPid()I
++
++    move-result v0
++
++    invoke-static {v0}, Landroid/os/Process;->killProcess(I)V
++
++    return-void
++
++    :cond_store
++    sput v0, Ldev/android/dynamicisland/island/window/IslandWindow$Root;->sDensityDpi:I
++
+     .line 392
+     iget-object p1, p0, Ldev/android/dynamicisland/island/window/IslandWindow$Root;->listener:Ldev/android/dynamicisland/island/window/IslandWindow$Listener;
+ 
