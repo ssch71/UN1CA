@@ -22,7 +22,6 @@ Signed-off-by: At30c <PabloAtsoc9993@outlook.com>
  1 file changed, 5 insertions(+)
 
 diff --git a/smali_classes2/com/android/server/power/PowerManagerService.smali b/smali_classes2/com/android/server/power/PowerManagerService.smali
-index 000000000..000000000 100644
 --- a/smali_classes2/com/android/server/power/PowerManagerService.smali
 +++ b/smali_classes2/com/android/server/power/PowerManagerService.smali
 @@ -19821,5 +19821,6 @@
@@ -32,7 +31,7 @@ index 000000000..000000000 100644
 +    move p1, v2
 
      iget-object v3, p0, Lcom/android/server/power/PowerManagerService;->mBatteryManagerInternal:Landroid/os/BatteryManagerInternal;
-@@ -20272,2 +20272,6 @@
+@@ -20272,2 +20273,6 @@
      :goto_6
 +    iget v4, p0, Lcom/android/server/power/PowerManagerService;->mPlugType:I
 +    const/4 v6, 0x2
