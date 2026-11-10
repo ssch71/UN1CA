@@ -25,12 +25,10 @@ public final class DressroomModule {
     void log(int level,String tag,String message) { android.util.Log.println(level,tag,message); }
     void log(int level,String tag,String message,Throwable failure) { android.util.Log.println(level,tag,message+": "+failure); }
     boolean nativeAdvancedShown(android.app.Activity activity) {
-        NativeClockPanel current=panel.get();
-        return current!=null && current.shownFor(activity);
+        return AdvancedPanelDismiss.shownFor(activity);
     }
     boolean nativeOutsideTouch(Object source,android.view.MotionEvent event) {
-        NativeClockPanel current=panel.get();
-        return current!=null && current.outsideTouch(source,event);
+        return AdvancedPanelDismiss.touch(source,event);
     }
     void nativeSession(android.app.Activity activity) {
         if (editorActivity.get()==activity) return;
@@ -449,6 +447,7 @@ public final class DressroomModule {
 
 
     private void beginEditor() {
+        AdvancedPanelDismiss.clear();
         sourceSyncing = false;
         depthSaveHolds = 0;
         nativeSaveActive = false;

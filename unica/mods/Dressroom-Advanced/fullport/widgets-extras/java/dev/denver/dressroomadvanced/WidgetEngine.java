@@ -96,8 +96,13 @@ final class WidgetEngine {
     }
 
     void nativePreview(Object manager, Bundle draft) {
-        if (draft == null) { previewManagers.remove(manager); invalidate(); }
+        if (draft == null) { nativePreviewEnd(manager,false); }
         else previewManagers.put(manager, new Bundle(draft));
+    }
+
+    void nativePreviewEnd(Object manager,boolean committed) {
+        WidgetProviderForms.endPreview(manager,committed);
+        previewManagers.remove(manager);invalidate();
     }
 
     private Bundle config(Object manager) throws ReflectiveOperationException {
@@ -183,14 +188,10 @@ final class WidgetEngine {
             int columns = ((Number) Reflect.call(item, "getWidth")).intValue();
             int rows = ((Number) Reflect.call(item, "getHeight")).intValue();
             Object manager = Reflect.call(grid, "getWidgetSizeManager");
-            WidgetHostSizing.refresh(
-                    host,
-                    columns,
-                    rows,
-                    manager,
-                    config(manager).getFloat("scale", 1),
-                    legacyProviders.contains(manager.getClass().getClassLoader())
-                            && config(manager).getBoolean("layout"));
+            if(previewManagers.containsKey(manager))WidgetProviderForms.preview(manager,host,columns,rows);
+            else WidgetProviderForms.refresh(host,columns,rows);
+            WidgetHostSizing.refresh(host,columns,rows,manager,config(manager).getFloat("scale",1),
+                    config(manager).getBoolean("layout"));
             Reflect.call(grid, "sendAppWidgetOptions", id, columns, rows);
         }
     }

@@ -272,7 +272,7 @@ final class EditorWidgets {
     }
 
     void committed() {
-        clearManagerPreviews();
+        clearManagerPreviews(true);
         dirty = false;
         dirtyLayouts.clear();
     }
@@ -837,7 +837,7 @@ final class EditorWidgets {
         if(itemResult==-2)return -1;
         int action=event.getActionMasked();
         if(action==android.view.MotionEvent.ACTION_DOWN){
-            Rect bounds=new Rect();if(!root.getGlobalVisibleRect(bounds)||!bounds.contains(Math.round(event.getRawX()),Math.round(event.getRawY())))return -1;
+            Rect bounds=new Rect();if(!ScreenBounds.visible(root,bounds)||!bounds.contains(Math.round(event.getRawX()),Math.round(event.getRawY())))return -1;
             if(dragDown!=null)dragDown.recycle();dragDown=android.view.MotionEvent.obtain(event);
             dragStart=new Bundle(settings(root.getContext()));dragging=false;dragWasDirty=dirty;groupPinching=false;groupPinchSpan=0;
             dragX=event.getRawX();dragY=event.getRawY();dragModelX=((Number)Reflect.call(data(),"getX")).floatValue();dragModelY=((Number)Reflect.call(data(),"getY")).floatValue();return 1;
@@ -880,7 +880,7 @@ final class EditorWidgets {
     boolean gestureBoundary(float x,float y) throws ReflectiveOperationException {
         View root=owner.get()==null?null:OneUi9WidgetEditor.root(owner.get());
         if(root==null)return false;
-        Rect r=new Rect();if(!root.getGlobalVisibleRect(r)||!r.contains(Math.round(x),Math.round(y)))return false;
+        Rect r=new Rect();if(!ScreenBounds.visible(root,r)||!r.contains(Math.round(x),Math.round(y)))return false;
         float margin=12*root.getResources().getDisplayMetrics().density;
         return x-r.left<margin || r.right-x<margin || y-r.top<margin || r.bottom-y<margin;
     }
@@ -927,12 +927,13 @@ final class EditorWidgets {
             if(first)android.util.Log.i(DressroomModule.TAG,"Widget preview synchronized with plugin helper classloader");
         }
     }
-    private void clearManagerPreviews() {
+    private void clearManagerPreviews() { clearManagerPreviews(false); }
+    private void clearManagerPreviews(boolean committed) {
         for(Object manager:new java.util.ArrayList<>(previewManagers.keySet())){
-            module.widgetEngine.nativePreview(manager,null);
+            module.widgetEngine.nativePreviewEnd(manager,committed);
             try{
                 Class<?> target=Class.forName(NativeWidgets.class.getName(),false,manager.getClass().getClassLoader());
-                if(target!=NativeWidgets.class)target.getMethod("preview",Object.class,Bundle.class).invoke(null,manager,null);
+                if(target!=NativeWidgets.class)target.getMethod("previewEnd",Object.class,boolean.class).invoke(null,manager,committed);
             }catch(Exception failure){module.report("Widget preview scope cleanup",failure);}
         }
         previewManagers.clear();

@@ -154,6 +154,14 @@ def dressroom(p):
   return s[:m.end()]+code+s[m.end():]
  p.method('com/samsung/android/lockscreen/editor/item/domain/entity/item/widget/WidgetData','setEditableAlign(Z)V',editable)
 
+ # Expose two-row provider forms only inside Samsung's widget picker when its
+ # current editor draft has two rows. Never spoof DeviceType globally.
+ def tallPicker(s):
+  old='    invoke-virtual {v3}, Lcom/samsung/android/lockscreen/editor/item/domain/entity/system/DeviceType;->isTablet()Z'
+  if s.count(old)!=1:raise ValueError('Tall picker DeviceType callsite moved')
+  return s.replace(old,'    invoke-static {v3, v2}, '+W+'->pickerTablet(Ljava/lang/Object;Ljava/lang/Object;)Z')
+ p.method('sd/d','a(Lcom/samsung/android/lockscreen/editor/item/domain/entity/preview/UIMode;Lcom/samsung/android/lockscreen/editor/item/domain/entity/system/DeviceType;)Ljava/util/ArrayList;',tallPicker)
+
 def aod(p):
  base='com/samsung/android/app/facewidget/complication/'
  for sig,cb in [('getColumn()I','columnOverride'),('getRow()I','rowOverride'),('isBiggerSize()Z','biggerOverride')]:p.override(base+'ComplicationWidgetSizeManager',sig,W+'->'+cb+'(Ljava/lang/Object;)I')
@@ -309,6 +317,16 @@ def aod(p):
  new=old[:closing.start()]+closing[0].replace('FrameLayout',cls)+old[closing.end():]
  new=new[:target.start()]+target[0].replace('FrameLayout',cls)+new[target.end():]
  p.files['res/layout/now_bar_music_page_holder.xml']=[old,new]
+
+ # Native wrapper spans must follow a resized provider, not constructor-time 1x1.
+ container=base+'ComplicationWidgetHostViewContainer'
+ r=p.file(container);text=p.files[r][1]
+ for field in ['targetCellWidth','targetCellHeight']:
+  old='.field private final '+field+':I'
+  if text.count(old)!=1:raise ValueError('Widget container span field changed: '+field)
+  text=text.replace(old,'.field private '+field+':I')
+ text+='\n.method public final setWidgetCellSpan(II)V\n    .locals 0\n    if-lez p1, :native_widget_span_end\n    if-lez p2, :native_widget_span_end\n    iput p1, p0, L'+container+';->targetCellWidth:I\n    iput p2, p0, L'+container+';->targetCellHeight:I\n    invoke-direct {p0}, L'+container+';->initConfigurationValues()V\n    :native_widget_span_end\n    return-void\n.end method\n'
+ p.files[r][1]=text
 
 def systemui(p):
  base='com/android/systemui/'

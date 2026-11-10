@@ -1,0 +1,1 @@
+package android.view;import android.graphics.Insets; public class WindowInsets {public boolean ime;public Insets insets=new Insets();public static class Type {public static int ime(){return 1;}}public boolean isVisible(int type){return ime;}public Insets getInsets(int type){return insets;}}

@@ -1,0 +1,113 @@
+Clock/Widget menu dismissal and mixed widget forms, 2026-11-10
+=============================================================
+Author: @BlueOutside (https://github.com/BlueOutside)
+Upstream: https://github.com/BlueOutside/Dressroom-Advanced
+Native ROM integration: unica/mods/Dressroom-Advanced
+
+Why the clock menu closed while selecting controls
+--------------------------------------------------
+The previous observer compared MotionEvent raw screen coordinates with
+getGlobalVisibleRect bounds in the floating window's coordinate space. It also
+closed the parent unconditionally on ACTION_OUTSIDE, including events related
+to option windows. That allowed an inside control click to be treated as outside.
+
+Clock Advanced and Widget/Extras Advanced now use the same controller. It
+converts clipped bounds to screen coordinates, includes native header areas,
+tracks outside taps separately from drags/pinches and leaves inside taps alone.
+Option dialogs own their own outside touches. Explicit color/size dialogs,
+focused dropdowns and keyboard touches are protected from parent dismissal.
+Flags/tracking clear on detach, hidden panes and editor reset; queued callbacks
+from a closed session cannot reactivate the observer. Native close failure keeps
+tracking available for retry. Closing a settings panel still retains its editor
+draft; only Samsung Done/Apply commits it.
+
+Screenshot layout
+------------------
+Reference: out/archived/dressroom-advanced/5442976887488584171.jpg
+Minimum grid:5 columns x2 rows:
+ Calendar2x2 | small1x1 | detailed Weather2x2
+ Calendar    | small1x1 | detailed Weather
+The left/right forms each consume2 columns and2 rows. Four columns cannot fit
+2+1+2 columns. Scaling the whole group does not create these independent layouts.
+
+Three missing parts have been corrected:
+1. Samsung's picker filtered out two-row providers on phones. One exact picker
+   callsite now admits them only for the active lockscreen Custom-grid draft
+   with at least2 rows; no framework-wide tablet/device override is installed.
+2. GridItem span changes alone did not select the actual provider layout.
+   Supported forms now update Samsung's real semWidgetSize/span options and
+   rebind the same appWidgetId with cloned provider metadata. Existing widget
+   component, configured location/calendar and other options are preserved.
+3. Native host wrapper target spans stayed at their constructor values. An exact
+   AOD patch makes those two fields writable and adds a span setter, reusing
+   native configuration sizing. Original methods/register counts are preserved.
+
+Widget Advanced now offers Individual widget sizes. It lists only sizes declared
+by each installed provider. Month Calendar declares2x2. Detailed Weather declares
+2x1 and2x2; Simple Weather declares only1x1. Enlarging Simple Weather cannot
+produce detailed Weather's extra content. Select the detailed provider initially.
+Pinch resizing snaps to supported forms. Empty cells/grid boundaries constrain
+placement; the explicit size chooser can change width and height independently.
+
+Use after rebuilding
+---------------------
+Enable Widgets -> Advanced -> Custom grid; choose5x2 or larger. Add Month Calendar,
+detailed Weather and two small widgets using Samsung's picker. Set the calendar
+and weather to2x2 in Individual widget sizes, then drag them left/right and place
+the two1x1 widgets in the middle. Move nearby widgets first if resizing would
+overlap them. Apply normally, then reopen to verify persistence.
+
+Preview and Cancel
+-------------------
+Provider options are real external state even before Done. Original provider
+metadata/options are captured only for the exact active preview manager/host.
+Cancel/session reset restores the original form; successful Apply discards the
+rollback snapshot. Runtime refreshes are not entered into the preview rollback
+registry. No provider/component swap, appWidgetId deletion/reallocation or app
+configuration reset is performed. Cleanup failures are contained per host.
+
+Changed source files
+---------------------
+ fullport/editor-runtime/src/dev/denver/dressroomadvanced/AdvancedPanelDismiss.java
+ fullport/editor-runtime/src/dev/denver/dressroomadvanced/OutsidePanelTap.java
+ fullport/editor-runtime/src/dev/denver/dressroomadvanced/ScreenBounds.java
+ fullport/editor-runtime/src/dev/denver/dressroomadvanced/NativeClockPanel.java
+ fullport/editor-runtime/src/dev/denver/dressroomadvanced/DressroomModule.java
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/WidgetPanel.java
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/WidgetFormControls.java
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/WidgetFormModel.java
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/WidgetProviderForms.java
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/WidgetItemGestures.java
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/WidgetHostSizing.java
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/WidgetEngine.java
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/NativeWidgets.java
+ fullport/widgets-extras/java/dev/denver/dressroomadvanced/EditorWidgets.java
+ fullport/widgets-extras/generate_patches.py
+ fullport/tests/run.sh and dedicated panel/provider/form regressions
+Generated implementation, callback index and source hashes accompany these files.
+
+Verification and remaining boundary
+-----------------------------------
+ bash unica/mods/Dressroom-Advanced/fullport/tests/run.sh /path/to/org-json.jar
+
+Host tests exercise the actual dismissal controller using simulated Android
+windows at nonzero screen offsets, child dialogs, focus/keyboard cases, failed
+close, hidden panes and closed sessions. Provider tests exercise actual form
+rebind/options/identity logic with Android doubles and Cancel/Apply behavior.
+These do not establish real Samsung popup delivery, provider RemoteViews updates,
+visual mixed layout or device persistence. The revised APKs were not installed
+or flashed; another ROM rebuild/device check is required.
+
+Backups, static evidence, APK validations and final results:
+ out/archived/dressroom-menu-mixedwidgets-20261110/
+The previous font, AOD synchronization, depth and Ambient Weather changes remain.
+No unrelated source modifications were edited or staged by this work.
+
+Completed validation
+---------------------
+Full host suite passed, including23 production-controller checks with simulated
+Android windows and production provider rebind/Cancel/Apply tests. All four APK
+rebuild/integrity checks passed;217 public static bridge calls resolve. Source
+hashes and all633 helper bodies match the final compiled export. Generated
+implementation and callback metadata have been updated together with backups.
+Corrected on-device menus and provider rendering remain unverified.

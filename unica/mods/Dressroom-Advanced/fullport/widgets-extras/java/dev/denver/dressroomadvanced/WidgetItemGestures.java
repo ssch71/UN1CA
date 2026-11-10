@@ -19,12 +19,12 @@ final class WidgetItemGestures {
     private int[] initial;
     private boolean changed,pinching,vertical;
     private boolean replaying,passThrough;
-    private int columns,rows;
+    private int columns,rows,supportedForms;
     void clear(){holder=original=grid=null;root=null;initial=null;span=0;changed=pinching=passThrough=false;if(down!=null){down.recycle();down=null;}}
     boolean replaying(){return replaying;}
-    private static Object value(Object holder)throws ReflectiveOperationException{return Reflect.call(Reflect.call(holder,"getItemFlow"),"getValue");}
+    static Object value(Object holder)throws ReflectiveOperationException{return Reflect.call(Reflect.call(holder,"getItemFlow"),"getValue");}
     private static int number(Object item,String getter)throws ReflectiveOperationException{return ((Number)Reflect.call(item,getter)).intValue();}
-    private static List<?> holders(Object grid)throws ReflectiveOperationException{
+    static List<?> holders(Object grid)throws ReflectiveOperationException{
         Object id=Reflect.call(Reflect.field(grid,"containerManager"),"getContainerId");
         if(id==null)return java.util.Collections.emptyList();
         Object container=Reflect.call(Reflect.call(grid,"getGridManager"),"b",id);
@@ -36,16 +36,14 @@ final class WidgetItemGestures {
     private static float span(MotionEvent e){return (float)Math.hypot(e.getX(0)-e.getX(1),e.getY(0)-e.getY(1));}
     private static float[] local(View view,float x,float y){
         Matrix global=new Matrix(),inverse=new Matrix();view.transformMatrixToGlobal(global);
-        float[] result={x,y};if(!global.invert(inverse))return null;inverse.mapPoints(result);return result;
+        int[] origin=new int[2];view.getRootView().getLocationOnScreen(origin);
+        float[] result={x-origin[0],y-origin[1]};if(!global.invert(inverse))return null;inverse.mapPoints(result);return result;
     }
     private void update(int[] next)throws ReflectiveOperationException{
         for(Object other:holders(grid))if(other!=holder&&WidgetCellBounds.overlaps(next,cells(value(other))))return;
         Object current=value(holder);int[] now=cells(current);if(java.util.Arrays.equals(now,next))return;
-        // Immutable copy preserves opposite-orientation coordinates and Samsung drag/availability flags.
-        Object updated=Reflect.call(current,"copy",Reflect.call(current,"getGridId"),next[2],next[3],
-                vertical?number(current,"getX"):next[0],vertical?number(current,"getY"):next[1],
-                vertical?next[0]:number(current,"getSecondaryX"),vertical?next[1]:number(current,"getSecondaryY"),
-                Reflect.call(current,"isDragAllowed"),number(current,"getXPositionUnit"),number(current,"getYPositionUnit"),Reflect.call(current,"getAvailable"));
+        if((next[2]!=now[2]||next[3]!=now[3])&&!WidgetFormModel.supported(supportedForms,next[2],next[3]))return;
+        Object updated=WidgetFormModel.copy(current,next,vertical);
         Reflect.call(holder,"updateGridItem",updated);changed=true;
     }
     int touch(Activity activity,MotionEvent event,EditorWidgets editor)throws Exception{
@@ -57,9 +55,9 @@ final class WidgetItemGestures {
             Object candidateGrid=editor.gestureGrid();
             for(Object candidate:holders(candidateGrid)){
                 View view=(View)Reflect.call(candidate,"getRoot");Rect bounds=new Rect();
-                if(!view.isShown()||!view.getGlobalVisibleRect(bounds)||!bounds.contains(Math.round(event.getRawX()),Math.round(event.getRawY())))continue;
+                if(!view.isShown()||!ScreenBounds.visible(view,bounds)||!bounds.contains(Math.round(event.getRawX()),Math.round(event.getRawY())))continue;
                 if(!custom){passThrough=true;return -2;}
-                holder=candidate;original=value(candidate);grid=candidateGrid;root=view;
+                holder=candidate;original=value(candidate);grid=candidateGrid;root=view;supportedForms=WidgetFormControls.mask(candidate);
                 Object sizes=Reflect.call(grid,"getWidgetSizeManager");
                 columns=number(sizes,"getColumn");rows=number(sizes,"getRow");
                 vertical=(Boolean)Reflect.call(Reflect.field(sizes,"widgetAlignType"),"isVertical");
@@ -76,7 +74,8 @@ final class WidgetItemGestures {
             if(pinching&&event.getPointerCount()>=2&&span>1){
                 float factor=span(event)/span;
                 int w=Math.round(initial[2]*factor),h=Math.round(initial[3]*factor);
-                update(WidgetCellBounds.fit(initial[0],initial[1],w,h,columns,rows));
+                int[] form=WidgetFormModel.nearest(supportedForms,w,h,columns,rows);
+                if(form!=null)update(WidgetCellBounds.fit(initial[0],initial[1],form[0],form[1],columns,rows));
             }else if(!pinching&&Math.hypot(event.getRawX()-startX,event.getRawY()-startY)>ViewConfiguration.get(activity).getScaledTouchSlop()){
                 float[] p=local(root,event.getRawX(),event.getRawY()),start=local(root,startX,startY);
                 if(p!=null&&start!=null&&root.getWidth()>0&&root.getHeight()>0){

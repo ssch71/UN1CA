@@ -90,7 +90,7 @@ Reproduce offline checks (no device writes)
   bash unica/mods/rezoss/memory/tests/run.sh
   bash unica/mods/rezoss/memory/build.sh /tmp/rezoss-memory-launcher-pristine
   bash unica/mods/rezoss/memory/prepare-launcher.sh ORIGINAL_LAUNCHER.apk NEW_OUTPUT.apk
-  bash unica/mods/rezoss/memory/tests/integration.sh ORIGINAL_LAUNCHER.apk NEW_OUTPUT.apk
+  bash unica/mods/rezoss/memory/tests/integration.sh ORIGINAL_LAUNCHER.apk NEW_OUTPUT.apk CLEAN_SERVICES_DECODE
   bash -n unica/mods/rezoss/customize.sh unica/mods/rezoss/memory/*.sh
 The pristine decode used above is generated from the exact original APK using
 project Apktool with --no-debug-info. Helper generation never edits decoded input;
@@ -193,3 +193,86 @@ this session; automatic permission grant after a future ROM update still needs
 verification. Screen/voice/camera saving, AI processing, rotation and Home Up
 coexistence have not been validated by this gesture-launch test.
 Evidence: out/archived/memory-gesture-runtime-20261109/working-global-gestures-logcat.txt
+
+Volume Up + Side voice capture (2026-11-10)
+Implemented in sidekey/0001-Add-Memory-volume-up-side-key.patch, applied by
+integrate.sh through the existing shared services.jar patch workflow. Memory.apk
+and the three-finger launcher patch are unchanged by this addition.
+
+Conflict findings from the exact dm3q framework:
+- KeyGestureController constructs rule class ID 5 for keys 24 + 26 (Volume Up +
+  Power). InputRune.PWM_KEY_COMBINATION_VOLUP_POWER selects gesture type 1001.
+- Its LocalKeyGestureEventHandler routes type 1001 to Samsung Accessibility
+  Direct access. The native rule already checks SecureLockDeviceService.
+- AccessibilityDirectAccessController uses the current user's secure setting
+  accessibility_direct_access_target_service. Any nonempty assignment therefore
+  takes priority over Memory; the original branch runs without modification.
+  When unassigned, Memory replaces the default Direct access chooser behavior
+  only while the eligibility checks below pass.
+- Volume Up + Volume Down is a separate accessibility rule and is untouched.
+  Volume Down + Side screenshot/power-menu handling, single/double/long Side
+  presses, ringer gestures and non-Samsung gesture types are untouched.
+- PWM_DEVICE_SHUTDOWN_VOLUP_POWER_CHN reserves this combination for regional
+  shutdown behavior; Memory declines the entire chord when that flag is true.
+- Read-only connected-phone checks: Direct access target null, region FRANCE.
+  No permission, setting, package or firmware changes were made for this work.
+
+Behavior and activation:
+Press Volume Up + Side together while the screen is on and the phone is
+unlocked. The native detector retains its existing 150 ms chord matching window
+and key consumption. Memory opens MainActivity with ADD_MEMORY_VOICE, the same
+voice entry point verified by the earlier swipe-right runtime test. Recording,
+microphone permission prompts and AI processing remain Memory's responsibility.
+
+The shortcut defaults on when this ROM integration is present. A separate
+per-user secure setting, memory_volume_up_side_key, disables it when set to 0;
+absence defaults to 1. It does not depend on memory_three_finger_gesture or
+Home Up, and no settings are written during boot/build. No new settings UI was
+added. To disable just this shortcut (manual command, not run by this session):
+  /mnt/c/platform-tools/adb.exe shell settings --user 0 put secure memory_volume_up_side_key 0
+Set it to 1 to enable again. With the shortcut off, the stock Direct access
+branch remains available. The existing memory/disable marker skips the complete
+integration in a clean ROM build, including this framework patch.
+
+Eligibility also requires provisioning and user setup complete, current user
+unlocked, no keyguard/device lock, no SecureLockDeviceService restriction, and
+an enabled/exported Memory voice entry point installed for the current user.
+The queued launch rechecks eligibility and current user before starting it.
+Native START owns a Memory chord and launches once; duplicate START callbacks
+and the native cancelled-COMPLETE cleanup never launch a second capture. Stock
+chords cannot be stolen if settings change while the buttons are held.
+
+Framework patch safety and validation:
+- Only the type-1001 branch of LocalKeyGestureEventHandler is hooked. Existing
+  .locals 21, labels, exception regions and original instructions are retained.
+- Five exact native detector/rule/handler files are guarded by targets.sha256.
+  Stock firmware, compiled working JAR decode and existing shared patched
+  decode match those guards. A mismatch or prior application stops integration.
+- No other unica patch touches these classes; all other services.jar mods use
+  the normal shared decode and remain composable. A zero-fuzz dry-run is required
+  before APPLY_PATCH. Helper classes are added to classes2.dex; compile-only
+  Android/server stubs are excluded from the generated patch.
+- 1,212 ownership/repeat/cancellation policy checks pass, together with the
+  existing 41 three-finger checks and original-container packaging checks.
+- Exact temporary zero-fuzz apply, full project Apktool services.jar rebuild
+  and ZIP integrity checks pass. Real-helper integration staging passes for
+  both existing Memory packaging and the framework patch, with disabled,
+  incompatible-target and previously modified-policy rejection checks.
+
+Regenerate helper patch (temporary clean services.jar decode required):
+  source buildenv.sh dm3q
+  bash unica/mods/rezoss/memory/sidekey/build.sh CLEAN_SERVICES_DECODE
+  python3 unica/mods/rezoss/memory/sidekey/check-target.py CLEAN_SERVICES_DECODE
+  patch --dry-run --fuzz=0 -p1 -d CLEAN_SERVICES_DECODE < unica/mods/rezoss/memory/sidekey/0001-Add-Memory-volume-up-side-key.patch
+  bash unica/mods/rezoss/memory/tests/run.sh
+Build helper generation reads decoded input and emits patch files only. Existing
+generated patches are backed up before regeneration. No source/target smali was
+edited directly. Logs and the offline JAR are under:
+  out/archived/memory-sidekey-20261110/
+
+Deployment remains untested: no full ROM build, installation, flash or reboot
+was performed for the hardware shortcut. The next clean ROM build must include
+the services.jar change. Validate button launches, accessibility target priority,
+locked/screen-off fallback, repeated holds, screenshot/power-menu behavior and
+voice recording on that flashed build before treating the shortcut as complete
+runtime validation. A framework failure can affect system-server boot or keys.

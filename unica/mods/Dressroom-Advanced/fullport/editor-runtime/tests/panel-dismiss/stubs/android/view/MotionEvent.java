@@ -1,0 +1,1 @@
+package android.view;public class MotionEvent {public static final int ACTION_OUTSIDE=4;int action;float x,y;public MotionEvent(int a,float x,float y){action=a;this.x=x;this.y=y;}public int getActionMasked(){return action;}public float getRawX(){return x;}public float getRawY(){return y;}}

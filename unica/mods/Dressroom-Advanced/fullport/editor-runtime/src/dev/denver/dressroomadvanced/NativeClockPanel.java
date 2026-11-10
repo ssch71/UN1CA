@@ -93,92 +93,24 @@ final class NativeClockPanel {
     private Object weatherJob;
     private int editGeneration;
     private Runnable finishEdit;
-    private boolean outsideDown;
-    private View watchedFloating;
-    private int addedOutsideFlags;
-    private float outsideX, outsideY;
+    private AdvancedPanelDismiss outsideDismiss;
 
-    // Samsung hosts this panel in a separate floating window. Request outside events
-    // there as well as observing ordinary Activity taps for the embedded layout.
-    private void watchOutside() {
-        if (advanced == null || !advanced.isShown()) return;
-        View floating = root.getRootView();
-        if (!floating.isAttachedToWindow()
-                || !(floating.getLayoutParams() instanceof android.view.WindowManager.LayoutParams params)
-                || params.type < android.view.WindowManager.LayoutParams.FIRST_SUB_WINDOW
-                || params.type > android.view.WindowManager.LayoutParams.LAST_SUB_WINDOW) return;
-        int flags = params.flags | android.view.WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
-                | android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
-        if (params.flags == flags) return;
-        watchedFloating=floating;
-        addedOutsideFlags=flags & ~params.flags;
-        params.flags = flags;
-        context.getSystemService(android.view.WindowManager.class).updateViewLayout(floating, params);
+    private void watchOutside() throws ReflectiveOperationException {
+        if (outsideDismiss==null) {
+            Object owner=binding.activity(controller);
+            if (!(owner instanceof android.app.Activity activity)) return;
+            outsideDismiss=new AdvancedPanelDismiss(activity,root,null,
+                    () -> advanced!=null && advanced.isShown(), () -> {
+                        flush();
+                        Reflect.call(Reflect.field(activity,"j"),"f",false);
+                    });
+        }
+        outsideDismiss.activate();
     }
 
-    void releaseOutside() {
-        outsideDown=false;
-        try { unwatchOutside(); }
-        catch (Exception failure) { module.report("Advanced outside cleanup unavailable",failure); }
-    }
-
+    void releaseOutside() { unwatchOutside(); }
     private void unwatchOutside() {
-        View floating=watchedFloating;
-        watchedFloating=null;
-        if (floating != null && floating.getLayoutParams() instanceof android.view.WindowManager.LayoutParams params) {
-            params.flags &= ~addedOutsideFlags;
-            if (floating.isAttachedToWindow()) context.getSystemService(android.view.WindowManager.class).updateViewLayout(floating,params);
-        }
-        addedOutsideFlags=0;
-    }
-
-    boolean shownFor(android.app.Activity activity) {
-        if (advanced==null || !advanced.isShown()) return false;
-        try { return binding.activity(controller)==activity; }
-        catch (Exception ignored) { return false; }
-    }
-
-    boolean outsideTouch(Object source, android.view.MotionEvent event) {
-        if (advanced == null || !advanced.isShown() || !root.isAttachedToWindow()) {
-            outsideDown = false;
-            return false;
-        }
-        try {
-            Object activity = binding.activity(controller);
-            View floating = root.getRootView();
-            if (source != activity && source != floating) return false;
-            int action = event.getActionMasked();
-            if (action == android.view.MotionEvent.ACTION_OUTSIDE && source == floating) {
-                dismissAdvanced(activity);
-                return true;
-            }
-            Rect area = new Rect();
-            // Include Samsung's entire sheet, including tabs and its native footer.
-            View sheet = floating == ((android.app.Activity) activity).getWindow().getDecorView()
-                    ? root : floating;
-            if (!sheet.getGlobalVisibleRect(area)) return false;
-            boolean outside = !area.contains(Math.round(event.getRawX()), Math.round(event.getRawY()));
-            if (action == android.view.MotionEvent.ACTION_DOWN) {
-                outsideDown = outside;
-                outsideX = event.getRawX(); outsideY = event.getRawY();
-            } else if (action == android.view.MotionEvent.ACTION_MOVE) {
-                int slop = android.view.ViewConfiguration.get(context).getScaledTouchSlop();
-                if (Math.hypot(event.getRawX()-outsideX,event.getRawY()-outsideY) > slop) outsideDown=false;
-            } else if (action == android.view.MotionEvent.ACTION_UP) {
-                boolean close = outsideDown && outside;
-                outsideDown=false;
-                if (close) dismissAdvanced(activity);
-            } else if (action == android.view.MotionEvent.ACTION_CANCEL
-                    || action == android.view.MotionEvent.ACTION_POINTER_DOWN) outsideDown=false;
-        } catch (Exception failure) { module.report("Advanced outside dismissal unavailable", failure); }
-        return false;
-    }
-
-    private void dismissAdvanced(Object activity) throws ReflectiveOperationException {
-        outsideDown=false;
-        flush();
-        unwatchOutside();
-        Reflect.call(Reflect.field(activity,"j"),"f",false);
+        if(outsideDismiss!=null) outsideDismiss.deactivate();
     }
 
     static void attach(LinearLayout root, Object controller, Object repo, DressroomModule module)
@@ -1934,6 +1866,7 @@ final class NativeClockPanel {
                                     }
                                 });
                         dialog.show();
+                        AdvancedPanelDismiss.protectCurrent(dialog);
                     } catch (Exception e) {
                         error(e);
                     }

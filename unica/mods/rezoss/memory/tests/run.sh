@@ -7,4 +7,8 @@ javac --release 8 -d "$MEMORY_TEST_BUILD" \
     "$MEMORY_TEST_SOURCE/java/io/mesalabs/rezoss/memory/GesturePolicy.java" \
     "$MEMORY_TEST_SOURCE/tests/GesturePolicyTest.java"
 java -cp "$MEMORY_TEST_BUILD" GesturePolicyTest
+javac --release 8 -d "$MEMORY_TEST_BUILD" \
+    "$MEMORY_TEST_SOURCE/sidekey/java/io/mesalabs/rezoss/memory/SideKeyPolicy.java" \
+    "$MEMORY_TEST_SOURCE/tests/SideKeyPolicyTest.java"
+java -cp "$MEMORY_TEST_BUILD" SideKeyPolicyTest
 python3 "$MEMORY_TEST_SOURCE/tests/test_package.py"

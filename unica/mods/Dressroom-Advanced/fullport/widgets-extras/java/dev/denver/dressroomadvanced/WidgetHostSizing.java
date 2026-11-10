@@ -200,6 +200,7 @@ final class WidgetHostSizing {
         else appliedZoom.put(host, zoom);
         if (!(host.getParent() instanceof ViewGroup container)
                 || !container.getClass().getName().equals(CONTAINER)) return;
+        Reflect.call(container, "setWidgetCellSpan", columns, rows);
         Object backgroundManager = Reflect.field(container, "widgetSizeManager");
         Reflect.call(
                 backgroundManager, "init", Reflect.call(backgroundManager, "getWidgetDisplayType"));

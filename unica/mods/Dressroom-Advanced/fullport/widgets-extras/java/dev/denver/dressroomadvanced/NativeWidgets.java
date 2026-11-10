@@ -32,6 +32,7 @@ public final class NativeWidgets {
         DressroomModule m=owner();if(m.editorWidgets!=null)try{m.editorWidgets.nativeRestore(store,model,profile);}catch(Exception e){m.report("Widget restore",e);}
     }
     public static void restoreModel(Object store,Object profile,Object model) {restore(store,model,profile);}
+    public static void previewEnd(Object manager,boolean committed){owner().widgetEngine.nativePreviewEnd(manager,committed);}
     public static void preview(Object manager,android.os.Bundle draft){owner().widgetEngine.nativePreview(manager,draft);}
     public static int columnOverride(Object manager){return owner().widgetEngine.nativeDimension(manager,-1,true);}
     public static int rowOverride(Object manager){return owner().widgetEngine.nativeDimension(manager,-1,false);}
@@ -76,4 +77,15 @@ public final class NativeWidgets {
     public static boolean rotateResult(boolean original){return owner().editorWidgets==null?original:owner().editorWidgets.nativeRotateAfter(original);}
     public static Object trimmed(Object policy){try{return owner().editorWidgets==null?null:owner().editorWidgets.nativeTrimmed(policy);}catch(Exception e){return null;}}
     public static int touch(android.app.Activity activity,android.view.MotionEvent event){try{if(owner().nativeAdvancedShown(activity))return -1;return owner().editorWidgets==null?-1:owner().editorWidgets.nativeTouch(activity,event);}catch(Exception e){owner().report("Widget drag",e);return -1;}}
+
+    public static boolean pickerTablet(Object device,Object mode){
+        boolean stock=false;
+        try{
+            stock=(Boolean)Reflect.call(device,"isTablet");
+            EditorWidgets editor=owner().editorWidgets;
+            if(editor==null||!editor.active()||editor.context()==null)return stock;
+            android.os.Bundle draft=editor.settings(editor.context());
+            return WidgetFormModel.tallPicker(stock,(Boolean)Reflect.call(mode,"isLockScreen"),draft.getBoolean("layout"),draft.getInt("rows",1));
+        }catch(Exception failure){owner().report("Tall widget picker eligibility",failure);return stock;}
+    }
 }

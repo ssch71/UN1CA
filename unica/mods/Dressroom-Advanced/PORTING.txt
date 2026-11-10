@@ -20,7 +20,9 @@ device installation or flash was performed by the agent. On November 10 the
 user reported normal boot and editor failures; fixes are documented in
 RUNTIME-REVIEW.txt. After rebuilding, the user reported preview-only depth
 and a stale widget boundary; the subsequent corrections are documented in
-DEPTH-GRID-FIXES.txt. The latest candidate still needs device testing.
+DEPTH-GRID-FIXES.txt. Current menu-dismissal and mixed provider-form changes
+are documented in MENU-AND-WIDGET-FORMS.txt. The latest candidate still needs
+device testing.
 Complete visual parity with the LSPosed module remains unverified.
 
 The initial port source is preserved outside the active mod at:

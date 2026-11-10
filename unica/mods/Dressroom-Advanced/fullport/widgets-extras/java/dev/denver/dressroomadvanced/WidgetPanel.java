@@ -28,6 +28,7 @@ final class WidgetPanel {
     private TextView status;
     private boolean extrasSelected;
     private int renderedScreen;
+    private AdvancedPanelDismiss outsideDismiss;
 
     interface Choice {
         void change(Bundle b, int value) throws Exception;
@@ -106,6 +107,13 @@ final class WidgetPanel {
                 null,
                 false,
                 null);
+        Object mediator=Reflect.field(ui,"a");
+        Object owner=Reflect.field(mediator,"b");
+        if(owner instanceof android.app.Activity activity) {
+            outsideDismiss=new AdvancedPanelDismiss(activity,content,tabs,() -> true,
+                    () -> Reflect.call(mediator,"f",false));
+            content.post(outsideDismiss::activate);
+        }
     }
 
     private Bundle draft() {
@@ -198,6 +206,8 @@ final class WidgetPanel {
                         "",
                         (next, value) -> next.putInt("rows", value),
                         true);
+                WidgetFormControls.add(context,editor,group);
+                note("For a mixed layout, use 5 × 2 or larger. Add Month Calendar and detailed Weather widgets to use their full layouts.");
                 note("Grid capacity: " + b.getInt("columns") + " × " + b.getInt("rows") + ".");
                 note("Drag an individual widget to an empty cell. Pinch a widget to resize it in whole cells. Increase the grid to make more room.");
             }

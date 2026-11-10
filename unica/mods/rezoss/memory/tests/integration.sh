@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
-[[ $# == 2 ]] || { echo "Usage: $0 ORIGINAL_LAUNCHER.apk VALIDATED_SIGNED_LAUNCHER.apk" >&2; exit 2; }
+[[ $# == 3 ]] || { echo "Usage: $0 ORIGINAL_LAUNCHER.apk VALIDATED_SIGNED_LAUNCHER.apk CLEAN_SERVICES_DECODE" >&2; exit 2; }
 MEMORY_TEST_ORIGINAL=$(realpath "$1")
 MEMORY_TEST_SIGNED=$(realpath "$2")
+MEMORY_TEST_SERVICES=$(realpath "$3")
 MEMORY_TEST_SOURCE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 SRC_DIR=$(cd -- "$MEMORY_TEST_SOURCE/../../../.." && pwd)
 source "$SRC_DIR/scripts/utils/common_utils.sh"
+source "$SRC_DIR/scripts/utils/module_utils.sh"
 TARGET_CODENAME=dm3q
 TARGET_OS_BUILD_SYSTEM_EXT_PARTITION=true
 MODPATH="$SRC_DIR/unica/mods/rezoss"
@@ -64,6 +66,13 @@ if source "$MEMORY_TEST_SOURCE/integrate.sh"; then
 fi
 [[ "$MEMORY_TEST_BUILDS" == 0 ]]
 APKTOOL_DIR="$MEMORY_TEST_TEMP/no-prior-decodes"
+# Seed the exact native policy in an isolated shared decode. APPLY_PATCH itself
+# remains real, and creates the helper classes from the checked-in patch.
+MEMORY_TEST_NATIVE='smali/com/android/server/input/KeyGestureController$LocalKeyGestureEventHandler.smali'
+while read -r MEMORY_TEST_HASH MEMORY_TEST_POLICY; do
+    mkdir -p "$APKTOOL_DIR/system/framework/services.jar/$(dirname "$MEMORY_TEST_POLICY")"
+    cp "$MEMORY_TEST_SERVICES/$MEMORY_TEST_POLICY" "$APKTOOL_DIR/system/framework/services.jar/$MEMORY_TEST_POLICY"
+done < "$MEMORY_TEST_SOURCE/sidekey/targets.sha256"
 for entry in system/priv-app system/priv-app/TouchWizHome_2017 system/etc system/etc/permissions; do
     SET_METADATA system "$entry" 0 0 755 u:object_r:system_file:s0
 done
@@ -72,6 +81,11 @@ touch "$WORK_DIR/system/system/priv-app/TouchWizHome_2017/oat/arm64/stale.odex" 
     "$WORK_DIR/system/system/priv-app/TouchWizHome_2017/TouchWizHome_2017.apk.prof"
 source "$MEMORY_TEST_SOURCE/integrate.sh"
 [[ "$MEMORY_TEST_BUILDS" == 1 ]]
+grep -q 'MemorySideKey;->handle' "$APKTOOL_DIR/system/framework/services.jar/$MEMORY_TEST_NATIVE"
+[[ -s "$APKTOOL_DIR/system/framework/services.jar/smali_classes2/io/mesalabs/rezoss/memory/MemorySideKey.smali" ]]
+if python3 "$MEMORY_TEST_SOURCE/sidekey/check-target.py" "$APKTOOL_DIR/system/framework/services.jar"; then
+    echo "FAIL: previously modified native policy accepted" >&2; exit 1
+fi
 cmp "$MEMORY_TEST_SIGNED" "$WORK_DIR/system/system/priv-app/TouchWizHome_2017/TouchWizHome_2017.apk"
 [[ ! -e "$WORK_DIR/system/system/priv-app/TouchWizHome_2017/oat" ]]
 [[ ! -e "$WORK_DIR/system/system/priv-app/TouchWizHome_2017/TouchWizHome_2017.apk.prof" ]]
