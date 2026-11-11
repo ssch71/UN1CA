@@ -14,9 +14,10 @@ on post-fs-data
     mkdir /data/misc/unica_gpu/requests 0770 system system
     mkdir /data/misc/unica_gpu/responses 0750 root system
     mkdir /data/misc/unica_gpu/archives 0750 root root
-    restorecon_recursive /data/misc/unica_gpu
+    # Existing data may have inherited generic labels despite a cached sehash.
+    restorecon_recursive --force /data/misc/unica_gpu
     mkdir /cache/unica-gpu 0750 root system
-    restorecon_recursive /cache/unica-gpu
+    restorecon_recursive --force /cache/unica-gpu
     restorecon /dev/block/sda28
     restorecon /dev/block/sde20
 

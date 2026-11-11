@@ -16,6 +16,29 @@ import java.util.concurrent.*;
 
 /** User-reviewed diagnostics. AI output is plain text and never becomes an action request. */
 public final class TroubleshootingActivity extends Activity {
+    // Match the UN1CA Settings toolbar, typography and inset cards.
+    private TextView styleText(String value,int size,boolean detail) { return label(value,size,detail); }
+    private LinearLayout settingsRoot(String title) {
+        if(getActionBar()!=null)getActionBar().hide();
+        getWindow().setDecorFitsSystemWindows(false);
+        LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
+        root.setOnApplyWindowInsetsListener((v,insets)->{
+            android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());
+            v.setPadding(bars.left,bars.top,bars.right,bars.bottom);return insets;
+        });
+        LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setPaddingRelative(dp(8),dp(4),dp(24),dp(4));bar.setMinimumHeight(dp(56));
+        TextView back=styleText(getResources().getConfiguration().getLayoutDirection()==View.LAYOUT_DIRECTION_RTL?"›":"‹",36,false);
+        back.setGravity(Gravity.CENTER);back.setContentDescription("Navigate up");back.setFocusable(true);
+        android.util.TypedValue ripple=new android.util.TypedValue();
+        if(getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless,ripple,true)&&ripple.resourceId!=0)back.setBackgroundResource(ripple.resourceId);
+        back.setOnClickListener(v->onBackPressed());bar.addView(back,new LinearLayout.LayoutParams(dp(48),dp(48)));
+        TextView toolbarTitle=styleText(title,22,false);toolbarTitle.setTypeface(android.graphics.Typeface.create("sans-serif-medium",0));
+        toolbarTitle.setAccessibilityHeading(true);
+        bar.addView(toolbarTitle,new LinearLayout.LayoutParams(0,-2,1));root.addView(bar,new LinearLayout.LayoutParams(-1,-2));
+        return root;
+    }
+
     private final android.window.OnBackInvokedCallback back=()->finish();
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private final ArrayList<View> cards=new ArrayList<>();
@@ -49,7 +72,7 @@ public final class TroubleshootingActivity extends Activity {
     private int themed(int attr,int fallback){android.util.TypedValue value=new android.util.TypedValue();if(!getTheme().resolveAttribute(attr,value,true))return fallback;return value.resourceId!=0?getColor(value.resourceId):value.data;}
     private int color(String name,int fallback){int id=getResources().getIdentifier(name,"color",getPackageName());return id==0?fallback:getColor(id);}
     private TextView label(String value,int size,boolean secondary){TextView t=new TextView(this);t.setText(value);t.setTextSize(size);t.setTextColor(themed(secondary?android.R.attr.textColorSecondary:android.R.attr.textColorPrimary,secondary?(dark()?0xffbfc1c7:0xff62656b):(dark()?0xfff4f4f6:0xff17181b)));return t;}
-    private void card(String title){page=new LinearLayout(this);page.setOrientation(1);page.setClipToOutline(true);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(24);content.addView(page,lp);cards.add(page);text(title,22).setTypeface(Typeface.create("sans-serif-medium",0));}
+    private void card(String title){page=new LinearLayout(this);page.setOrientation(1);page.setClipToOutline(true);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(20);content.addView(page,lp);cards.add(page);TextView heading=text(title,20);heading.setTypeface(Typeface.create("sans-serif-medium",0));heading.setAccessibilityHeading(true);}
     private TextView text(String value,int size){TextView t=label(value,size,size<20);t.setPaddingRelative(dp(24),dp(10),dp(24),dp(14));t.setTextIsSelectable(true);page.addView(t);return t;}
     private CharSequence highlightDuplicate(String summary){
         String prefix="Same purpose as UN1CA’s ";int start=summary.indexOf(prefix);
@@ -78,7 +101,7 @@ public final class TroubleshootingActivity extends Activity {
         if(transparent)getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER);else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER);
         getWindow().setFormat(transparent?android.graphics.PixelFormat.TRANSLUCENT:android.graphics.PixelFormat.OPAQUE);
         getWindow().setBackgroundDrawable(new ColorDrawable(transparent?0:color("sesl_round_and_bgcolor_"+(dark()?"dark":"light"),dark()?0xff000000:0xfff2f2f2)));
-        for(View v:cards){GradientDrawable shape=new GradientDrawable();int surface=color("sesl_background_color_"+(dark()?"dark":"light"),dark()?0xff17171a:0xffffffff);if(transparent)surface=(surface&0xffffff)|((255-level*255/100)<<24);shape.setColor(surface);shape.setCornerRadius(dp(30));v.setBackground(shape);}
+        for(View v:cards){GradientDrawable shape=new GradientDrawable();int surface=color("sesl_background_color_"+(dark()?"dark":"light"),dark()?0xff17171a:0xffffffff);if(transparent)surface=(surface&0xffffff)|((255-level*255/100)<<24);shape.setColor(surface);shape.setCornerRadius(dp(28));v.setBackground(shape);}
     }
     private boolean hasConfirmedApps(){for(int i=0;i<apps.length();i++)if(apps.optJSONObject(i).optBoolean("confirmed"))return true;return false;}
     private boolean duplicate(JSONObject m){JSONArray items=m.optJSONArray("duplicates");return items!=null&&items.length()>0;}
@@ -87,10 +110,10 @@ public final class TroubleshootingActivity extends Activity {
         if(getPreferences(0).getBoolean("restart",false)&&getPreferences(0).getInt("restart_boot",-1)!=android.provider.Settings.Global.getInt(getContentResolver(),"boot_count",-1))getPreferences(0).edit().putBoolean("restart",false).apply();
         final int scrollY=rootScroll==null?0:rootScroll.getScrollY();
         controls.clear();cards.clear();
-        if(rootScroll==null){rootScroll=new ScrollView(this);content=new LinearLayout(this);content.setOrientation(1);content.setPadding(dp(16),dp(20),dp(16),dp(24));rootScroll.addView(content);setContentView(rootScroll);}
+        if(rootScroll==null){LinearLayout root=settingsRoot("Troubleshooting");rootScroll=new ScrollView(this);rootScroll.setFillViewport(true);rootScroll.setClipToPadding(false);content=new LinearLayout(this);content.setOrientation(1);content.setPadding(dp(12),dp(12),dp(12),dp(24));rootScroll.addView(content);root.addView(rootScroll,new LinearLayout.LayoutParams(-1,0,1));setContentView(root);}
         else content.removeAllViews();
         ScrollView scroll=rootScroll;
-        scroll.setOnApplyWindowInsetsListener((v,insets)->{android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars());v.setPadding(bars.left,bars.top,bars.right,bars.bottom);return insets;});
+
         int suspects=0;for(int i=0;i<modules.length();i++){JSONObject m=modules.optJSONObject(i);if(!m.optBoolean("disabled")&&!m.optBoolean("removed")&&finding(m))suspects++;}
         for(int i=0;i<apps.length();i++)if(apps.optJSONObject(i).optBoolean("confirmed")||apps.optJSONObject(i).optBoolean("duplicate"))suspects++;
         card("Status");TextView heading=text(suspects>0?"Review recommended":!warning.isEmpty()?"Scan incomplete":scanned?"No known conflict detected":"Not scanned",22);heading.setTypeface(null,Typeface.BOLD);if(suspects>0)heading.setTextColor(dark()?0xffffcc80:0xff895100);

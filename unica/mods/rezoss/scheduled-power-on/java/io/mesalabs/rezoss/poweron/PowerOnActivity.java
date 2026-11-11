@@ -18,6 +18,29 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class PowerOnActivity extends Activity {
+    // Match the UN1CA Settings toolbar, typography and inset cards.
+    private TextView styleText(String value,int size,boolean detail) { return text(value,size,detail?secondary:primary); }
+    private LinearLayout settingsRoot(String title) {
+        if(getActionBar()!=null)getActionBar().hide();
+        getWindow().setDecorFitsSystemWindows(false);
+        LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
+        root.setOnApplyWindowInsetsListener((v,insets)->{
+            android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());
+            v.setPadding(bars.left,bars.top,bars.right,bars.bottom);return insets;
+        });
+        LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setPaddingRelative(dp(8),dp(4),dp(24),dp(4));bar.setMinimumHeight(dp(56));
+        TextView back=styleText(getResources().getConfiguration().getLayoutDirection()==View.LAYOUT_DIRECTION_RTL?"›":"‹",36,false);
+        back.setGravity(Gravity.CENTER);back.setContentDescription("Navigate up");back.setFocusable(true);
+        android.util.TypedValue ripple=new android.util.TypedValue();
+        if(getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless,ripple,true)&&ripple.resourceId!=0)back.setBackgroundResource(ripple.resourceId);
+        back.setOnClickListener(v->onBackPressed());bar.addView(back,new LinearLayout.LayoutParams(dp(48),dp(48)));
+        TextView toolbarTitle=styleText(title,22,false);toolbarTitle.setTypeface(android.graphics.Typeface.create("sans-serif-medium",0));
+        toolbarTitle.setAccessibilityHeading(true);
+        bar.addView(toolbarTitle,new LinearLayout.LayoutParams(0,-2,1));root.addView(bar,new LinearLayout.LayoutParams(-1,-2));
+        return root;
+    }
+
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private LinearLayout content;
     private AlertDialog timeDialog;
@@ -68,12 +91,13 @@ public final class PowerOnActivity extends Activity {
         GradientDrawable out=new GradientDrawable();out.setColor(color);out.setCornerRadius(dp(radius));return out;
     }
     private TextView text(String label,int size,int color) {
-        TextView view=new TextView(this);view.setText(label);view.setTextSize(size);view.setTextColor(color);return view;
+        TextView view=new TextView(this);view.setText(label);view.setTextSize(size);view.setTextColor(color);view.setTextDirection(View.TEXT_DIRECTION_LOCALE);return view;
     }
     private void colors() {
         boolean dark=(getResources().getConfiguration().uiMode&0x30)==0x20;
         primary=dark?0xfff4f4f6:0xff161619; secondary=dark?0xffc0c1c7:0xff62636a;
-        accent=dark?0xffacc9ff:0xff365da8;
+        android.content.res.TypedArray palette=obtainStyledAttributes(new int[]{android.R.attr.textColorPrimary,android.R.attr.textColorSecondary,android.R.attr.colorAccent});
+        primary=palette.getColor(0,primary);secondary=palette.getColor(1,secondary);accent=palette.getColor(2,primary);palette.recycle();
         surface=settingsColor("sesl_background_color_"+(dark?"dark":"light"),dark?0xff202125:Color.WHITE);
         int background=settingsColor("sesl_round_and_bgcolor_"+(dark?"dark":"light"),dark?Color.BLACK:0xfff2f2f5);
         boolean transparent=Settings.System.getInt(getContentResolver(),"unica_settings_bg_transparency_enabled",0)!=0;
@@ -88,28 +112,33 @@ public final class PowerOnActivity extends Activity {
     }
     private LinearLayout card() {
         LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(20),dp(6),dp(20),dp(6));card.setBackground(shape(surface,28));
-        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);params.bottomMargin=dp(18);
+        card.setPadding(dp(24),dp(6),dp(24),dp(6));card.setBackground(shape(surface,28));card.setClipToOutline(true);
+        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);params.bottomMargin=dp(20);
         content.addView(card,params);return card;
     }
     private void divider(LinearLayout parent) {
         View line=new View(this);line.setBackgroundColor((secondary&0xffffff)|0x22000000);
         parent.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
     }
+    private void feedback(View view) {
+        android.util.TypedValue value=new android.util.TypedValue();
+        if(getTheme().resolveAttribute(android.R.attr.selectableItemBackground,value,true)&&value.resourceId!=0)view.setForeground(getDrawable(value.resourceId));
+        view.setFocusable(true);
+    }
     private void row(LinearLayout parent,String label,String summary,Runnable action) {
         LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.VERTICAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(0,dp(17),0,dp(17));row.setMinimumHeight(dp(76));
+        row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(0,dp(17),0,dp(17));row.setMinimumHeight(dp(80));
         TextView title=text(label,20,primary);row.addView(title);
         if(summary!=null&&!summary.isEmpty()) {
             TextView detail=text(summary,14,secondary);detail.setPadding(0,dp(5),0,0);row.addView(detail);
         }
-        if(action!=null) { row.setEnabled(!busy); row.setAlpha(busy?0.5f:1f);row.setOnClickListener(v->{if(!busy)action.run();}); }
+        if(action!=null) { feedback(row);row.setEnabled(!busy); row.setAlpha(busy?0.5f:1f);row.setOnClickListener(v->{if(!busy)action.run();}); }
         parent.addView(row,new LinearLayout.LayoutParams(-1,-2));
     }
     private void action(String label,Runnable action) {
         TextView button=text(label,17,accent);button.setTypeface(null,Typeface.BOLD);button.setGravity(Gravity.CENTER);
         button.setPadding(dp(12),dp(14),dp(12),dp(14));button.setMinimumHeight(dp(52));
-        button.setBackground(shape(surface,26));button.setEnabled(!busy);button.setAlpha(busy?0.5f:1f);
+        button.setBackground(shape(surface,28));feedback(button);button.setEnabled(!busy);button.setAlpha(busy?0.5f:1f);
         button.setOnClickListener(v->{if(!busy)action.run();});
         LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);params.bottomMargin=dp(12);content.addView(button,params);
     }
@@ -118,22 +147,14 @@ public final class PowerOnActivity extends Activity {
     }
     private void draw() {
         if(isDestroyed()) return;
-        colors();ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
+        colors();LinearLayout root=settingsRoot("Power Schedule");ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(12),dp(10),dp(12),dp(28));scroll.addView(content);
-        scroll.setOnApplyWindowInsetsListener((v,insets)->{
-            android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars());
-            v.setPadding(bars.left,bars.top,bars.right,bars.bottom);return insets;
-        });
-        TextView back=text("‹",38,primary);back.setGravity(Gravity.CENTER);back.setContentDescription("Back");
-        back.setBackground(shape(surface,25));back.setOnClickListener(v->onBackPressed());
-        LinearLayout.LayoutParams backParams=new LinearLayout.LayoutParams(dp(48),dp(48));backParams.leftMargin=dp(8);content.addView(back,backParams);
-        TextView heading=text("Power schedule",32,primary);heading.setTypeface(null,Typeface.BOLD);
-        heading.setPadding(dp(18),dp(24),dp(18),dp(8));content.addView(heading);
+        content.setPadding(dp(12),dp(12),dp(12),dp(24));scroll.addView(content);
+
         TextView intro=text("Choose when your phone turns off and starts again.",15,secondary);
         intro.setPadding(dp(18),0,dp(18),dp(24));content.addView(intro);
         if (!Build.DEVICE.startsWith("dm3q")) {
-            row(card(),"Not available","Power scheduling is supported on S23 Ultra (dm3q).",null);setContentView(scroll);return;
+            row(card(),"Not available","Power scheduling is supported on S23 Ultra (dm3q).",null);setContentView(root);return;
         }
         LinearLayout mode=card();LinearLayout toggleRow=new LinearLayout(this);toggleRow.setGravity(Gravity.CENTER_VERTICAL);
         toggleRow.setPadding(0,dp(17),0,dp(17));
@@ -173,7 +194,7 @@ public final class PowerOnActivity extends Activity {
         if(state.on>0 || state.uncertain) action("Cancel entire schedule",()->confirmCancel(true));
         TextView footer=text("Your PIN is required after startup. Keep enough battery charge for the scheduled power on.",14,secondary);
         footer.setPadding(dp(18),dp(12),dp(18),dp(18));content.addView(footer);
-        setContentView(scroll);
+        setContentView(root);
     }
     private void pick(boolean powerOn) {
         long now=System.currentTimeMillis()/1000;
