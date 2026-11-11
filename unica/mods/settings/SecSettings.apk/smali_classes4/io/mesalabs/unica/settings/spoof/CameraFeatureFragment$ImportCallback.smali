@@ -60,6 +60,10 @@
 
     const-string p1, "Camera feature XML imported. Open Samsung Camera to load it."
 
+    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object p1
+
     invoke-virtual {p0, p1}, Lio/mesalabs/unica/settings/spoof/CameraFeatureFragment;->showToast(Ljava/lang/String;)V
 
     invoke-virtual {p0}, Lio/mesalabs/unica/settings/spoof/CameraFeatureFragment;->rebuildFeaturePreferences()V
@@ -68,6 +72,10 @@
 
     :cond_0
     const-string p1, "Could not import camera-feature.xml."
+
+    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object p1
 
     invoke-virtual {p0, p1}, Lio/mesalabs/unica/settings/spoof/CameraFeatureFragment;->showToast(Ljava/lang/String;)V
 

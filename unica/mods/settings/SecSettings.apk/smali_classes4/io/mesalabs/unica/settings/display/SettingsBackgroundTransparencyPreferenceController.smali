@@ -86,6 +86,10 @@
     :cond_0
     const-string p0, "Min starts at 70% transparency. Middle is 85%. Max makes it fully transparent."
 
+    invoke-static/range {p0 .. p0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object p0
+
     return-object p0
 .end method
 

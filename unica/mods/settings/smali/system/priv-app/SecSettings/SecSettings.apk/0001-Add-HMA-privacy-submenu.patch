@@ -4,7 +4,7 @@ Subject: [PATCH] Replace developer-status picker with the unified HMA privacy su
 diff --git a/smali_classes4/io/mesalabs/unica/settings/spoof/HideDeveloperStatusFragment$1.smali b/smali_classes4/io/mesalabs/unica/settings/spoof/HideDeveloperStatusFragment$1.smali
 --- a/smali_classes4/io/mesalabs/unica/settings/spoof/HideDeveloperStatusFragment$1.smali
 +++ b/smali_classes4/io/mesalabs/unica/settings/spoof/HideDeveloperStatusFragment$1.smali
-@@ -1,95 +1,72 @@
+@@ -1,95 +1,76 @@
 -.class public final Lio/mesalabs/unica/settings/spoof/HideDeveloperStatusFragment$1;
 +.class Lio/mesalabs/unica/settings/spoof/HideDeveloperStatusFragment$1;
  .super Ljava/lang/Object;
@@ -80,6 +80,10 @@ diff --git a/smali_classes4/io/mesalabs/unica/settings/spoof/HideDeveloperStatus
 +    const-string/jumbo v1, "gids"
 +
 +    const-string/jumbo v2, "Permissions to remove"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    # invokes: Lio/mesalabs/unica/settings/spoof/HideDeveloperStatusFragment;->choices(Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;Ljava/util/Set;)V
 +    invoke-static/range {v0 .. v5}, Lio/mesalabs/unica/settings/spoof/HideDeveloperStatusFragment;->access$200(Lio/mesalabs/unica/settings/spoof/HideDeveloperStatusFragment;Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;Ljava/util/Set;)V
@@ -2459,7 +2463,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/settings/spoof/HideDeveloperStatus
 diff --git a/smali_classes4/io/mesalabs/unica/settings/spoof/HideDeveloperStatusFragment$9$2.smali b/smali_classes4/io/mesalabs/unica/settings/spoof/HideDeveloperStatusFragment$9$2.smali
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/settings/spoof/HideDeveloperStatusFragment$9$2.smali
-@@ -0,0 +1,172 @@
+@@ -0,0 +1,188 @@
 +.class Lio/mesalabs/unica/settings/spoof/HideDeveloperStatusFragment$9$2;
 +.super Ljava/lang/Object;
 +.source "HideDeveloperStatusFragment.java"
@@ -2571,6 +2575,10 @@ diff --git a/smali_classes4/io/mesalabs/unica/settings/spoof/HideDeveloperStatus
 +
 +    const-string/jumbo v0, "App to hide"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    :goto_20
 +    move-object v3, v0
 +
@@ -2591,6 +2599,10 @@ diff --git a/smali_classes4/io/mesalabs/unica/settings/spoof/HideDeveloperStatus
 +
 +    const-string/jumbo v0, "Prevent Play Store update"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    goto :goto_20
 +
 +    :cond_31
@@ -2608,10 +2620,18 @@ diff --git a/smali_classes4/io/mesalabs/unica/settings/spoof/HideDeveloperStatus
 +
 +    const-string/jumbo v0, "Invert activity protection for"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    goto :goto_20
 +
 +    :cond_40
 +    const-string/jumbo v0, "App to spoof"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    goto :goto_20
 +
@@ -3148,7 +3168,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/settings/spoof/HideDeveloperStatus
 
      invoke-static {v1, v2}, Lio/mesalabs/unica/utils/Utils;->getResourceId(Ljava/lang/String;Ljava/lang/String;)I
 
-@@ -42,313 +65,4312 @@
+@@ -42,313 +65,4320 @@
 
      sput-object v0, Lio/mesalabs/unica/settings/spoof/HideDeveloperStatusFragment;->SEARCH_INDEX_DATA_PROVIDER:Lcom/android/settings/search/BaseSearchIndexProvider;
 
@@ -7372,6 +7392,10 @@ diff --git a/smali_classes4/io/mesalabs/unica/settings/spoof/HideDeveloperStatus
 +
 +    const-string/jumbo v4, "Application presets"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    move-object v2, p0
 +
 +    invoke-direct/range {v2 .. v7}, Lio/mesalabs/unica/settings/spoof/HideDeveloperStatusFragment;->choices(Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;Ljava/util/Set;)V
@@ -7395,6 +7419,10 @@ diff --git a/smali_classes4/io/mesalabs/unica/settings/spoof/HideDeveloperStatus
 +    const/4 v7, 0x0
 +
 +    const-string/jumbo v4, "Settings presets"
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    move-object v2, p0
 +

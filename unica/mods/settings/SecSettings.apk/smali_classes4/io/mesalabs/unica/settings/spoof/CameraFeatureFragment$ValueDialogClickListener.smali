@@ -66,6 +66,10 @@
 
     const-string p0, "Camera feature saved. Samsung Camera was reloaded."
 
+    invoke-static/range {p0 .. p0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object p0
+
     invoke-virtual {p2, p0}, Lio/mesalabs/unica/settings/spoof/CameraFeatureFragment;->showToast(Ljava/lang/String;)V
 
     invoke-virtual {p2}, Lio/mesalabs/unica/settings/spoof/CameraFeatureFragment;->rebuildFeaturePreferences()V
@@ -74,6 +78,10 @@
 
     :cond_0
     const-string p0, "Could not save camera feature value."
+
+    invoke-static/range {p0 .. p0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object p0
 
     invoke-virtual {p2, p0}, Lio/mesalabs/unica/settings/spoof/CameraFeatureFragment;->showToast(Ljava/lang/String;)V
 

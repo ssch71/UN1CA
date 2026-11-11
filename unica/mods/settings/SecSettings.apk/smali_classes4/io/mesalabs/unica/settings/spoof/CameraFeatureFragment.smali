@@ -441,6 +441,10 @@
 
     const-string p1, "Camera feature override reset."
 
+    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object p1
+
     invoke-virtual {p0, p1}, Lio/mesalabs/unica/settings/spoof/CameraFeatureFragment;->showToast(Ljava/lang/String;)V
 
     invoke-virtual {p0}, Lio/mesalabs/unica/settings/spoof/CameraFeatureFragment;->rebuildFeaturePreferences()V
@@ -449,6 +453,10 @@
 
     :cond_4
     const-string p1, "Could not reset camera feature override."
+
+    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object p1
 
     invoke-virtual {p0, p1}, Lio/mesalabs/unica/settings/spoof/CameraFeatureFragment;->showToast(Ljava/lang/String;)V
 
@@ -582,6 +590,10 @@
 
     const-string v2, "Filter by feature name, attribute, or value."
 
+    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v2
+
     goto :goto_search_summary
 
     :cond_search_summary_filtering
@@ -590,6 +602,10 @@
     invoke-direct {v3}, Ljava/lang/StringBuilder;-><init>()V
 
     const-string v5, "Filtering: "
+
+    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v5
 
     invoke-virtual {v3, v5}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 
@@ -680,6 +696,10 @@
     invoke-virtual {v7, v6}, Landroidx/preference/Preference;->setTitle(Ljava/lang/CharSequence;)V
 
     const-string v8, "Open local name values"
+
+    invoke-static/range {v8 .. v8}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v8
 
     invoke-virtual {v7, v8}, Landroidx/preference/Preference;->setSummary(Ljava/lang/CharSequence;)V
 
@@ -908,6 +928,10 @@
     invoke-direct {v2, v0}, Landroid/app/AlertDialog$Builder;-><init>(Landroid/content/Context;)V
 
     const-string v0, "Search camera features"
+
+    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v0
 
     invoke-virtual {v2, v0}, Landroid/app/AlertDialog$Builder;->setTitle(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;
 

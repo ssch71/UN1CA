@@ -1084,7 +1084,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/quicktiles/ConfigActivity.smali b/
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/quicktiles/ConfigActivity.smali
-@@ -0,0 +1,2958 @@
+@@ -0,0 +1,3006 @@
 +.class public final Lio/mesalabs/unica/quicktiles/ConfigActivity;
 +.super Landroid/app/Activity;
 +.source "ConfigActivity.java"
@@ -1291,6 +1291,10 @@ new file mode 100644
 +    if-eqz v0, :cond_51
 +
 +    const-string p1, "This app has no available shortcuts. You can assign Open app instead."
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1}, Lio/mesalabs/unica/quicktiles/ConfigActivity;->message(Ljava/lang/String;)V
 +
@@ -2162,6 +2166,10 @@ new file mode 100644
 +
 +    const-string v0, "Choose an app shortcut first"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p1, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -2205,6 +2213,10 @@ new file mode 100644
 +    new-instance p1, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v0, "No installed app supports this action"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p1, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -2379,6 +2391,10 @@ new file mode 100644
 +
 +    const-string v0, "Choose an app first"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p1, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -2389,6 +2405,10 @@ new file mode 100644
 +
 +    const-string v0, "Keep the label under 61 characters"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p1, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -2398,6 +2418,10 @@ new file mode 100644
 +    new-instance p1, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v0, "Enter a tile label"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p1, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -2529,6 +2553,10 @@ new file mode 100644
 +
 +    const-string v1, "Tap to cycle Off \u2192 Auto \u2192 saved provider. The provider must support Private DNS."
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    goto :goto_64
 +
 +    .line 111
@@ -2544,6 +2572,10 @@ new file mode 100644
 +    if-eqz v1, :cond_3e
 +
 +    const-string v1, "Restarts the status bar and Quick Settings. The screen may briefly go blank."
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    goto :goto_64
 +
@@ -2561,6 +2593,10 @@ new file mode 100644
 +
 +    const-string v1, "Requires Developer options and Wi-Fi. Pair your computer in Wireless debugging settings first."
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    goto :goto_64
 +
 +    .line 113
@@ -2577,6 +2613,10 @@ new file mode 100644
 +
 +    const-string v1, "Requires Developer options. Turning this off disconnects USB debugging."
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    goto :goto_64
 +
 +    .line 114
@@ -2590,6 +2630,10 @@ new file mode 100644
 +    if-eqz v1, :cond_63
 +
 +    const-string v1, "Choose a shortcut published by an installed app. Available shortcuts can change when the app is updated."
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    goto :goto_64
 +
@@ -2699,6 +2743,10 @@ new file mode 100644
 +    if-eqz v1, :cond_bd
 +
 +    const-string v1, "Choose app"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    goto :goto_ee
 +
@@ -4495,7 +4543,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/quicktiles/QuickTile.smali b/smali
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/quicktiles/QuickTile.smali
-@@ -0,0 +1,1189 @@
+@@ -0,0 +1,1221 @@
 +.class public abstract Lio/mesalabs/unica/quicktiles/QuickTile;
 +.super Landroid/service/quicksettings/TileService;
 +.source "QuickTile.java"
@@ -4811,6 +4859,10 @@ new file mode 100644
 +
 +    const-string v2, "Unexpected SystemUI UID; restart cancelled"
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    invoke-direct {v1, v2}, Ljava/lang/IllegalStateException;-><init>(Ljava/lang/String;)V
 +
 +    throw v1
@@ -4872,6 +4924,10 @@ new file mode 100644
 +    new-instance v1, Ljava/lang/IllegalStateException;
 +
 +    const-string v2, "Enable Developer options first"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    invoke-direct {v1, v2}, Ljava/lang/IllegalStateException;-><init>(Ljava/lang/String;)V
 +
@@ -4947,6 +5003,10 @@ new file mode 100644
 +
 +    const-string v2, "Connect to Wi-Fi first"
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    invoke-direct {v1, v2}, Ljava/lang/IllegalStateException;-><init>(Ljava/lang/String;)V
 +
 +    throw v1
@@ -4974,6 +5034,10 @@ new file mode 100644
 +    new-instance v1, Ljava/lang/IllegalStateException;
 +
 +    const-string v2, "Debugging is restricted by your administrator"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    invoke-direct {v1, v2}, Ljava/lang/IllegalStateException;-><init>(Ljava/lang/String;)V
 +
@@ -5069,6 +5133,10 @@ new file mode 100644
 +    new-instance v1, Ljava/lang/IllegalStateException;
 +
 +    const-string v2, "Private DNS is restricted by your administrator"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    invoke-direct {v1, v2}, Ljava/lang/IllegalStateException;-><init>(Ljava/lang/String;)V
 +
@@ -5210,6 +5278,10 @@ new file mode 100644
 +
 +    const-string p2, "The system did not accept the change"
 +
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
++
 +    invoke-direct {p1, p2}, Ljava/lang/IllegalStateException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -5290,6 +5362,10 @@ new file mode 100644
 +
 +    const-string v3, "On \u00b7 Custom provider"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    goto :goto_3b
 +
 +    :cond_39
@@ -5346,6 +5422,10 @@ new file mode 100644
 +    if-eqz v1, :cond_81
 +
 +    const-string v2, "Tap to configure"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    goto :goto_81
 +
@@ -5857,7 +5937,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/quicktiles/TileConfig.smali b/smal
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/quicktiles/TileConfig.smali
-@@ -0,0 +1,1052 @@
+@@ -0,0 +1,1116 @@
 +.class public final Lio/mesalabs/unica/quicktiles/TileConfig;
 +.super Ljava/lang/Object;
 +.source "TileConfig.java"
@@ -5913,6 +5993,10 @@ new file mode 100644
 +    .line 15
 +    const-string v7, "App shortcut"
 +
++    invoke-static/range {v7 .. v7}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v7
++
 +    const-string v8, "Predefined action"
 +
 +    invoke-static/range {v8 .. v8}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
@@ -5927,13 +6011,29 @@ new file mode 100644
 +
 +    const-string v2, "Private DNS"
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    const-string v3, "Restart SystemUI"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const-string v4, "Wireless debugging"
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    const-string v5, "USB debugging"
 +
 +    const-string v6, "Open app"
++
++    invoke-static/range {v6 .. v6}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v6
 +
 +    filled-new-array/range {v1 .. v8}, [Ljava/lang/String;
 +
@@ -5943,6 +6043,10 @@ new file mode 100644
 +
 +    .line 16
 +    const-string v7, "Bluetooth settings"
++
++    invoke-static/range {v7 .. v7}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v7
 +
 +    const-string v8, "Wireless debugging settings"
 +
@@ -5958,13 +6062,33 @@ new file mode 100644
 +
 +    const-string v2, "Record video"
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    const-string v3, "Dial a number"
++
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
 +
 +    const-string v4, "New message"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    const-string v5, "Set alarm"
 +
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
++
 +    const-string v6, "Wi-Fi settings"
++
++    invoke-static/range {v6 .. v6}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v6
 +
 +    filled-new-array/range {v1 .. v8}, [Ljava/lang/String;
 +
@@ -6267,6 +6391,10 @@ new file mode 100644
 +
 +    const-string v0, "Invalid DNS provider hostname"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -6280,6 +6408,10 @@ new file mode 100644
 +    new-instance p0, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v0, "Enter a DNS provider hostname, such as dns.google"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p0, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -6609,6 +6741,10 @@ new file mode 100644
 +
 +    const-string p1, "This action is not available"
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    invoke-direct {p0, p1}, Ljava/lang/IllegalStateException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -6618,6 +6754,10 @@ new file mode 100644
 +    new-instance p0, Ljava/lang/IllegalStateException;
 +
 +    const-string p1, "This app is no longer available"
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1}, Ljava/lang/IllegalStateException;-><init>(Ljava/lang/String;)V
 +
@@ -6726,6 +6866,10 @@ new file mode 100644
 +    new-instance p0, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v0, "Unknown predefined action"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p0, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +

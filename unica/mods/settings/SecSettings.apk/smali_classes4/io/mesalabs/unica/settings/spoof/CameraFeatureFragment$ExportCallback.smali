@@ -67,6 +67,10 @@
     :cond_0
     const-string p1, "Could not export camera-feature.xml."
 
+    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object p1
+
     invoke-virtual {p0, p1}, Lio/mesalabs/unica/settings/spoof/CameraFeatureFragment;->showToast(Ljava/lang/String;)V
 
     :goto_0

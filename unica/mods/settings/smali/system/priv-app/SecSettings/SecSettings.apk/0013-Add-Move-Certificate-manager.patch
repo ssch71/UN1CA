@@ -951,7 +951,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/movecertificate/Certificates.smali
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/movecertificate/Certificates.smali
-@@ -0,0 +1,833 @@
+@@ -0,0 +1,869 @@
 +.class public final Lio/mesalabs/unica/movecertificate/Certificates;
 +.super Ljava/lang/Object;
 +.source "Certificates.java"
@@ -1057,6 +1057,10 @@ new file mode 100644
 +
 +    const-string p1, "Cannot save certificate configuration"
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -1066,6 +1070,10 @@ new file mode 100644
 +    new-instance p0, Ljava/io/IOException;
 +
 +    const-string p1, "Cannot set certificate permissions"
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -1343,6 +1351,10 @@ new file mode 100644
 +
 +    const-string p1, "Certificate is already imported"
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -1457,6 +1469,10 @@ new file mode 100644
 +    new-instance p0, Ljava/io/IOException;
 +
 +    const-string p1, "Maximum of 64 imported CAs reached"
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -1616,6 +1632,10 @@ new file mode 100644
 +
 +    const-string v0, "Keep the AdGuard Intermediate CA in the Android user store; import the Personal CA here"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Ljava/security/cert/CertificateException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -1631,6 +1651,10 @@ new file mode 100644
 +
 +    const-string v0, "This is not a CA certificate"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Ljava/security/cert/CertificateException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -1640,6 +1664,10 @@ new file mode 100644
 +    new-instance p0, Ljava/security/cert/CertificateException;
 +
 +    const-string v0, "Select a single CA certificate"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p0, v0}, Ljava/security/cert/CertificateException;-><init>(Ljava/lang/String;)V
 +
@@ -1763,6 +1791,10 @@ new file mode 100644
 +
 +    const-string v0, "Certificate exceeds 64 KiB"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -1780,6 +1812,10 @@ new file mode 100644
 +    new-instance p0, Ljava/io/IOException;
 +
 +    const-string v0, "Cannot open certificate"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p0, v0}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +

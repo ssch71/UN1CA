@@ -336,7 +336,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/troubleshooting/AiClient.smali b/s
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/troubleshooting/AiClient.smali
-@@ -0,0 +1,715 @@
+@@ -0,0 +1,731 @@
 +.class final Lio/mesalabs/unica/troubleshooting/AiClient;
 +.super Ljava/lang/Object;
 +.source "AiClient.java"
@@ -602,6 +602,10 @@ new file mode 100644
 +
 +    const-string p2, "No analysis returned"
 +
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
++
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -692,6 +696,10 @@ new file mode 100644
 +    new-instance p1, Ljava/io/IOException;
 +
 +    const-string p2, "No answer returned"
++
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
 +
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -804,6 +812,10 @@ new file mode 100644
 +    :cond_15
 +    :goto_15
 +    const-string v0, "Analysis cancelled"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p0, v0}, Lio/mesalabs/unica/troubleshooting/AiClient;->fail(Ljava/lang/String;)V
 +
@@ -1037,6 +1049,10 @@ new file mode 100644
 +    new-instance p1, Ljava/io/IOException;
 +
 +    const-string p2, "Analysis cancelled"
++
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
 +
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -2637,7 +2653,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/troubleshooting/AskAiChat.smali b/
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/troubleshooting/AskAiChat.smali
-@@ -0,0 +1,3855 @@
+@@ -0,0 +1,4099 @@
 +.class final Lio/mesalabs/unica/troubleshooting/AskAiChat;
 +.super Ljava/lang/Object;
 +.source "AskAiChat.java"
@@ -2915,6 +2931,10 @@ new file mode 100644
 +
 +    const-string v1, "Ask aI"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-virtual {v0, v1}, Landroid/app/Activity;->setTitle(Ljava/lang/CharSequence;)V
 +
 +    iget-object v0, p0, Lio/mesalabs/unica/troubleshooting/AskAiChat;->host:Landroid/app/Activity;
@@ -3023,6 +3043,10 @@ new file mode 100644
 +
 +    const-string v2, "Checking your active AI backend\u2026"
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    const/16 v4, 0xf
 +
 +    invoke-direct {p0, v2, v4, v3}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->text(Ljava/lang/String;IZ)Landroid/widget/TextView;
@@ -3038,6 +3062,10 @@ new file mode 100644
 +    .line 53
 +    const-string v2, "Ask about a problem, paste a log, or attach a text file. Up to 12 recent exchanges stay in memory until Troubleshooting closes. AI suggestions require verification."
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    invoke-direct {p0, v2, v4, v3}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->text(Ljava/lang/String;IZ)Landroid/widget/TextView;
 +
 +    move-result-object v2
@@ -3050,6 +3078,10 @@ new file mode 100644
 +    invoke-direct {v2, p0}, Lio/mesalabs/unica/troubleshooting/AskAiChat$4;-><init>(Lio/mesalabs/unica/troubleshooting/AskAiChat;)V
 +
 +    const-string v4, "Refresh AI backend"
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    invoke-direct {p0, v1, v4, v2}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->button(Landroid/widget/LinearLayout;Ljava/lang/String;Ljava/lang/Runnable;)Landroid/widget/Button;
 +
@@ -3082,6 +3114,10 @@ new file mode 100644
 +    .line 57
 +    const-string v2, "No log attached"
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    const/16 v4, 0xe
 +
 +    invoke-direct {p0, v2, v4, v3}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->text(Ljava/lang/String;IZ)Landroid/widget/TextView;
@@ -3101,6 +3137,10 @@ new file mode 100644
 +
 +    const-string v5, "Paste log"
 +
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
++
 +    invoke-direct {p0, v1, v5, v2}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->button(Landroid/widget/LinearLayout;Ljava/lang/String;Ljava/lang/Runnable;)Landroid/widget/Button;
 +
 +    new-instance v2, Lio/mesalabs/unica/troubleshooting/AskAiChat$6;
@@ -3109,12 +3149,20 @@ new file mode 100644
 +
 +    const-string v5, "Attach text / log file"
 +
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
++
 +    invoke-direct {p0, v1, v5, v2}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->button(Landroid/widget/LinearLayout;Ljava/lang/String;Ljava/lang/Runnable;)Landroid/widget/Button;
 +
 +    .line 59
 +    const/4 v2, 0x5
 +
 +    const-string v5, "Review or edit the selected log section"
++
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
 +
 +    const/4 v6, 0x3
 +
@@ -3135,6 +3183,10 @@ new file mode 100644
 +
 +    const-string v5, "Expand / collapse log"
 +
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
++
 +    invoke-direct {p0, v1, v5, v2}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->button(Landroid/widget/LinearLayout;Ljava/lang/String;Ljava/lang/Runnable;)Landroid/widget/Button;
 +
 +    .line 61
@@ -3149,6 +3201,10 @@ new file mode 100644
 +    iget-object v2, p0, Lio/mesalabs/unica/troubleshooting/AskAiChat;->includeLog:Landroid/widget/CheckBox;
 +
 +    const-string v5, "Include this log section in the next message"
++
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
 +
 +    invoke-virtual {v2, v5}, Landroid/widget/CheckBox;->setText(Ljava/lang/CharSequence;)V
 +
@@ -3201,6 +3257,10 @@ new file mode 100644
 +
 +    const-string v5, "Previous section"
 +
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
++
 +    invoke-direct {p0, v1, v5, v2}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->button(Landroid/widget/LinearLayout;Ljava/lang/String;Ljava/lang/Runnable;)Landroid/widget/Button;
 +
 +    new-instance v2, Lio/mesalabs/unica/troubleshooting/AskAiChat$10;
@@ -3208,6 +3268,10 @@ new file mode 100644
 +    invoke-direct {v2, p0}, Lio/mesalabs/unica/troubleshooting/AskAiChat$10;-><init>(Lio/mesalabs/unica/troubleshooting/AskAiChat;)V
 +
 +    const-string v5, "Next section"
++
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
 +
 +    invoke-direct {p0, v1, v5, v2}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->button(Landroid/widget/LinearLayout;Ljava/lang/String;Ljava/lang/Runnable;)Landroid/widget/Button;
 +
@@ -3218,16 +3282,28 @@ new file mode 100644
 +
 +    const-string v5, "Remove log"
 +
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
++
 +    invoke-direct {p0, v1, v5, v2}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->button(Landroid/widget/LinearLayout;Ljava/lang/String;Ljava/lang/Runnable;)Landroid/widget/Button;
 +
 +    .line 64
 +    const-string v1, "Your message"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-direct {p0, v0, v1}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->card(Landroid/widget/LinearLayout;Ljava/lang/String;)Landroid/widget/LinearLayout;
 +
 +    move-result-object v0
 +
 +    const-string v1, "Describe the problem or ask a follow-up question"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    const/16 v2, 0x8
 +
@@ -3283,6 +3359,10 @@ new file mode 100644
 +    .line 66
 +    const-string v1, "Review each request before sending. No device changes are made by the chat."
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-direct {p0, v1, v4, v3}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->text(Ljava/lang/String;IZ)Landroid/widget/TextView;
 +
 +    move-result-object v1
@@ -3300,6 +3380,10 @@ new file mode 100644
 +
 +    const-string v3, "Review and send"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    invoke-direct {p0, v0, v3, v1}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->button(Landroid/widget/LinearLayout;Ljava/lang/String;Ljava/lang/Runnable;)Landroid/widget/Button;
 +
 +    .line 68
@@ -3308,6 +3392,10 @@ new file mode 100644
 +    invoke-direct {v1, p0}, Lio/mesalabs/unica/troubleshooting/AskAiChat$2;-><init>(Lio/mesalabs/unica/troubleshooting/AskAiChat;)V
 +
 +    const-string v3, "Cancel request"
++
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
 +
 +    invoke-direct {p0, v0, v3, v1}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->button(Landroid/widget/LinearLayout;Ljava/lang/String;Ljava/lang/Runnable;)Landroid/widget/Button;
 +
@@ -3332,10 +3420,18 @@ new file mode 100644
 +
 +    const-string v2, "Clear conversation"
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    invoke-direct {p0, v0, v2, v1}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->button(Landroid/widget/LinearLayout;Ljava/lang/String;Ljava/lang/Runnable;)Landroid/widget/Button;
 +
 +    .line 70
 +    const-string v1, "Back to Troubleshooting"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    iget-object v2, p0, Lio/mesalabs/unica/troubleshooting/AskAiChat;->leave:Ljava/lang/Runnable;
 +
@@ -3481,6 +3577,10 @@ new file mode 100644
 +
 +    const-string v1, "Copy answer"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-virtual {v0, v1}, Landroid/widget/Button;->setText(Ljava/lang/CharSequence;)V
 +
 +    const/16 v1, 0x30
@@ -3535,11 +3635,19 @@ new file mode 100644
 +
 +    const-string v1, "Refresh the backend before sending again."
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-virtual {v0, v1}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
 +
 +    iget-object v0, p0, Lio/mesalabs/unica/troubleshooting/AskAiChat;->status:Landroid/widget/TextView;
 +
 +    const-string v1, "Request cancelled. Your draft and log remain available."
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-virtual {v0, v1}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
 +
@@ -3706,6 +3814,10 @@ new file mode 100644
 +
 +    const-string v0, "Show more"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, p1, v0, p2}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->button(Landroid/widget/LinearLayout;Ljava/lang/String;Ljava/lang/Runnable;)Landroid/widget/Button;
 +
 +    move-result-object p1
@@ -3814,10 +3926,18 @@ new file mode 100644
 +
 +    const-string v2, "Online \u2014 "
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    goto :goto_12
 +
 +    :cond_10
 +    const-string v2, "On device \u2014 "
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    :goto_12
 +    invoke-virtual {v0, v2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
@@ -4003,6 +4123,10 @@ new file mode 100644
 +
 +    const-string p0, "The AI backend changed. Refresh it and review the request again before sending."
 +
++    invoke-static/range {p0 .. p0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p0
++
 +    return-object p0
 +
 +    .line 106
@@ -4012,6 +4136,10 @@ new file mode 100644
 +    invoke-direct {v0}, Ljava/lang/StringBuilder;-><init>()V
 +
 +    const-string v1, "Unable to complete: "
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-virtual {v0, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
@@ -4110,10 +4238,18 @@ new file mode 100644
 +
 +    const-string p0, "Show less"
 +
++    invoke-static/range {p0 .. p0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p0
++
 +    goto :goto_19
 +
 +    :cond_17
 +    const-string p0, "Show more"
++
++    invoke-static/range {p0 .. p0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p0
 +
 +    :goto_19
 +    invoke-virtual {p1, p0}, Landroid/widget/Button;->setText(Ljava/lang/CharSequence;)V
@@ -4247,6 +4383,10 @@ new file mode 100644
 +
 +    const-string v0, "No log attached. You can also paste directly below."
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    goto :goto_b1
 +
 +    :cond_6e
@@ -4371,6 +4511,10 @@ new file mode 100644
 +
 +    const-string v1, "Copy plain text before pasting a log."
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-virtual {v0, v1}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
 +
 +    return-void
@@ -4389,6 +4533,10 @@ new file mode 100644
 +
 +    const-string v1, "Pasted log exceeds 256 KiB of characters. Use a smaller excerpt."
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-virtual {v0, v1}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
 +
 +    return-void
@@ -4401,6 +4549,10 @@ new file mode 100644
 +
 +    const-string v1, "Pasted log"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-direct {p0, v0, v1}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->attach(Ljava/lang/String;Ljava/lang/String;)V
 +
 +    .line 135
@@ -4412,6 +4564,10 @@ new file mode 100644
 +    iget-object v0, p0, Lio/mesalabs/unica/troubleshooting/AskAiChat;->status:Landroid/widget/TextView;
 +
 +    const-string v1, "Clipboard has no text."
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-virtual {v0, v1}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
 +
@@ -4457,6 +4613,10 @@ new file mode 100644
 +    iget-object v0, p0, Lio/mesalabs/unica/troubleshooting/AskAiChat;->status:Landroid/widget/TextView;
 +
 +    const-string v1, "No document picker available."
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-virtual {v0, v1}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
 +
@@ -4507,6 +4667,10 @@ new file mode 100644
 +
 +    const-string v2, "Checking your active AI backend\u2026"
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    invoke-virtual {v1, v2}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
 +
 +    .line 111
@@ -4515,6 +4679,10 @@ new file mode 100644
 +    invoke-direct {v1, p0, v0}, Lio/mesalabs/unica/troubleshooting/AskAiChat$17;-><init>(Lio/mesalabs/unica/troubleshooting/AskAiChat;Lio/mesalabs/unica/troubleshooting/AiClient;)V
 +
 +    const-string v0, "Checking active backend\u2026"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p0, v0, v1}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->run(Ljava/lang/String;Lio/mesalabs/unica/troubleshooting/AskAiChat$Task;)V
 +
@@ -4611,6 +4779,10 @@ new file mode 100644
 +
 +    const-string v3, "Ask aI"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const/16 v5, 0x12
 +
 +    const/4 v6, 0x0
@@ -4660,6 +4832,10 @@ new file mode 100644
 +    iget-object v0, p0, Lio/mesalabs/unica/troubleshooting/AskAiChat;->status:Landroid/widget/TextView;
 +
 +    const-string v1, "Refresh the AI backend first."
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-virtual {v0, v1}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
 +
@@ -4860,10 +5036,18 @@ new file mode 100644
 +
 +    const-string v5, "Send this conversation online?"
 +
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
++
 +    goto :goto_d1
 +
 +    :cond_cf
 +    const-string v5, "Review local AI request"
++
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
 +
 +    :goto_d1
 +    invoke-virtual {v3, v5}, Landroid/app/AlertDialog$Builder;->setTitle(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;
@@ -4883,10 +5067,18 @@ new file mode 100644
 +
 +    const-string v0, "Agree and send online"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    goto :goto_e4
 +
 +    :cond_e2
 +    const-string v0, "Ask on device"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    :goto_e4
 +    new-instance v4, Lio/mesalabs/unica/troubleshooting/AskAiChat$16;
@@ -4898,6 +5090,10 @@ new file mode 100644
 +    move-result-object v0
 +
 +    const-string v1, "Back to edit"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    const/4 v2, 0x0
 +
@@ -5065,6 +5261,10 @@ new file mode 100644
 +    invoke-direct {v1, p0, v0, p1, p2}, Lio/mesalabs/unica/troubleshooting/AskAiChat$20;-><init>(Lio/mesalabs/unica/troubleshooting/AskAiChat;Lio/mesalabs/unica/troubleshooting/AiClient;Lio/mesalabs/unica/troubleshooting/ChatHistory$Request;Landroid/os/Bundle;)V
 +
 +    const-string p1, "Asking your selected AI backend\u2026"
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1, v1}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->run(Ljava/lang/String;Lio/mesalabs/unica/troubleshooting/AskAiChat$Task;)V
 +
@@ -5632,6 +5832,10 @@ new file mode 100644
 +
 +    const-string p1, "Reading text file\u2026"
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    invoke-direct {p0, p1, v0}, Lio/mesalabs/unica/troubleshooting/AskAiChat;->run(Ljava/lang/String;Lio/mesalabs/unica/troubleshooting/AskAiChat$Task;)V
 +
 +    .line 141
@@ -5781,6 +5985,10 @@ new file mode 100644
 +
 +    const-string p2, "Conversation cleared."
 +
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
++
 +    invoke-virtual {p1, p2}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
 +
 +    return-void
@@ -5798,11 +6006,19 @@ new file mode 100644
 +
 +    const-string v1, "Clear conversation?"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-virtual {v0, v1}, Landroid/app/AlertDialog$Builder;->setTitle(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;
 +
 +    move-result-object v0
 +
 +    const-string v1, "Clear chat history, your draft and the attached log from this session."
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-virtual {v0, v1}, Landroid/app/AlertDialog$Builder;->setMessage(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;
 +
@@ -5851,6 +6067,10 @@ new file mode 100644
 +
 +    const-string v0, "Ask aI"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-static {v0, p1}, Landroid/content/ClipData;->newPlainText(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Landroid/content/ClipData;
 +
 +    move-result-object p1
@@ -5860,6 +6080,10 @@ new file mode 100644
 +    iget-object p1, p0, Lio/mesalabs/unica/troubleshooting/AskAiChat;->host:Landroid/app/Activity;
 +
 +    const-string p2, "Answer copied"
++
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
 +
 +    const/4 v0, 0x0
 +
@@ -5883,6 +6107,10 @@ new file mode 100644
 +    iget-object p1, p0, Lio/mesalabs/unica/troubleshooting/AskAiChat;->history:Lio/mesalabs/unica/troubleshooting/ChatHistory;
 +
 +    const-string v0, "Imported text file (device provenance unverified)"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    iput-object v0, p1, Lio/mesalabs/unica/troubleshooting/ChatHistory;->attachmentName:Ljava/lang/String;
 +
@@ -5909,6 +6137,10 @@ new file mode 100644
 +    iget-object p1, p0, Lio/mesalabs/unica/troubleshooting/AskAiChat;->status:Landroid/widget/TextView;
 +
 +    const-string v0, "File loaded. Review the selected section; other sections are not sent. Redaction can miss sensitive information."
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-virtual {p1, v0}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
 +
@@ -5984,6 +6216,10 @@ new file mode 100644
 +    new-instance p1, Ljava/io/IOException;
 +
 +    const-string p2, "Select a UTF-8 text/log file; extract compressed or binary files first"
++
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
 +
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -6162,6 +6398,10 @@ new file mode 100644
 +
 +    const-string v0, "Backend ready. Review your message and log before sending."
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-virtual {p1, v0}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
 +
 +    return-void
@@ -6216,6 +6456,10 @@ new file mode 100644
 +
 +    const-string p2, "Prepare the selected model or provider in AI Settings first"
 +
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
++
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -6225,6 +6469,10 @@ new file mode 100644
 +    new-instance p1, Ljava/io/IOException;
 +
 +    const-string p2, "Install the updated ROM AI backend to enable chat"
++
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
 +
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -6386,6 +6634,10 @@ new file mode 100644
 +
 +    const-string p2, "Answer received. Ask a follow-up using the included history, or select another log section. The current section is not repeated unless you check Include. Verify suggestions before applying changes."
 +
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
++
 +    invoke-virtual {p1, p2}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
 +
 +    return-void
@@ -6434,6 +6686,10 @@ new file mode 100644
 +
 +    const-string p2, "Answer exceeds display limit"
 +
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
++
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -6443,6 +6699,10 @@ new file mode 100644
 +    new-instance p1, Ljava/io/IOException;
 +
 +    const-string p2, "Refresh the backend before sending"
++
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
 +
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -6596,7 +6856,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/troubleshooting/ChatHistory.smali 
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/troubleshooting/ChatHistory.smali
-@@ -0,0 +1,806 @@
+@@ -0,0 +1,814 @@
 +.class final Lio/mesalabs/unica/troubleshooting/ChatHistory;
 +.super Ljava/lang/Object;
 +.source "ChatHistory.java"
@@ -7389,6 +7649,10 @@ new file mode 100644
 +
 +    const-string p2, "Message and log exceed this backend\'s budget. Shorten the question or log section."
 +
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
++
 +    invoke-direct {p1, p2}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -7398,6 +7662,10 @@ new file mode 100644
 +    new-instance p1, Ljava/lang/IllegalArgumentException;
 +
 +    const-string p2, "Describe the problem or ask a question first."
++
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
 +
 +    invoke-direct {p1, p2}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -8603,7 +8871,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/troubleshooting/LogTools$Selection
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/troubleshooting/LogTools$Selection.smali
-@@ -0,0 +1,145 @@
+@@ -0,0 +1,153 @@
 +.class final Lio/mesalabs/unica/troubleshooting/LogTools$Selection;
 +.super Ljava/lang/Object;
 +.source "LogTools.java"
@@ -8727,6 +8995,10 @@ new file mode 100644
 +
 +    const-string v1, "Coverage limited. "
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    goto :goto_36
 +
 +    :cond_34
@@ -8738,6 +9010,10 @@ new file mode 100644
 +    move-result-object v0
 +
 +    const-string v1, "Other sections have not been analyzed."
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-virtual {v0, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
@@ -8754,7 +9030,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/troubleshooting/LogTools.smali b/s
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/troubleshooting/LogTools.smali
-@@ -0,0 +1,904 @@
+@@ -0,0 +1,916 @@
 +.class final Lio/mesalabs/unica/troubleshooting/LogTools;
 +.super Ljava/lang/Object;
 +.source "LogTools.java"
@@ -8863,6 +9139,10 @@ new file mode 100644
 +
 +    const-string p0, "App could not open"
 +
++    invoke-static/range {p0 .. p0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p0
++
 +    return-object p0
 +
 +    .line 48
@@ -8924,6 +9204,10 @@ new file mode 100644
 +
 +    const-string v1, "File exceeds "
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-virtual {v0, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
 +    move-result-object v0
@@ -8962,6 +9246,10 @@ new file mode 100644
 +    new-instance p0, Ljava/io/IOException;
 +
 +    const-string p1, "Cannot open file"
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -9664,7 +9952,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/troubleshooting/ModuleTransport.sm
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/troubleshooting/ModuleTransport.smali
-@@ -0,0 +1,516 @@
+@@ -0,0 +1,536 @@
 +.class final Lio/mesalabs/unica/troubleshooting/ModuleTransport;
 +.super Ljava/lang/Object;
 +.source "ModuleTransport.java"
@@ -9849,6 +10137,10 @@ new file mode 100644
 +    new-instance p0, Ljava/io/IOException;
 +
 +    const-string p1, "Invalid module identity"
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -10115,6 +10407,10 @@ new file mode 100644
 +
 +    const-string p1, "Module service did not respond. Scan again before retrying."
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -10147,6 +10443,10 @@ new file mode 100644
 +
 +    const-string p1, "Troubleshooting service is not installed. Install the updated ROM."
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -10157,6 +10457,10 @@ new file mode 100644
 +
 +    const-string p1, "Invalid operation"
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -10166,6 +10470,10 @@ new file mode 100644
 +    new-instance p0, Ljava/io/IOException;
 +
 +    const-string p1, "Available to the device owner\'s Settings only"
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -10186,7 +10494,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/troubleshooting/SetupChecks.smali 
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/troubleshooting/SetupChecks.smali
-@@ -0,0 +1,1815 @@
+@@ -0,0 +1,1915 @@
 +.class final Lio/mesalabs/unica/troubleshooting/SetupChecks;
 +.super Ljava/lang/Object;
 +.source "SetupChecks.java"
@@ -10442,6 +10750,10 @@ new file mode 100644
 +
 +    const-string v4, "Not verified \u2014 built-in PIF class is unavailable."
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    :goto_b8
 +    invoke-virtual {v6, v4}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
@@ -10456,6 +10768,10 @@ new file mode 100644
 +
 +    const-string v4, "Problem found \u2014 "
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    invoke-virtual {v6, v4}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
 +    move-result-object v4
@@ -10468,6 +10784,10 @@ new file mode 100644
 +    if-nez v4, :cond_d1
 +
 +    const-string v4, "Not verified \u2014 PIF is switched off."
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    goto :goto_b8
 +
@@ -10533,6 +10853,10 @@ new file mode 100644
 +    move-exception v0
 +
 +    const-string v0, "Not verified \u2014 PIF properties could not be read."
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-virtual {v6, v0}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
@@ -10878,6 +11202,10 @@ new file mode 100644
 +
 +    const-string v4, "Invalid PIF toggle. "
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    invoke-virtual {v0, v4}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
 +    :cond_41
@@ -10965,6 +11293,10 @@ new file mode 100644
 +    if-eqz v1, :cond_84
 +
 +    const-string v1, "Invalid fingerprint structure or size. "
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-virtual {v0, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
@@ -11081,6 +11413,10 @@ new file mode 100644
 +
 +    const-string v1, "Invalid security patch date. "
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-virtual {v0, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
 +    .line 25
@@ -11124,6 +11460,10 @@ new file mode 100644
 +
 +    :cond_10f
 +    const-string p0, "Invalid first API level. "
++
++    invoke-static/range {p0 .. p0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p0
 +
 +    invoke-virtual {v0, p0}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
@@ -11204,6 +11544,10 @@ new file mode 100644
 +
 +    const-string p0, "Problem found \u2014 recent PIF log buffer contains startup/configuration failures. Reproduce with the affected app and collect device logs. Old errors can remain after a configuration change."
 +
++    invoke-static/range {p0 .. p0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p0
++
 +    return-object p0
 +
 +    .line 80
@@ -11212,11 +11556,19 @@ new file mode 100644
 +
 +    const-string p0, "Not verified \u2014 successful GMS unstable-process initialization was observed in the recent buffer. This is historical evidence, not proof that the current process uses the current settings or that Google accepts it."
 +
++    invoke-static/range {p0 .. p0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p0
++
 +    return-object p0
 +
 +    .line 81
 +    :cond_33
 +    const-string p0, "Not verified \u2014 no matching GMS initialization evidence in the recent log buffer. Missing logs do not prove failure."
++
++    invoke-static/range {p0 .. p0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p0
 +
 +    return-object p0
 +.end method
@@ -11226,6 +11578,10 @@ new file mode 100644
 +
 +    .line 84
 +    const-string v1, "Not verified \u2014 recent device logs are unavailable."
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    .line 85
 +    const/4 v2, 0x0
@@ -11497,6 +11853,10 @@ new file mode 100644
 +    if-le v7, v8, :cond_35
 +
 +    const-string v0, "Problem found \u2014 profile configuration exceeds its size limit."
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    return-object v0
 +
@@ -11791,6 +12151,10 @@ new file mode 100644
 +    :goto_11f
 +    const-string v0, "Problem found \u2014 a targeted profile has no selected keybox. Select a keybox in Manage Keybox \u2192 Profiles."
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    return-object v0
 +
 +    .line 50
@@ -11798,6 +12162,10 @@ new file mode 100644
 +    if-nez v0, :cond_127
 +
 +    const-string v0, "Not verified \u2014 no profile targets any app. Review target apps in Manage Keybox \u2192 Profiles."
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    return-object v0
 +
@@ -11807,6 +12175,10 @@ new file mode 100644
 +
 +    const-string v0, "Problem found \u2014 a targeted keybox contains an expired or not-yet-valid certificate."
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    return-object v0
 +
 +    .line 52
@@ -11814,6 +12186,10 @@ new file mode 100644
 +    if-eqz v13, :cond_131
 +
 +    const-string v0, "Problem found \u2014 a targeted profile uses an AOSP software test keybox; it is not a hardware attestation identity."
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    return-object v0
 +
@@ -11824,6 +12200,10 @@ new file mode 100644
 +    invoke-direct {v1}, Ljava/lang/StringBuilder;-><init>()V
 +
 +    const-string v2, "Configured \u2014 "
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    invoke-virtual {v1, v2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
@@ -11886,6 +12266,10 @@ new file mode 100644
 +
 +    const-string v0, "Problem found \u2014 profile or selected keybox validation failed. Review profiles and keyboxes in Manage Keybox. No signing material was included in this report."
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    return-object v0
 +
 +    .line 55
@@ -11894,6 +12278,10 @@ new file mode 100644
 +
 +    const-string v0, "Not verified \u2014 profile or keybox settings could not be read."
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    return-object v0
 +
 +    .line 54
@@ -11901,6 +12289,10 @@ new file mode 100644
 +    move-exception v0
 +
 +    const-string v0, "Not verified \u2014 the compatible keybox/profile validator is unavailable."
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    return-object v0
 +.end method
@@ -11967,6 +12359,10 @@ new file mode 100644
 +
 +    const-string p0, "Not verified \u2014 TEE is switched off; this is not a configuration failure."
 +
++    invoke-static/range {p0 .. p0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p0
++
 +    return-object p0
 +
 +    .line 30
@@ -11974,6 +12370,10 @@ new file mode 100644
 +    if-nez p1, :cond_a
 +
 +    const-string p0, "Not verified \u2014 no fresh backend heartbeat. Check Manage Keybox \u2192 System and collect logs after reproducing the problem."
++
++    invoke-static/range {p0 .. p0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p0
 +
 +    return-object p0
 +
@@ -11993,12 +12393,20 @@ new file mode 100644
 +    :cond_13
 +    const-string p0, "Runtime verified \u2014 fresh backend reports connected interceptor, acknowledged configuration and loaded keybox. App-specific interception and Google acceptance remain unverified."
 +
++    invoke-static/range {p0 .. p0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p0
++
 +    return-object p0
 +
 +    .line 31
 +    :cond_16
 +    :goto_16
 +    const-string p0, "Problem found \u2014 live backend reports incomplete daemon/interceptor/configuration/keybox readiness. Check Manage Keybox \u2192 System."
++
++    invoke-static/range {p0 .. p0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p0
 +
 +    return-object p0
 +.end method
@@ -15919,7 +16327,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/troubleshooting/TroubleshootingAct
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/troubleshooting/TroubleshootingActivity.smali
-@@ -0,0 +1,7993 @@
+@@ -0,0 +1,8549 @@
 +.class public final Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;
 +.super Landroid/app/Activity;
 +.source "TroubleshootingActivity.java"
@@ -16181,6 +16589,10 @@ new file mode 100644
 +    .line 26
 +    const-string v1, "Run a read-only check of PIF and TEE settings."
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    iput-object v1, p0, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setupStatus:Ljava/lang/String;
 +
 +    iput-object v0, p0, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setupReport:Ljava/lang/String;
@@ -16188,9 +16600,17 @@ new file mode 100644
 +    .line 27
 +    const-string v1, "Tap Scan installed modules to begin."
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    iput-object v1, p0, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->scanStatus:Ljava/lang/String;
 +
 +    const-string v1, "Collect or import a log to find crashes and app failures."
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    iput-object v1, p0, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->logStatus:Ljava/lang/String;
 +
@@ -16239,6 +16659,10 @@ new file mode 100644
 +
 +    .line 31
 +    const-string v1, "Scan installed modules to check for overlaps."
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    iput-object v1, p0, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->status:Ljava/lang/String;
 +
@@ -16375,6 +16799,10 @@ new file mode 100644
 +    const-string p1, "logs"
 +
 +    const-string p2, "Analyzing selected crash details\u2026"
++
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
 +
 +    invoke-direct {p0, p1, p2, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->run(Ljava/lang/String;Ljava/lang/String;Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$Work;)V
 +
@@ -16976,6 +17404,10 @@ new file mode 100644
 +
 +    const-string v2, "Checking PIF settings, TEE profiles and runtime evidence\u2026"
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    invoke-direct {p0, v1, v2, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->run(Ljava/lang/String;Ljava/lang/String;Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$Work;)V
 +
 +    .line 243
@@ -17003,6 +17435,10 @@ new file mode 100644
 +
 +    const-string v0, "Troubleshooting"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-virtual {p0, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setTitle(Ljava/lang/CharSequence;)V
 +
 +    iget-object v0, p0, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->rootScroll:Landroid/widget/ScrollView;
@@ -17025,6 +17461,10 @@ new file mode 100644
 +    const-string v1, "logs"
 +
 +    const-string v2, "Collecting recent logcat\u2026"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    invoke-direct {p0, v1, v2, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->run(Ljava/lang/String;Ljava/lang/String;Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$Work;)V
 +
@@ -17081,10 +17521,18 @@ new file mode 100644
 +
 +    const-string v2, "Disable this module?"
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    goto :goto_12
 +
 +    :cond_10
 +    const-string v2, "Restore this module?"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    :goto_12
 +    invoke-virtual {v1, v2}, Landroid/app/AlertDialog$Builder;->setTitle(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;
@@ -17152,15 +17600,27 @@ new file mode 100644
 +
 +    const-string v3, "This module serves the same purpose as a built-in UN1CA feature."
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    goto :goto_59
 +
 +    :cond_54
 +    const-string v3, "This module changes files related to a built-in UN1CA feature."
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    goto :goto_59
 +
 +    :cond_57
 +    const-string v3, "Restore this module by removing this menu\u2019s disable marker."
++
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
 +
 +    :goto_59
 +    invoke-virtual {v2, v3}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
@@ -17198,6 +17658,10 @@ new file mode 100644
 +    if-eqz v0, :cond_7a
 +
 +    const-string v1, "Keep enabled"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    goto :goto_7c
 +
@@ -17287,6 +17751,10 @@ new file mode 100644
 +
 +    const-string v1, "Kept enabled: "
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-virtual {v0, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
 +    move-result-object v0
@@ -17302,6 +17770,10 @@ new file mode 100644
 +    invoke-direct {p0, p1}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->history(Ljava/lang/String;)V
 +
 +    const-string p1, "Suggestion declined; finding remains for review."
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setStatus(Ljava/lang/String;)V
 +
@@ -17862,6 +18334,10 @@ new file mode 100644
 +
 +    const-string v4, "Review recommended"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    goto :goto_10d
 +
 +    :cond_f9
@@ -17875,6 +18351,10 @@ new file mode 100644
 +
 +    const-string v4, "Scan incomplete"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    goto :goto_10d
 +
 +    :cond_104
@@ -17884,10 +18364,18 @@ new file mode 100644
 +
 +    const-string v4, "No known conflict detected"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    goto :goto_10d
 +
 +    :cond_10b
 +    const-string v4, "Not scanned"
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    :goto_10d
 +    const/16 v7, 0x16
@@ -17944,6 +18432,10 @@ new file mode 100644
 +
 +    const-string v4, "You kept a flagged module enabled. Review the recommendation below."
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    invoke-direct {v0, v4, v6}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->text(Ljava/lang/String;I)Landroid/widget/TextView;
 +
 +    .line 104
@@ -17997,6 +18489,10 @@ new file mode 100644
 +
 +    const-string v13, "Coverage: "
 +
++    invoke-static/range {v13 .. v13}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v13
++
 +    invoke-virtual {v4, v13}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
 +    move-result-object v4
@@ -18021,7 +18517,15 @@ new file mode 100644
 +
 +    const-string v13, "About this check"
 +
++    invoke-static/range {v13 .. v13}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v13
++
 +    const-string v14, "What the scan can detect"
++
++    invoke-static/range {v14 .. v14}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v14
 +
 +    invoke-direct {v0, v13, v14, v4}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->button(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Runnable;)Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$ActionRow;
 +
@@ -18032,7 +18536,15 @@ new file mode 100644
 +
 +    const-string v13, "Scan installed modules"
 +
++    invoke-static/range {v13 .. v13}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v13
++
 +    const-string v14, "Check root modules and enabled LSPosed conflicts"
++
++    invoke-static/range {v14 .. v14}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v14
 +
 +    invoke-direct {v0, v13, v14, v4}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->button(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Runnable;)Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$ActionRow;
 +
@@ -18068,6 +18580,10 @@ new file mode 100644
 +
 +    const-string v3, "Restart required. A loaded module can remain active until restart."
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    invoke-direct {v0, v3, v13}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->text(Ljava/lang/String;I)Landroid/widget/TextView;
 +
 +    new-instance v3, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$28;
@@ -18075,6 +18591,10 @@ new file mode 100644
 +    invoke-direct {v3, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$28;-><init>(Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;)V
 +
 +    const-string v4, "Restart now"
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    invoke-direct {v0, v4, v3}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->button(Ljava/lang/String;Ljava/lang/Runnable;)Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$ActionRow;
 +
@@ -18084,11 +18604,19 @@ new file mode 100644
 +
 +    const-string v4, "Restart later"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    invoke-direct {v0, v4, v3}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->button(Ljava/lang/String;Ljava/lang/Runnable;)Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$ActionRow;
 +
 +    .line 110
 +    :cond_1d7
 +    const-string v3, "Root modules"
++
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
 +
 +    invoke-direct {v0, v3}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->card(Ljava/lang/String;)V
 +
@@ -18123,6 +18651,10 @@ new file mode 100644
 +
 +    const-string v14, "Pending removal"
 +
++    invoke-static/range {v14 .. v14}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v14
++
 +    goto :goto_201
 +
 +    :cond_1f6
@@ -18138,6 +18670,10 @@ new file mode 100644
 +
 +    :cond_1ff
 +    const-string v14, "Enabled \u00b7 restart state unverified"
++
++    invoke-static/range {v14 .. v14}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v14
 +
 +    .line 113
 +    :goto_201
@@ -18408,10 +18944,18 @@ new file mode 100644
 +
 +    const-string v3, "No modules listed. Check scan coverage above if root access was unavailable."
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    goto :goto_302
 +
 +    :cond_300
 +    const-string v3, "Scan to view installed modules."
++
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
 +
 +    :goto_302
 +    invoke-direct {v0, v3, v13}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->text(Ljava/lang/String;I)Landroid/widget/TextView;
@@ -18430,6 +18974,10 @@ new file mode 100644
 +    if-nez v3, :cond_317
 +
 +    const-string v3, "Run a scan to check LSPosed conflicts."
++
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
 +
 +    invoke-direct {v0, v3, v6}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->text(Ljava/lang/String;I)Landroid/widget/TextView;
 +
@@ -18528,6 +19076,10 @@ new file mode 100644
 +
 +    const-string v5, "Checked "
 +
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
++
 +    invoke-virtual {v3, v5}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
 +    move-result-object v3
@@ -18574,6 +19126,10 @@ new file mode 100644
 +    if-nez v3, :cond_399
 +
 +    const-string v3, "No confirmed LSPosed conflicts found. This does not establish compatibility with every module."
++
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
 +
 +    invoke-direct {v0, v3, v6}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->text(Ljava/lang/String;I)Landroid/widget/TextView;
 +
@@ -18632,6 +19188,10 @@ new file mode 100644
 +
 +    const-string v9, "Conflicts with UN1CA mod: "
 +
++    invoke-static/range {v9 .. v9}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v9
++
 +    invoke-virtual {v8, v9}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
 +    move-result-object v8
@@ -18675,6 +19235,10 @@ new file mode 100644
 +
 +    const-string v5, "Review in LSPosed Manager"
 +
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
++
 +    invoke-direct {v0, v5, v7}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->button(Ljava/lang/String;Ljava/lang/Runnable;)Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$ActionRow;
 +
 +    .line 131
@@ -18695,6 +19259,10 @@ new file mode 100644
 +    if-nez v3, :cond_406
 +
 +    const-string v3, "Run a scan to check for duplicate features."
++
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
 +
 +    invoke-direct {v0, v3, v13}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->text(Ljava/lang/String;I)Landroid/widget/TextView;
 +
@@ -18760,6 +19328,10 @@ new file mode 100644
 +
 +    const-string v11, "Same purpose as UN1CA\u2019s "
 +
++    invoke-static/range {v11 .. v11}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v11
++
 +    invoke-virtual {v9, v11}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
 +    move-result-object v9
@@ -18802,6 +19374,10 @@ new file mode 100644
 +
 +    const-string v3, "No known duplicate features found among enabled modules with matching scopes. Unlisted modules remain unchecked."
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    invoke-direct {v0, v3, v13}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->text(Ljava/lang/String;I)Landroid/widget/TextView;
 +
 +    .line 146
@@ -18821,6 +19397,10 @@ new file mode 100644
 +
 +    const-string v4, "Restart after changing LSPosed scope"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    invoke-direct {v0, v4, v3}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->button(Ljava/lang/String;Ljava/lang/Runnable;)Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$ActionRow;
 +
 +    .line 147
@@ -18836,7 +19416,15 @@ new file mode 100644
 +
 +    const-string v4, "Check PIF and TEE setup"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    const-string v5, "Validate configuration and check backend readiness"
++
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
 +
 +    invoke-direct {v0, v4, v5, v3}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->button(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Runnable;)Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$ActionRow;
 +
@@ -18873,7 +19461,15 @@ new file mode 100644
 +
 +    const-string v4, "View setup results"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    const-string v5, "Configuration, runtime evidence and verification steps"
++
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
 +
 +    invoke-direct {v0, v4, v5, v3}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->button(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Runnable;)Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$ActionRow;
 +
@@ -18884,13 +19480,25 @@ new file mode 100644
 +
 +    const-string v4, "Explain setup results with AI"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    const-string v5, "Review the report before using your active backend"
++
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
 +
 +    invoke-direct {v0, v4, v5, v3}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->button(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Runnable;)Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$ActionRow;
 +
 +    .line 154
 +    :cond_4b3
 +    const-string v3, "Ask aI"
++
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
 +
 +    invoke-direct {v0, v3}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->card(Ljava/lang/String;)V
 +
@@ -18900,14 +19508,26 @@ new file mode 100644
 +
 +    const-string v5, "Chat with your active AI backend \u00b7 paste or attach a log"
 +
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
++
 +    invoke-direct {v0, v3, v5, v4}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->button(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Runnable;)Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$ActionRow;
 +
 +    .line 155
 +    const-string v3, "Analyze logs"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    invoke-direct {v0, v3}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->card(Ljava/lang/String;)V
 +
 +    const-string v3, "Find system crashes, app crashes and apps that fail to open. Uses your active AI backend."
++
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
 +
 +    invoke-direct {v0, v3, v13}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->text(Ljava/lang/String;I)Landroid/widget/TextView;
 +
@@ -18918,7 +19538,15 @@ new file mode 100644
 +
 +    const-string v4, "Collect recent device log"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    const-string v5, "Read recent logs from this device"
++
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
 +
 +    invoke-direct {v0, v4, v5, v3}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->button(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Runnable;)Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$ActionRow;
 +
@@ -18928,7 +19556,15 @@ new file mode 100644
 +
 +    const-string v4, "Import log file"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    const-string v5, "Choose a text log to review"
++
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
 +
 +    invoke-direct {v0, v4, v5, v3}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->button(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Runnable;)Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$ActionRow;
 +
@@ -18963,6 +19599,10 @@ new file mode 100644
 +    invoke-direct {v3}, Ljava/lang/StringBuilder;-><init>()V
 +
 +    const-string v4, "Source: "
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    invoke-virtual {v3, v4}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
@@ -19008,6 +19648,10 @@ new file mode 100644
 +
 +    const-string v4, "Save original log"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    invoke-direct {v0, v4, v3}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->button(Ljava/lang/String;Ljava/lang/Runnable;)Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$ActionRow;
 +
 +    new-instance v3, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$36;
@@ -19015,6 +19659,10 @@ new file mode 100644
 +    invoke-direct {v3, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$36;-><init>(Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;)V
 +
 +    const-string v4, "Review crash details and backend"
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    invoke-direct {v0, v4, v3}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->button(Ljava/lang/String;Ljava/lang/Runnable;)Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$ActionRow;
 +
@@ -19025,6 +19673,10 @@ new file mode 100644
 +    invoke-direct {v3, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$37;-><init>(Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;)V
 +
 +    const-string v4, "Cancel analysis"
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    invoke-direct {v0, v4, v3}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->button(Ljava/lang/String;Ljava/lang/Runnable;)Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$ActionRow;
 +
@@ -19197,6 +19849,10 @@ new file mode 100644
 +    :cond_5e1
 +    const-string v1, "History and restoration"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-direct {v0, v1}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->card(Ljava/lang/String;)V
 +
 +    new-instance v1, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$40;
@@ -19205,7 +19861,15 @@ new file mode 100644
 +
 +    const-string v3, "Action history"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const-string v4, "Review previous module actions"
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    invoke-direct {v0, v3, v4, v1}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->button(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Runnable;)Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$ActionRow;
 +
@@ -19215,7 +19879,15 @@ new file mode 100644
 +
 +    const-string v3, "Restoration help"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const-string v4, "Undo changes made by Troubleshooting"
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    invoke-direct {v0, v3, v4, v1}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->button(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Runnable;)Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$ActionRow;
 +
@@ -19278,6 +19950,10 @@ new file mode 100644
 +    const-string v1, "setup"
 +
 +    const-string v2, "Preparing setup report for review\u2026"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    invoke-direct {p0, v1, v2, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->run(Ljava/lang/String;Ljava/lang/String;Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$Work;)V
 +
@@ -19560,6 +20236,10 @@ new file mode 100644
 +
 +    const-string v0, "No document picker available"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setStatus(Ljava/lang/String;)V
 +
 +    invoke-direct {p0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->draw()V
@@ -19780,6 +20460,10 @@ new file mode 100644
 +
 +    const-string v2, "Finding crashes and app failures\u2026"
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    invoke-direct {p0, v1, v2, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->run(Ljava/lang/String;Ljava/lang/String;Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$Work;)V
 +
 +    .line 254
@@ -19806,10 +20490,18 @@ new file mode 100644
 +
 +    const-string v2, "Online \u2014 "
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    goto :goto_14
 +
 +    :cond_12
 +    const-string v2, "On device \u2014 "
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    :goto_14
 +    invoke-virtual {v1, v2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
@@ -19951,6 +20643,10 @@ new file mode 100644
 +
 +    const-string v9, "Include log section "
 +
++    invoke-static/range {v9 .. v9}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v9
++
 +    invoke-virtual {v8, v9}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
 +    move-result-object v8
@@ -19998,6 +20694,10 @@ new file mode 100644
 +
 +    :cond_cb
 +    const-string v7, "Crash details"
++
++    invoke-static/range {v7 .. v7}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v7
 +
 +    .line 262
 +    :goto_cd
@@ -20062,10 +20762,18 @@ new file mode 100644
 +
 +    const-string v10, "Tap to expand or collapse setup details"
 +
++    invoke-static/range {v10 .. v10}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v10
++
 +    goto :goto_113
 +
 +    :cond_111
 +    const-string v10, "Tap to expand or collapse crash details"
++
++    invoke-static/range {v10 .. v10}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v10
 +
 +    :goto_113
 +    new-instance v11, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$13;
@@ -20100,6 +20808,10 @@ new file mode 100644
 +
 +    const-string v6, "Review before sending online"
 +
++    invoke-static/range {v6 .. v6}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v6
++
 +    goto :goto_13f
 +
 +    :cond_136
@@ -20109,10 +20821,18 @@ new file mode 100644
 +
 +    const-string v6, "Review setup report"
 +
++    invoke-static/range {v6 .. v6}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v6
++
 +    goto :goto_13f
 +
 +    :cond_13d
 +    const-string v6, "Review crash details"
++
++    invoke-static/range {v6 .. v6}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v6
 +
 +    :goto_13f
 +    invoke-virtual {v2, v6}, Landroid/app/AlertDialog$Builder;->setTitle(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;
@@ -20151,10 +20871,18 @@ new file mode 100644
 +
 +    const-string v0, "Send selected sections"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    goto :goto_165
 +
 +    :cond_163
 +    const-string v0, "Analyze selected sections"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    :goto_165
 +    const/4 v2, 0x0
@@ -20370,6 +21098,10 @@ new file mode 100644
 +
 +    const-string p1, "Check incomplete"
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    goto :goto_7f
 +
 +    :cond_79
@@ -20393,11 +21125,19 @@ new file mode 100644
 +
 +    const-string v1, "Restart device?"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-virtual {v0, v1}, Landroid/app/AlertDialog$Builder;->setTitle(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;
 +
 +    move-result-object v0
 +
 +    const-string v1, "Save your work before restarting."
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-virtual {v0, v1}, Landroid/app/AlertDialog$Builder;->setMessage(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;
 +
@@ -20436,11 +21176,19 @@ new file mode 100644
 +
 +    const-string v1, "Restart required"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-virtual {v0, v1}, Landroid/app/AlertDialog$Builder;->setTitle(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;
 +
 +    move-result-object v0
 +
 +    const-string v1, "Restart to apply the module change. Loaded hooks may still be active."
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-virtual {v0, v1}, Landroid/app/AlertDialog$Builder;->setMessage(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;
 +
@@ -20451,6 +21199,10 @@ new file mode 100644
 +    invoke-direct {v1, p0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$7;-><init>(Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;)V
 +
 +    const-string v2, "Restart now"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    invoke-virtual {v0, v2, v1}, Landroid/app/AlertDialog$Builder;->setPositiveButton(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;
 +
@@ -20479,6 +21231,10 @@ new file mode 100644
 +
 +    const-string v1, "Review LSPosed scope."
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-virtual {v0, v1}, Landroid/app/AlertDialog$Builder;->setTitle(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;
 +
 +    move-result-object v0
@@ -20494,10 +21250,18 @@ new file mode 100644
 +
 +    const-string v1, "This module serves the same purpose as a built-in UN1CA feature."
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    goto :goto_18
 +
 +    :cond_16
 +    const-string v1, "This module conflicts with a built-in UN1CA feature."
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    :goto_18
 +    invoke-virtual {v0, v1}, Landroid/app/AlertDialog$Builder;->setMessage(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;
@@ -20511,6 +21275,10 @@ new file mode 100644
 +    .line 211
 +    const-string v2, "Open manager"
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    invoke-virtual {v0, v2, v1}, Landroid/app/AlertDialog$Builder;->setPositiveButton(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;
 +
 +    move-result-object v0
@@ -20521,6 +21289,10 @@ new file mode 100644
 +
 +    .line 216
 +    const-string p1, "Keep enabled"
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-virtual {v0, p1, v1}, Landroid/app/AlertDialog$Builder;->setNegativeButton(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;
 +
@@ -20614,6 +21386,10 @@ new file mode 100644
 +
 +    const-string v0, "No document picker available"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setStatus(Ljava/lang/String;)V
 +
 +    invoke-direct {p0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->draw()V
@@ -20634,6 +21410,10 @@ new file mode 100644
 +    const-string v1, "scan"
 +
 +    const-string v2, "Scanning installed modules\u2026"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    invoke-direct {p0, v1, v2, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->run(Ljava/lang/String;Ljava/lang/String;Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$Work;)V
 +
@@ -20829,6 +21609,10 @@ new file mode 100644
 +
 +    const-string v1, "Analyzing log section "
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-virtual {v0, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
 +    move-result-object v0
@@ -20907,6 +21691,10 @@ new file mode 100644
 +    :cond_1f
 +    const-string p4, "Crash details"
 +
++    invoke-static/range {p4 .. p4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p4
++
 +    :goto_21
 +    invoke-virtual {p2, p4}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
@@ -20939,6 +21727,10 @@ new file mode 100644
 +    .line 287
 +    const-string v0, "Analysis stopped. Some selected log sections were not analyzed."
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setStatus(Ljava/lang/String;)V
 +
 +    return-void
@@ -20949,6 +21741,10 @@ new file mode 100644
 +
 +    .line 289
 +    const-string v0, "Analysis finished. Expand a result below to read it. Suggested causes require verification."
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p0, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setStatus(Ljava/lang/String;)V
 +
@@ -20978,10 +21774,18 @@ new file mode 100644
 +
 +    const-string v1, "Online \u2014 "
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    goto :goto_12
 +
 +    :cond_10
 +    const-string v1, "On device \u2014 "
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    :goto_12
 +    invoke-virtual {v0, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
@@ -21088,6 +21892,10 @@ new file mode 100644
 +
 +    const-string v2, "Not analyzed: "
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    invoke-virtual {v1, v2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
 +    move-result-object v1
@@ -21147,6 +21955,10 @@ new file mode 100644
 +
 +    const-string p2, "Analysis cancelled"
 +
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
++
 +    invoke-direct {p1, p2}, Ljava/io/InterruptedIOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -21170,6 +21982,10 @@ new file mode 100644
 +    iput-object p1, p0, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setupReport:Ljava/lang/String;
 +
 +    const-string p1, "Check completed. Review configuration and runtime results below."
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setStatus(Ljava/lang/String;)V
 +
@@ -21207,6 +22023,10 @@ new file mode 100644
 +
 +    const-string p1, "This device \u2014 recent logcat and dedicated crash buffer"
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    iput-object p1, p0, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->source:Ljava/lang/String;
 +
 +    const-string p1, ""
@@ -21226,6 +22046,10 @@ new file mode 100644
 +    invoke-interface {p1}, Ljava/util/Set;->clear()V
 +
 +    const-string p1, "Recent log collected; older or persistent crash evidence may be absent."
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setStatus(Ljava/lang/String;)V
 +
@@ -21271,6 +22095,10 @@ new file mode 100644
 +    new-instance v0, Ljava/io/IOException;
 +
 +    const-string v1, "Cannot prepare log storage"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-direct {v0, v1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -21517,6 +22345,10 @@ new file mode 100644
 +
 +    const-string v5, "Crash buffer access unavailable"
 +
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
++
 +    invoke-direct {v0, v5}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw v0
@@ -21526,6 +22358,10 @@ new file mode 100644
 +    new-instance v0, Ljava/io/IOException;
 +
 +    const-string v5, "Crash buffer collection timed out"
++
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
 +
 +    invoke-direct {v0, v5}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -21643,6 +22479,10 @@ new file mode 100644
 +    invoke-interface {p1}, Landroid/content/SharedPreferences$Editor;->apply()V
 +
 +    const-string p1, "Module action verified. Restart required."
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setStatus(Ljava/lang/String;)V
 +
@@ -21814,6 +22654,10 @@ new file mode 100644
 +
 +    const-string p2, "Updating module\u2026"
 +
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
++
 +    invoke-direct {p0, p1, p2, p3}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->run(Ljava/lang/String;Ljava/lang/String;Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$Work;)V
 +
 +    return-void
@@ -21921,6 +22765,10 @@ new file mode 100644
 +    :cond_c
 +    const-string v0, "Analysis cancellation requested."
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setStatus(Ljava/lang/String;)V
 +
 +    return-void
@@ -21986,11 +22834,19 @@ new file mode 100644
 +
 +    const-string v2, "No actions recorded."
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    invoke-interface {v0, v1, v2}, Landroid/content/SharedPreferences;->getString(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
 +
 +    move-result-object v0
 +
 +    const-string v1, "Action history"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-direct {p0, v1, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->info(Ljava/lang/String;Ljava/lang/String;)V
 +
@@ -22003,7 +22859,15 @@ new file mode 100644
 +    .line 166
 +    const-string v0, "Restoration help"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    const-string v1, "Restore removes only unchanged disable markers created by this menu. For recovery restoration, remove only the selected module\u2019s disable file whose contents start with \u2018UN1CA troubleshooting v1\u2019. Module files and app data are preserved."
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-direct {p0, v0, v1}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->info(Ljava/lang/String;Ljava/lang/String;)V
 +
@@ -22016,7 +22880,15 @@ new file mode 100644
 +    .line 106
 +    const-string v0, "About this check"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    const-string v1, "Checks known duplicate-purpose root modules, selected modified files, known LSPosed duplicate purposes, and verified LSPosed conflicts. Duplicate purpose does not prove a crash or a failed integrity check. Built-in files must be present, but this does not prove that feature is enabled or working. Dynamic hooks and scripts may be missed. LSPosed checks require an exact package and matching enabled scope. Duplicate-purpose rules also require the built-in framework class. They do not establish runtime hook execution. Confirmed conflicts require additional verified evidence."
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-direct {p0, v0, v1}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->info(Ljava/lang/String;Ljava/lang/String;)V
 +
@@ -22028,6 +22900,10 @@ new file mode 100644
 +
 +    .line 109
 +    const-string v0, "Restart postponed. Changes are pending."
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p0, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setStatus(Ljava/lang/String;)V
 +
@@ -22117,6 +22993,10 @@ new file mode 100644
 +
 +    const-string p1, "This device \u2014 PIF and TEE setup report"
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    iput-object p1, p0, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->reviewSource:Ljava/lang/String;
 +
 +    const/4 p1, 0x1
@@ -22124,6 +23004,10 @@ new file mode 100644
 +    iput-boolean p1, p0, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setupReview:Z
 +
 +    const-string p1, "Report ready. Review the selected sections before analysis."
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setStatus(Ljava/lang/String;)V
 +
@@ -22235,6 +23119,10 @@ new file mode 100644
 +
 +    const-string v1, "Active AI backend is not ready."
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-direct {v0, v1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw v0
@@ -22264,6 +23152,10 @@ new file mode 100644
 +
 +    .line 224
 +    const-string v0, "Original log saved. It may contain sensitive information."
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p0, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setStatus(Ljava/lang/String;)V
 +
@@ -22326,6 +23218,10 @@ new file mode 100644
 +
 +    const-string v0, "Cannot write selected document"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p2, v0}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p2
@@ -22360,6 +23256,10 @@ new file mode 100644
 +
 +    const-string p1, "Imported file (device provenance unverified)"
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    iput-object p1, p0, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->source:Ljava/lang/String;
 +
 +    const-string p1, ""
@@ -22379,6 +23279,10 @@ new file mode 100644
 +    invoke-interface {p1}, Ljava/util/Set;->clear()V
 +
 +    const-string p1, "File imported. Review crash details before analysis."
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setStatus(Ljava/lang/String;)V
 +
@@ -22437,6 +23341,10 @@ new file mode 100644
 +
 +    const-string v0, "Select a plain text log; extract compressed or binary files first"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p1, v0}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -22487,6 +23395,10 @@ new file mode 100644
 +    .line 251
 +    const-string v0, "No system crash, app crash, app-start failure or app-not-responding report found. Nothing was sent for analysis."
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setStatus(Ljava/lang/String;)V
 +
 +    return-void
@@ -22513,6 +23425,10 @@ new file mode 100644
 +    invoke-direct {p1}, Ljava/lang/StringBuilder;-><init>()V
 +
 +    const-string v0, "Found "
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-virtual {p1, v0}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
@@ -22627,6 +23543,10 @@ new file mode 100644
 +    new-instance v0, Ljava/io/IOException;
 +
 +    const-string v1, "Active AI backend is not ready. Prepare its model or API settings first."
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-direct {v0, v1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -22782,6 +23702,10 @@ new file mode 100644
 +    :cond_83
 +    const-string v4, "Crash details"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    :goto_85
 +    invoke-virtual {v3, v4}, Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z
 +
@@ -22805,6 +23729,10 @@ new file mode 100644
 +    if-eqz p1, :cond_9e
 +
 +    const-string p1, "Select at least one non-empty log section"
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-static {p0, p1, v0}, Landroid/widget/Toast;->makeText(Landroid/content/Context;Ljava/lang/CharSequence;I)Landroid/widget/Toast;
 +
@@ -22926,6 +23854,10 @@ new file mode 100644
 +
 +    const-string v0, "Accepted LSPosed review: "
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-virtual {p2, v0}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
 +    move-result-object p2
@@ -23001,6 +23933,10 @@ new file mode 100644
 +
 +    const-string p2, "Open LSPosed Manager from its notification or shortcut, disable the module/scope, then restart. No compatible manager launch activity was found."
 +
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
++
 +    invoke-virtual {p1, p2}, Landroid/app/AlertDialog$Builder;->setMessage(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;
 +
 +    move-result-object p1
@@ -23063,6 +23999,10 @@ new file mode 100644
 +
 +    const-string v1, "Unable to complete: "
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-virtual {v0, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
 +    move-result-object v0
@@ -23086,6 +24026,10 @@ new file mode 100644
 +    invoke-direct {v0}, Ljava/lang/StringBuilder;-><init>()V
 +
 +    const-string v1, "Failed: "
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-virtual {v0, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
@@ -23225,6 +24169,10 @@ new file mode 100644
 +    iput-boolean p1, p0, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->scanned:Z
 +
 +    const-string p2, "Scan completed. Review evidence below."
++
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
 +
 +    invoke-direct {p0, p2}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setStatus(Ljava/lang/String;)V
 +
@@ -23490,6 +24438,10 @@ new file mode 100644
 +
 +    const-string p1, "Saving original log\u2026"
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    invoke-direct {p0, v2, p1, p3}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->run(Ljava/lang/String;Ljava/lang/String;Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$Work;)V
 +
 +    return-void
@@ -23519,6 +24471,10 @@ new file mode 100644
 +    invoke-direct {p2, p0, p1}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$11;-><init>(Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;Landroid/net/Uri;)V
 +
 +    const-string p1, "Reading selected log\u2026"
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, v2, p1, p2}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->run(Ljava/lang/String;Ljava/lang/String;Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity$Work;)V
 +
@@ -23555,6 +24511,10 @@ new file mode 100644
 +
 +    const-string v1, "Troubleshooting"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-virtual {p0, v1}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->setTitle(Ljava/lang/CharSequence;)V
 +
 +    invoke-virtual {p0}, Lio/mesalabs/unica/troubleshooting/TroubleshootingActivity;->getActionBar()Landroid/app/ActionBar;
@@ -23584,6 +24544,10 @@ new file mode 100644
 +    invoke-direct {p1, p0}, Landroid/app/AlertDialog$Builder;-><init>(Landroid/content/Context;)V
 +
 +    const-string v0, "Troubleshooting is available to the device owner only."
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-virtual {p1, v0}, Landroid/app/AlertDialog$Builder;->setMessage(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;
 +

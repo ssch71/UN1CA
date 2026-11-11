@@ -3058,7 +3058,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/battery/BatteryActivity.smali b/sm
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/battery/BatteryActivity.smali
-@@ -0,0 +1,6186 @@
+@@ -0,0 +1,6274 @@
 +.class public final Lio/mesalabs/unica/battery/BatteryActivity;
 +.super Landroid/app/Activity;
 +.source "BatteryActivity.java"
@@ -3131,6 +3131,10 @@ new file mode 100644
 +
 +    .line 23
 +    const-string v0, "Checking available controls\u2026"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    iput-object v0, p0, Lio/mesalabs/unica/battery/BatteryActivity;->status:Ljava/lang/String;
 +
@@ -4044,6 +4048,10 @@ new file mode 100644
 +
 +    const-string v4, "Keep original"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    if-nez v3, :cond_e3
 +
 +    new-instance p1, Ljava/lang/StringBuilder;
@@ -4866,6 +4874,10 @@ new file mode 100644
 +
 +    const-string v9, "Standby bucket"
 +
++    invoke-static/range {v9 .. v9}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v9
++
 +    move-object v8, p0
 +
 +    invoke-direct/range {v8 .. v13}, Lio/mesalabs/unica/battery/BatteryActivity;->discrete(Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;Lio/mesalabs/unica/battery/BatteryActivity$Choice;)V
@@ -5133,6 +5145,10 @@ new file mode 100644
 +    if-eqz v0, :cond_25
 +
 +    const-string v0, "Restrict user and non-essential system apps"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    goto :goto_27
 +
@@ -5935,6 +5951,10 @@ new file mode 100644
 +
 +    const-string p0, "No matching apps"
 +
++    invoke-static/range {p0 .. p0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p0
++
 +    goto :goto_76
 +
 +    :cond_5f
@@ -6523,6 +6543,10 @@ new file mode 100644
 +
 +    const-string v0, "Checking battery service\u2026"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    iput-object v0, p0, Lio/mesalabs/unica/battery/BatteryActivity;->status:Ljava/lang/String;
 +
 +    invoke-direct {p0}, Lio/mesalabs/unica/battery/BatteryActivity;->draw()V
@@ -6948,6 +6972,10 @@ new file mode 100644
 +
 +    const-string p1, "Selection saved. Use Save and apply."
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    iput-object p1, p0, Lio/mesalabs/unica/battery/BatteryActivity;->status:Ljava/lang/String;
 +
 +    invoke-direct {p0}, Lio/mesalabs/unica/battery/BatteryActivity;->draw()V
@@ -6958,6 +6986,10 @@ new file mode 100644
 +    new-instance p1, Ljava/io/IOException;
 +
 +    const-string p2, "Select at most 100 apps"
++
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
 +
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -7614,6 +7646,10 @@ new file mode 100644
 +
 +    const-string p1, "Preset selected. Review the controls, then Save and apply."
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    iput-object p1, p0, Lio/mesalabs/unica/battery/BatteryActivity;->status:Ljava/lang/String;
 +
 +    invoke-direct {p0}, Lio/mesalabs/unica/battery/BatteryActivity;->draw()V
@@ -7777,6 +7813,10 @@ new file mode 100644
 +
 +    const-string p1, "Selection saved. Save and apply will confirm app disabling and restart."
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    iput-object p1, p0, Lio/mesalabs/unica/battery/BatteryActivity;->status:Ljava/lang/String;
 +
 +    invoke-direct {p0}, Lio/mesalabs/unica/battery/BatteryActivity;->draw()V
@@ -7789,6 +7829,10 @@ new file mode 100644
 +    new-instance p1, Ljava/io/IOException;
 +
 +    const-string p2, "Select at most 100 apps"
++
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
 +
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -7872,6 +7916,10 @@ new file mode 100644
 +    invoke-direct {v7, p0, v5, p1}, Lio/mesalabs/unica/battery/BatteryActivity$41;-><init>(Lio/mesalabs/unica/battery/BatteryActivity;[ZLjava/util/List;)V
 +
 +    const-string v3, "Exempted App \u2014 disable completely"
++
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
 +
 +    move-object v2, p0
 +
@@ -8072,6 +8120,10 @@ new file mode 100644
 +
 +    const-string v4, "Protected \u2014 needed for recovery"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    goto :goto_a8
 +
 +    :cond_9b
@@ -8084,6 +8136,10 @@ new file mode 100644
 +    if-eqz v4, :cond_a6
 +
 +    const-string v4, "Saved app state available for restoration"
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    goto :goto_a8
 +
@@ -8231,6 +8287,10 @@ new file mode 100644
 +    iput-boolean v1, p0, Lio/mesalabs/unica/battery/BatteryActivity;->busy:Z
 +
 +    const-string v1, "Reading Exempted (5) apps\u2026"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    iput-object v1, p0, Lio/mesalabs/unica/battery/BatteryActivity;->status:Ljava/lang/String;
 +
@@ -8400,15 +8460,27 @@ new file mode 100644
 +
 +    const-string v1, "Completed with Android policy limits; review details below"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    goto :goto_5f
 +
 +    :cond_5a
 +    const-string v1, "Device status checked"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    goto :goto_5f
 +
 +    :cond_5d
 +    const-string v1, "Some changes failed; review details below"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    :goto_5f
 +    invoke-direct {p2, v1}, Ljava/lang/StringBuilder;-><init>(Ljava/lang/String;)V
@@ -8807,6 +8879,10 @@ new file mode 100644
 +    :cond_3c
 +    const-string p1, "Profile backed up."
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    iput-object p1, p0, Lio/mesalabs/unica/battery/BatteryActivity;->status:Ljava/lang/String;
 +
 +    invoke-direct {p0}, Lio/mesalabs/unica/battery/BatteryActivity;->draw()V
@@ -8825,6 +8901,10 @@ new file mode 100644
 +    new-instance p2, Ljava/io/IOException;
 +
 +    const-string p3, "Cannot open backup"
++
++    invoke-static/range {p3 .. p3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p3
 +
 +    invoke-direct {p2, p3}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -8909,6 +8989,10 @@ new file mode 100644
 +    new-instance p1, Ljava/io/IOException;
 +
 +    const-string p3, "Profile exceeds 64 KB"
++
++    invoke-static/range {p3 .. p3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p3
 +
 +    invoke-direct {p1, p3}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +    :try_end_8c
@@ -9008,6 +9092,10 @@ new file mode 100644
 +    new-instance p1, Ljava/io/IOException;
 +
 +    const-string p3, "Cannot open profile"
++
++    invoke-static/range {p3 .. p3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p3
 +
 +    invoke-direct {p1, p3}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -9306,7 +9394,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/battery/BatteryBoot$ApplyJob.smali
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/battery/BatteryBoot$ApplyJob.smali
-@@ -0,0 +1,136 @@
+@@ -0,0 +1,140 @@
 +.class public final Lio/mesalabs/unica/battery/BatteryBoot$ApplyJob;
 +.super Landroid/app/job/JobService;
 +.source "BatteryBoot.java"
@@ -9394,6 +9482,10 @@ new file mode 100644
 +
 +    const-string v3, "Boot profile failed"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    invoke-static {v2, v3, v1}, Landroid/util/Log;->e(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
 +    :try_end_2c
 +    .catchall {:try_start_25 .. :try_end_2c} :catchall_22
@@ -9448,7 +9540,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/battery/BatteryBoot.smali b/smali_
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/battery/BatteryBoot.smali
-@@ -0,0 +1,177 @@
+@@ -0,0 +1,181 @@
 +.class public final Lio/mesalabs/unica/battery/BatteryBoot;
 +.super Landroid/content/BroadcastReceiver;
 +.source "BatteryBoot.java"
@@ -9614,6 +9706,10 @@ new file mode 100644
 +    const-string p2, "UnicaBattery"
 +
 +    const-string v0, "Cannot schedule battery profile"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-static {p2, v0, p1}, Landroid/util/Log;->e(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
 +
@@ -9814,7 +9910,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/battery/BatteryEngine.smali b/smal
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/battery/BatteryEngine.smali
-@@ -0,0 +1,9458 @@
+@@ -0,0 +1,9682 @@
 +.class public Lio/mesalabs/unica/battery/BatteryEngine;
 +.super Ljava/lang/Object;
 +.source "BatteryEngine.java"
@@ -10878,6 +10974,10 @@ new file mode 100644
 +
 +    const-string v0, "Activity status timed out"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -11887,6 +11987,10 @@ new file mode 100644
 +
 +    const-string p1, "Rollback journal capacity exceeded; no new controls applied"
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -12178,6 +12282,10 @@ new file mode 100644
 +    new-instance p1, Ljava/io/IOException;
 +
 +    const-string v0, "App identity changed; refusing UID policy write"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p1, v0}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -13316,6 +13424,10 @@ new file mode 100644
 +
 +    const-string v4, "Value is outside this device\'s available choices"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    invoke-direct {v0, v4}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw v0
@@ -13327,6 +13439,10 @@ new file mode 100644
 +    new-instance v0, Ljava/io/IOException;
 +
 +    const-string v4, "Unsupported on this device"
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    invoke-direct {v0, v4}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -13394,6 +13510,10 @@ new file mode 100644
 +    new-instance v0, Ljava/io/IOException;
 +
 +    const-string v4, "App is no longer Exempted (5); refresh the list before selecting it"
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    invoke-direct {v0, v4}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -13577,6 +13697,10 @@ new file mode 100644
 +    :try_start_488
 +    const-string v13, "Frequency floor \u00b7 "
 +
++    invoke-static/range {v13 .. v13}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v13
++
 +    invoke-virtual {v10, v13}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
 +    move-result-object v10
@@ -13666,6 +13790,10 @@ new file mode 100644
 +    const-string v6, "label"
 +
 +    const-string v8, "Minimum refresh rate"
++
++    invoke-static/range {v8 .. v8}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v8
 +
 +    invoke-virtual {v0, v6, v8}, Lorg/json/JSONObject;->put(Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
 +
@@ -14250,6 +14378,10 @@ new file mode 100644
 +
 +    const-string v0, "Subscription is not active; saved Wi-Fi Calling state retained"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p1, v0}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -14474,7 +14606,15 @@ new file mode 100644
 +
 +    const-string v5, "Wi-Fi runtime power"
 +
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
++
 +    const-string v6, "Auto allows runtime sleep. On can bypass a faulty suspend/resume loop, but may increase drain."
++
++    invoke-static/range {v6 .. v6}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v6
 +
 +    goto :goto_7b
 +
@@ -14490,7 +14630,15 @@ new file mode 100644
 +
 +    const-string v5, "Wi-Fi wakeup"
 +
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
++
 +    const-string v6, "Disabling wake events may delay Wi-Fi notifications or background communication."
++
++    invoke-static/range {v6 .. v6}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v6
 +
 +    goto :goto_7b
 +
@@ -14508,6 +14656,10 @@ new file mode 100644
 +
 +    const-string v6, "Power-saving states may reduce link consumption. Performance disables them; aggressive savings can expose driver instability."
 +
++    invoke-static/range {v6 .. v6}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v6
++
 +    goto :goto_7b
 +
 +    .line 207
@@ -14523,6 +14675,10 @@ new file mode 100644
 +    const-string v5, "Swappiness"
 +
 +    const-string v6, "Balances ZRAM work against reclaim and app reloads. A lower value does not guarantee lower power consumption."
++
++    invoke-static/range {v6 .. v6}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v6
 +
 +    goto :goto_7b
 +
@@ -14723,7 +14879,15 @@ new file mode 100644
 +
 +    const-string v3, "Cached-process limit"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const-string v4, "More caching can avoid costly app reloads. Fewer cached processes is not inherently more efficient. Adjustable range: 32\u20134096."
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    const-string v5, "device_config"
 +
@@ -14791,7 +14955,15 @@ new file mode 100644
 +
 +    const-string v3, "Cached-app freezer"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const-string v4, "Freezing eligible cached apps reduces their CPU activity. Device default preserves Android\'s policy; changes may need a reboot."
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    const-string v5, "global"
 +
@@ -14859,6 +15031,10 @@ new file mode 100644
 +
 +    :cond_169
 +    const-string v0, "Runtime freezer state not reported; no change made by Balanced"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    :goto_16b
 +    invoke-virtual {v2, v11, v0}, Lorg/json/JSONObject;->put(Ljava/lang/String;Ljava/lang/Object;)Lorg/json/JSONObject;
@@ -15002,7 +15178,15 @@ new file mode 100644
 +
 +    const-string v3, "Display refresh-rate ceiling"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const-string v4, "Optional. Lower refresh rates trade smoothness for lower display/rendering power. Samsung\'s display policy may override this request."
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    move-object v1, p0
 +
@@ -15025,7 +15209,15 @@ new file mode 100644
 +
 +    const-string v3, "Android Battery Saver"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const-string v4, "Requests Android\'s low-power policy. Charging or Samsung policy can switch it off."
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    const-string v5, "power"
 +
@@ -15046,7 +15238,15 @@ new file mode 100644
 +
 +    const-string v3, "Automatic account sync"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const-string v4, "Off stops Android sync adapters. Apps with their own network schedulers require background restrictions too."
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    const-string v5, "sync"
 +
@@ -15067,7 +15267,15 @@ new file mode 100644
 +
 +    const-string v3, "Data Saver"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const-string v4, "Restricts background data on metered networks; Wi-Fi is not necessarily metered."
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    const-string v5, "data_saver"
 +
@@ -15092,7 +15300,15 @@ new file mode 100644
 +
 +    const-string v3, "Aggressive app restrictions"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const-string v4, "Restricts user and non-essential system apps, including Play services, Play Store and Galaxy Store. Notifications, alarms, calls, connectivity and background work can fail. Removes their user-added Doze exemptions. Protects core UIDs, Settings, SystemUI, credential and permission components, launcher, enabled keyboards, accessibility services and device administrators. Reapply after installing apps. Foreground services and OS exemptions can still run."
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    const-string v5, "policy"
 +
@@ -15115,7 +15331,15 @@ new file mode 100644
 +
 +    const-string v3, "Adaptive brightness"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const-string v4, "Manual mode prevents automatic brightness increases. Review brightness before going outdoors."
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    const-string v5, "system"
 +
@@ -15134,7 +15358,15 @@ new file mode 100644
 +
 +    const-string v3, "Manual brightness"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const-string v4, "Stingy selects 8 (captured from the device brightness setting) on Android\'s legacy 1\u2013255 setting scale; this is not a measured panel luminance percentage."
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    const-string v5, "system"
 +
@@ -15163,6 +15395,10 @@ new file mode 100644
 +
 +    const-string v3, "Screen timeout"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const-string v4, "A shorter timeout reduces unattended screen-on time. Apps holding the screen awake can override it."
 +
 +    const-string v5, "system"
@@ -15188,6 +15424,10 @@ new file mode 100644
 +
 +    const-string v4, "Off avoids ambient display activity."
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    const-string v5, "system"
 +
 +    const-string v6, "aod_mode"
@@ -15207,7 +15447,15 @@ new file mode 100644
 +
 +    const-string v3, "Wi-Fi radio"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const-string v4, "Off disconnects ALL Wi-Fi, including foreground traffic and Wi-Fi Calling. Mobile data may take over and use more power/data. For no scanning while off, also disable Wi-Fi scanning."
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    const-string v5, "wifi"
 +
@@ -15310,6 +15558,10 @@ new file mode 100644
 +
 +    const-string v4, "Off disables carrier Wi-Fi Calling for this subscription, not ordinary Wi-Fi data. Calls can fail with poor cellular coverage. Carrier policy may reject the change."
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    move-object v6, v5
 +
 +    const-string v5, "wifi_calling"
@@ -15401,7 +15653,15 @@ new file mode 100644
 +
 +    const-string v3, "Wi-Fi scanning while off"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const-string v4, "Disables always-available Wi-Fi scans; reduces location accuracy."
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    const-string v5, "global"
 +
@@ -15424,7 +15684,15 @@ new file mode 100644
 +
 +    const-string v3, "Bluetooth scanning while off"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const-string v4, "Disables always-available BLE scans; can impair location and nearby-device discovery."
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    const-string v5, "global"
 +
@@ -15445,7 +15713,15 @@ new file mode 100644
 +
 +    const-string v3, "Keep mobile data active on Wi-Fi"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const-string v4, "Off reduces simultaneous data connectivity; Wi-Fi-to-mobile handover can be slower."
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    const-string v5, "global"
 +
@@ -15530,6 +15806,10 @@ new file mode 100644
 +
 +    const-string v4, "Zero removes optional animation work; apps may ignore this scale."
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    const-string v5, "global"
 +
 +    move-object v1, p0
@@ -15559,7 +15839,15 @@ new file mode 100644
 +
 +    const-string v3, "System dark mode"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    const-string v4, "Always dark can reduce OLED display power in apps that follow the theme. App-specific themes and wallpaper are unchanged."
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    const-string v5, "night"
 +
@@ -15619,6 +15907,10 @@ new file mode 100644
 +    new-instance p1, Ljava/io/IOException;
 +
 +    const-string p2, "Cannot create battery profile storage"
++
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
 +
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -15839,6 +16131,10 @@ new file mode 100644
 +    new-instance p1, Ljava/io/IOException;
 +
 +    const-string p2, "Only owner Settings may apply battery profiles"
++
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
 +
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -16884,6 +17180,10 @@ new file mode 100644
 +
 +    const-string p2, "Recovery component or shared UID protected"
 +
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
++
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -17671,6 +17971,10 @@ new file mode 100644
 +
 +    const-string p2, "Profile exceeds 64 KB"
 +
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
++
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -18074,6 +18378,10 @@ new file mode 100644
 +
 +    const-string p2, "Recovery component or shared UID protected"
 +
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
++
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -18456,6 +18764,10 @@ new file mode 100644
 +
 +    const-string p2, "Dark-mode schedule type was not restored"
 +
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
++
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -18668,6 +18980,10 @@ new file mode 100644
 +
 +    const-string p2, "Device configuration rejected the change"
 +
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
++
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -18868,6 +19184,10 @@ new file mode 100644
 +    new-instance p1, Ljava/io/IOException;
 +
 +    const-string p2, "Android rejected the setting"
++
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
 +
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -19278,7 +19598,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/battery/BatteryTransport.smali b/s
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/battery/BatteryTransport.smali
-@@ -0,0 +1,745 @@
+@@ -0,0 +1,773 @@
 +.class public final Lio/mesalabs/unica/battery/BatteryTransport;
 +.super Ljava/lang/Object;
 +.source "BatteryTransport.java"
@@ -19389,6 +19709,10 @@ new file mode 100644
 +    new-instance p1, Ljava/io/IOException;
 +
 +    const-string v1, "Battery message too large"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-direct {p1, v1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -19533,6 +19857,10 @@ new file mode 100644
 +
 +    const-string p1, "Invalid kernel control"
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -19562,6 +19890,10 @@ new file mode 100644
 +    new-instance p0, Ljava/io/IOException;
 +
 +    const-string p1, "Invalid kernel value"
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -19945,6 +20277,10 @@ new file mode 100644
 +
 +    const-string p1, "Battery kernel service did not respond. Refresh status before retrying."
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -19977,6 +20313,10 @@ new file mode 100644
 +
 +    const-string p1, "Invalid kernel operation"
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -19987,6 +20327,10 @@ new file mode 100644
 +
 +    const-string p1, "Battery Saving service is not installed. Install the updated ROM."
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -19996,6 +20340,10 @@ new file mode 100644
 +    new-instance p0, Ljava/io/IOException;
 +
 +    const-string p1, "Battery Saving is available to the device owner\'s Settings only"
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -20029,7 +20377,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/battery/Profile.smali b/smali_clas
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/battery/Profile.smali
-@@ -0,0 +1,2308 @@
+@@ -0,0 +1,2348 @@
 +.class public final Lio/mesalabs/unica/battery/Profile;
 +.super Ljava/lang/Object;
 +.source "Profile.java"
@@ -21089,6 +21437,10 @@ new file mode 100644
 +
 +    const-string v1, "Unknown preset"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-direct {v0, v1}, Lorg/json/JSONException;-><init>(Ljava/lang/String;)V
 +
 +    throw v0
@@ -21232,6 +21584,10 @@ new file mode 100644
 +    new-instance p0, Lorg/json/JSONException;
 +
 +    const-string v0, "Unknown profile field"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p0, v0}, Lorg/json/JSONException;-><init>(Ljava/lang/String;)V
 +
@@ -21387,6 +21743,10 @@ new file mode 100644
 +    new-instance p0, Lorg/json/JSONException;
 +
 +    const-string v0, "Invalid Wi-Fi Calling value"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p0, v0}, Lorg/json/JSONException;-><init>(Ljava/lang/String;)V
 +
@@ -22211,6 +22571,10 @@ new file mode 100644
 +
 +    const-string v0, "Invalid package name"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Lorg/json/JSONException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -22230,6 +22594,10 @@ new file mode 100644
 +
 +    const-string v0, "Select at most 100 apps"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Lorg/json/JSONException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -22244,6 +22612,10 @@ new file mode 100644
 +
 +    const-string v0, "Invalid standby bucket"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Lorg/json/JSONException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -22253,6 +22625,10 @@ new file mode 100644
 +    new-instance p0, Lorg/json/JSONException;
 +
 +    const-string v0, "Too many controls"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p0, v0}, Lorg/json/JSONException;-><init>(Ljava/lang/String;)V
 +
@@ -22264,6 +22640,10 @@ new file mode 100644
 +
 +    const-string v0, "Invalid preset"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Lorg/json/JSONException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -22274,6 +22654,10 @@ new file mode 100644
 +
 +    const-string v0, "Invalid enable switch"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Lorg/json/JSONException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -22283,6 +22667,10 @@ new file mode 100644
 +    new-instance p0, Lorg/json/JSONException;
 +
 +    const-string v0, "Unsupported battery profile format/version"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p0, v0}, Lorg/json/JSONException;-><init>(Ljava/lang/String;)V
 +

@@ -3036,7 +3036,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/gpu/GpuActivity.smali b/smali_clas
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/gpu/GpuActivity.smali
-@@ -0,0 +1,9094 @@
+@@ -0,0 +1,9314 @@
 +.class public final Lio/mesalabs/unica/gpu/GpuActivity;
 +.super Landroid/app/Activity;
 +.source "GpuActivity.java"
@@ -3225,6 +3225,10 @@ new file mode 100644
 +
 +    .line 32
 +    const-string v0, "Checking firmware compatibility\u2026"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    iput-object v0, p0, Lio/mesalabs/unica/gpu/GpuActivity;->message:Ljava/lang/String;
 +
@@ -3516,6 +3520,10 @@ new file mode 100644
 +    new-instance v0, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v1, "No GPU changes selected."
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -3823,6 +3831,10 @@ new file mode 100644
 +    new-instance v1, Landroid/text/SpannableStringBuilder;
 +
 +    const-string v2, "Changes from the current image:\n"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    invoke-direct {v1, v2}, Landroid/text/SpannableStringBuilder;-><init>(Ljava/lang/CharSequence;)V
 +
@@ -4788,6 +4800,10 @@ new file mode 100644
 +
 +    const-string v5, "Resume backup refresh?"
 +
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
++
 +    goto :goto_74
 +
 +    :cond_72
@@ -5451,6 +5467,10 @@ new file mode 100644
 +
 +    const-string v1, "Working\u2026"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    goto :goto_10a
 +
 +    :cond_108
@@ -5527,6 +5547,10 @@ new file mode 100644
 +
 +    const-string v2, "Export a shareable JSON file with frequencies and voltage levels"
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    const/4 v4, 0x0
 +
 +    invoke-direct/range {v0 .. v5}, Lio/mesalabs/unica/gpu/GpuActivity;->row(Ljava/lang/String;Ljava/lang/CharSequence;ZZLandroid/view/View$OnClickListener;)V
@@ -5537,6 +5561,10 @@ new file mode 100644
 +    invoke-direct {v5, v0}, Lio/mesalabs/unica/gpu/GpuActivity$46;-><init>(Lio/mesalabs/unica/gpu/GpuActivity;)V
 +
 +    const-string v1, "Import profile"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    const-string v2, "UN1CA JSON or original konabess:// export \u00b7 review both tables"
 +
@@ -5556,6 +5584,10 @@ new file mode 100644
 +    const-string v1, "Load current image values"
 +
 +    const-string v2, "Replace the saved draft with the current image\'s table"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    invoke-direct/range {v0 .. v5}, Lio/mesalabs/unica/gpu/GpuActivity;->row(Ljava/lang/String;Ljava/lang/CharSequence;ZZLandroid/view/View$OnClickListener;)V
 +
@@ -5591,6 +5623,10 @@ new file mode 100644
 +
 +    const-string v1, "Restart backup for current ROM"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    goto :goto_19a
 +
 +    :cond_17a
@@ -5607,6 +5643,10 @@ new file mode 100644
 +    if-eqz v1, :cond_189
 +
 +    const-string v1, "Resume backup refresh"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    goto :goto_19a
 +
@@ -5625,10 +5665,18 @@ new file mode 100644
 +
 +    const-string v1, "Create backup for current ROM"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    goto :goto_19a
 +
 +    :cond_198
 +    const-string v1, "Create or verify original backup"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    :goto_19a
 +    iget-object v4, v0, Lio/mesalabs/unica/gpu/GpuActivity;->state:Lorg/json/JSONObject;
@@ -5647,6 +5695,10 @@ new file mode 100644
 +
 +    const-string v4, "Verify old rollback in /data, free its cache space and back up this ROM; profile stays saved"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    goto :goto_1bc
 +
 +    :cond_1ab
@@ -5664,10 +5716,18 @@ new file mode 100644
 +
 +    const-string v4, "Original image saved"
 +
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
++
 +    goto :goto_1bc
 +
 +    :cond_1ba
 +    const-string v4, "Save the original before making changes"
++
++    invoke-static/range {v4 .. v4}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v4
 +
 +    :goto_1bc
 +    invoke-direct {v0}, Lio/mesalabs/unica/gpu/GpuActivity;->ready()Z
@@ -5774,10 +5834,18 @@ new file mode 100644
 +
 +    const-string v1, "Saved copy verified"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    goto :goto_220
 +
 +    :cond_21e
 +    const-string v1, "Required before Apply \u00b7 choose PC or USB storage"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    :goto_220
 +    invoke-direct {v0}, Lio/mesalabs/unica/gpu/GpuActivity;->ready()Z
@@ -5838,6 +5906,10 @@ new file mode 100644
 +
 +    const-string v1, "Save rollback ZIP"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    move-object/from16 v16, v4
 +
 +    const/4 v4, 0x0
@@ -5853,7 +5925,15 @@ new file mode 100644
 +
 +    const-string v1, "Recovery instructions"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    const-string v2, "Restore through OrangeFox if Android cannot start"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    const/4 v3, 0x1
 +
@@ -5877,7 +5957,15 @@ new file mode 100644
 +
 +    const-string v1, "About GPU tuning"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    const-string v2, "Full-Hz frequencies \u00b7 RPMh requests \u00b7 bus and ACD"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    invoke-direct/range {v0 .. v5}, Lio/mesalabs/unica/gpu/GpuActivity;->row(Ljava/lang/String;Ljava/lang/CharSequence;ZZLandroid/view/View$OnClickListener;)V
 +
@@ -5892,6 +5980,10 @@ new file mode 100644
 +    invoke-direct {v1}, Ljava/lang/StringBuilder;-><init>()V
 +
 +    const-string v2, "Table "
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    invoke-virtual {v1, v2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 +
@@ -5942,6 +6034,10 @@ new file mode 100644
 +    move-object v2, v1
 +
 +    const-string v1, "Edit table"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    move-object v4, v3
 +
@@ -5997,6 +6093,10 @@ new file mode 100644
 +    invoke-direct {v5, v0}, Lio/mesalabs/unica/gpu/GpuActivity$33;-><init>(Lio/mesalabs/unica/gpu/GpuActivity;)V
 +
 +    const-string v1, "Initial minimum level"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-direct/range {v0 .. v5}, Lio/mesalabs/unica/gpu/GpuActivity;->row(Ljava/lang/String;Ljava/lang/CharSequence;ZZLandroid/view/View$OnClickListener;)V
 +
@@ -6250,6 +6350,10 @@ new file mode 100644
 +
 +    const-string v1, "Voltage request"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    const/4 v4, 0x0
 +
 +    invoke-direct/range {v0 .. v5}, Lio/mesalabs/unica/gpu/GpuActivity;->row(Ljava/lang/String;Ljava/lang/CharSequence;ZZLandroid/view/View$OnClickListener;)V
@@ -6361,6 +6465,10 @@ new file mode 100644
 +
 +    const-string v1, "Bus and ACD"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    const/4 v4, 0x0
 +
 +    invoke-direct/range {v0 .. v5}, Lio/mesalabs/unica/gpu/GpuActivity;->row(Ljava/lang/String;Ljava/lang/CharSequence;ZZLandroid/view/View$OnClickListener;)V
@@ -6396,7 +6504,15 @@ new file mode 100644
 +
 +    const-string v1, "Remove power level"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    const-string v2, "Renumber remaining levels and adjust references"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    const/4 v4, 0x0
 +
@@ -6573,7 +6689,15 @@ new file mode 100644
 +
 +    const-string v1, "Restore original vendor_boot"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    const-string v2, "Restore the pre-trial image, then reboot"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    const/4 v4, 0x0
 +
@@ -6616,7 +6740,15 @@ new file mode 100644
 +
 +    const-string v1, "Reboot now"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    const-string v2, "Only after Apply or Restore reports success"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    const/4 v4, 0x0
 +
@@ -6815,6 +6947,10 @@ new file mode 100644
 +    new-array v4, v3, [Landroid/widget/EditText;
 +
 +    const-string v5, "Advanced: raw u32 bus requests must satisfy min \u2264 frequency \u2264 max. This driver clamps requests above 9 on active rows; the final row must use 0\u20139. ACD is a raw bitfield. Changes can prevent booting."
++
++    invoke-static/range {v5 .. v5}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v5
 +
 +    const/4 v6, 0x1
 +
@@ -7175,6 +7311,10 @@ new file mode 100644
 +
 +    const-string v3, "Initial minimum level"
 +
++    invoke-static/range {v3 .. v3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v3
++
 +    goto :goto_4f
 +
 +    :cond_4d
@@ -7458,6 +7598,10 @@ new file mode 100644
 +
 +    const-string p2, "Refresh compatibility before exporting the rollback ZIP."
 +
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
++
 +    invoke-direct {p0, p1, p2}, Lio/mesalabs/unica/gpu/GpuActivity;->alert(Ljava/lang/String;Ljava/lang/String;)V
 +
 +    return-void
@@ -7478,6 +7622,10 @@ new file mode 100644
 +    iput-boolean v1, p0, Lio/mesalabs/unica/gpu/GpuActivity;->busy:Z
 +
 +    const-string v1, "Saving and verifying recovery rollback ZIP\u2026"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    iput-object v1, p0, Lio/mesalabs/unica/gpu/GpuActivity;->message:Ljava/lang/String;
 +
@@ -8020,6 +8168,10 @@ new file mode 100644
 +
 +    const-string p2, "Profile unavailable"
 +
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
++
 +    invoke-virtual {p1}, Ljava/lang/Exception;->getMessage()Ljava/lang/String;
 +
 +    move-result-object p1
@@ -8041,10 +8193,18 @@ new file mode 100644
 +
 +    const-string p1, "Saving tuning profile\u2026"
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    goto :goto_28
 +
 +    :cond_26
 +    const-string p1, "Reading tuning profile\u2026"
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    :goto_28
 +    iput-object p1, p0, Lio/mesalabs/unica/gpu/GpuActivity;->message:Ljava/lang/String;
@@ -8195,6 +8355,10 @@ new file mode 100644
 +
 +    const-string v0, "Profile exceeds 32 KiB"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -8210,6 +8374,10 @@ new file mode 100644
 +    new-instance p0, Ljava/io/IOException;
 +
 +    const-string v0, "Cannot read profile"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p0, v0}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -9249,6 +9417,10 @@ new file mode 100644
 +
 +    const-string p2, "Cannot save tuning profile"
 +
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
++
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -9503,6 +9675,10 @@ new file mode 100644
 +
 +    :cond_74
 +    const-string p1, "Bus/ACD differs from stock. "
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +    :try_end_76
 +    .catch Ljava/lang/Exception; {:try_start_2c .. :try_end_76} :catch_77
 +
@@ -10815,6 +10991,10 @@ new file mode 100644
 +
 +    const-string p1, "Rollback ZIP saved and verified. Keep it accessible from recovery."
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    iput-object p1, p0, Lio/mesalabs/unica/gpu/GpuActivity;->message:Ljava/lang/String;
 +
 +    goto :goto_2f
@@ -11094,6 +11274,10 @@ new file mode 100644
 +
 +    const-string v2, "Saved rollback ZIP verification failed"
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    invoke-direct {v0, v2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw v0
@@ -11113,6 +11297,10 @@ new file mode 100644
 +    new-instance v0, Ljava/io/IOException;
 +
 +    const-string v2, "Cannot verify saved ZIP"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    invoke-direct {v0, v2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -11147,6 +11335,10 @@ new file mode 100644
 +
 +    const-string v2, "Source rollback checksum mismatch"
 +
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
++
 +    invoke-direct {v0, v2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw v0
@@ -11166,6 +11358,10 @@ new file mode 100644
 +    new-instance v0, Ljava/io/IOException;
 +
 +    const-string v2, "Cannot open destination"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    invoke-direct {v0, v2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -11299,6 +11495,10 @@ new file mode 100644
 +
 +    const-string p1, "Profile validated. Review before loading."
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    iput-object p1, p0, Lio/mesalabs/unica/gpu/GpuActivity;->message:Ljava/lang/String;
 +
 +    invoke-direct {p0, p2}, Lio/mesalabs/unica/gpu/GpuActivity;->reviewProfile(Lio/mesalabs/unica/gpu/GpuProfile;)V
@@ -11307,6 +11507,10 @@ new file mode 100644
 +
 +    :cond_33
 +    const-string p1, "Tuning profile saved and verified. Share this JSON file; keep your recovery rollback ZIP separately."
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    iput-object p1, p0, Lio/mesalabs/unica/gpu/GpuActivity;->message:Ljava/lang/String;
 +
@@ -11396,6 +11600,10 @@ new file mode 100644
 +
 +    const-string v1, "Saved profile verification failed"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-direct {p1, v1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -11437,6 +11645,10 @@ new file mode 100644
 +    new-instance p1, Ljava/io/IOException;
 +
 +    const-string p2, "Cannot open destination"
++
++    invoke-static/range {p2 .. p2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p2
 +
 +    invoke-direct {p1, p2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -11670,6 +11882,10 @@ new file mode 100644
 +
 +    const-string p1, "Imported profile saved. Loading did not write vendor_boot. Review before Apply."
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    iput-object p1, p0, Lio/mesalabs/unica/gpu/GpuActivity;->message:Ljava/lang/String;
 +
 +    invoke-direct {p0}, Lio/mesalabs/unica/gpu/GpuActivity;->draw()V
@@ -11740,6 +11956,10 @@ new file mode 100644
 +    if-eqz p3, :cond_24
 +
 +    const-string p3, "Original vendor_boot restored and verified. Reboot when ready."
++
++    invoke-static/range {p3 .. p3}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p3
 +
 +    goto :goto_61
 +
@@ -12236,7 +12456,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/gpu/GpuProfile.smali b/smali_class
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/gpu/GpuProfile.smali
-@@ -0,0 +1,2315 @@
+@@ -0,0 +1,2367 @@
 +.class final Lio/mesalabs/unica/gpu/GpuProfile;
 +.super Ljava/lang/Object;
 +.source "GpuProfile.java"
@@ -12452,6 +12672,10 @@ new file mode 100644
 +
 +    const-string v0, "Profile must be 1\u201332768 bytes"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -12501,6 +12725,10 @@ new file mode 100644
 +    new-instance p0, Ljava/lang/IllegalArgumentException;
 +
 +    const-string p1, "Unknown profile field"
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -12822,6 +13050,10 @@ new file mode 100644
 +
 +    const-string v1, "Bad legacy index"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw v0
@@ -13111,6 +13343,10 @@ new file mode 100644
 +
 +    const-string v1, "Expected 2\u201315 power levels per table"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw v0
@@ -13138,6 +13374,10 @@ new file mode 100644
 +
 +    const-string v1, "Expected both Samsung GPU tables"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw v0
@@ -13147,6 +13387,10 @@ new file mode 100644
 +    new-instance v0, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v1, "Profile format or target GPU does not match this device"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -13394,6 +13638,10 @@ new file mode 100644
 +
 +    const-string v0, "Unbalanced profile JSON"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -13416,6 +13664,10 @@ new file mode 100644
 +    new-instance p0, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v0, "Profile JSON is too deeply nested"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p0, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -13454,6 +13706,10 @@ new file mode 100644
 +
 +    const-string v0, "Expected one JSON profile"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p0, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -13462,6 +13718,10 @@ new file mode 100644
 +    new-instance p0, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v0, "Truncated profile JSON"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p0, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -13596,6 +13856,10 @@ new file mode 100644
 +    new-instance p0, Ljava/lang/IllegalArgumentException;
 +
 +    const-string p1, "Control characters in profile text"
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -14529,6 +14793,10 @@ new file mode 100644
 +
 +    const-string v1, "Table count or initial/minimum index is invalid"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw v0
@@ -14548,6 +14816,10 @@ new file mode 100644
 +
 +    const-string v1, "Tables exceed the original FDT space. Remove a level before adding another."
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw v0
@@ -14557,7 +14829,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/gpu/GpuTransport.smali b/smali_cla
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/gpu/GpuTransport.smali
-@@ -0,0 +1,626 @@
+@@ -0,0 +1,642 @@
 +.class final Lio/mesalabs/unica/gpu/GpuTransport;
 +.super Ljava/lang/Object;
 +.source "GpuTransport.java"
@@ -14656,6 +14928,10 @@ new file mode 100644
 +    new-instance v1, Ljava/io/IOException;
 +
 +    const-string v2, "Oversized GPU response"
++
++    invoke-static/range {v2 .. v2}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v2
 +
 +    invoke-direct {v1, v2}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -15148,6 +15424,10 @@ new file mode 100644
 +
 +    const-string p1, "Invalid GPU request"
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -15158,6 +15438,10 @@ new file mode 100644
 +
 +    const-string p1, "Invalid operation"
 +
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
++
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
 +    throw p0
@@ -15167,6 +15451,10 @@ new file mode 100644
 +    new-instance p0, Ljava/io/IOException;
 +
 +    const-string p1, "Available to the device owner\'s Settings only"
++
++    invoke-static/range {p1 .. p1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object p1
 +
 +    invoke-direct {p0, p1}, Ljava/io/IOException;-><init>(Ljava/lang/String;)V
 +
@@ -15285,7 +15573,7 @@ diff --git a/smali_classes4/io/mesalabs/unica/gpu/KonaProfileImport.smali b/smal
 new file mode 100644
 --- /dev/null
 +++ b/smali_classes4/io/mesalabs/unica/gpu/KonaProfileImport.smali
-@@ -0,0 +1,1502 @@
+@@ -0,0 +1,1582 @@
 +.class final Lio/mesalabs/unica/gpu/KonaProfileImport;
 +.super Ljava/lang/Object;
 +.source "KonaProfileImport.java"
@@ -15398,6 +15686,10 @@ new file mode 100644
 +
 +    const-string v0, "Too many device-tree tokens"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p1, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -15406,6 +15698,10 @@ new file mode 100644
 +    new-instance p1, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v0, "Unsupported content in KonaBess device-tree data"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p1, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -15426,6 +15722,10 @@ new file mode 100644
 +    new-instance p1, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v0, "Invalid device-tree suffix"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p1, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -15650,6 +15950,10 @@ new file mode 100644
 +    new-instance v0, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v1, "Truncated KonaBess table"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -15879,6 +16183,10 @@ new file mode 100644
 +
 +    const-string v0, "Device-tree cell overflows u32"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p1, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -15887,6 +16195,10 @@ new file mode 100644
 +    new-instance p1, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v0, "Invalid device-tree cell"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p1, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -15941,6 +16253,10 @@ new file mode 100644
 +
 +    const-string v0, "Duplicate GPU property"
 +
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
++
 +    invoke-direct {p1, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw p1
@@ -15950,6 +16266,10 @@ new file mode 100644
 +    new-instance p1, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v0, "Truncated GPU property"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p1, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -15968,6 +16288,10 @@ new file mode 100644
 +    new-instance p1, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v0, "Unexpected nested GPU node"
++
++    invoke-static/range {v0 .. v0}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v0
 +
 +    invoke-direct {p1, v0}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -16053,6 +16377,10 @@ new file mode 100644
 +    new-instance v0, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v1, "Expanded KonaBess profile exceeds 32 KiB"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -16143,6 +16471,10 @@ new file mode 100644
 +
 +    const-string v1, "Unknown KonaBess export field"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw v0
@@ -16190,6 +16522,10 @@ new file mode 100644
 +    new-instance v0, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v1, "Separate voltage/OPP tables are not supported for this Samsung firmware"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -16588,6 +16924,10 @@ new file mode 100644
 +
 +    const-string v1, "Non-contiguous KonaBess GPU index"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw v0
@@ -16667,6 +17007,10 @@ new file mode 100644
 +
 +    const-string v1, "KonaBess SKU selection differs from this Samsung firmware"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw v0
@@ -16676,6 +17020,10 @@ new file mode 100644
 +    new-instance v0, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v1, "Expected GPU tables 0 then 1"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -16722,6 +17070,10 @@ new file mode 100644
 +
 +    const-string v1, "Invalid KonaBess description"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw v0
@@ -16730,6 +17082,10 @@ new file mode 100644
 +    new-instance v0, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v1, "Unexpected extra KonaBess data"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -16741,6 +17097,10 @@ new file mode 100644
 +
 +    const-string v1, "Missing KonaBess frequency table"
 +
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
++
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
 +    throw v0
@@ -16750,6 +17110,10 @@ new file mode 100644
 +    new-instance v0, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v1, "This KonaBess export is not for kalama"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
@@ -16783,6 +17147,10 @@ new file mode 100644
 +    new-instance v0, Ljava/lang/IllegalArgumentException;
 +
 +    const-string v1, "Invalid KonaBess Base64 data"
++
++    invoke-static/range {v1 .. v1}, Lio/mesalabs/unica/UnicaL10n;->t(Ljava/lang/String;)Ljava/lang/String;
++
++    move-result-object v1
 +
 +    invoke-direct {v0, v1}, Ljava/lang/IllegalArgumentException;-><init>(Ljava/lang/String;)V
 +
