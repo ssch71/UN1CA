@@ -1,18 +1,30 @@
-LOG_STEP_IN "- Adding AIDL vibrator HAL"
-DELETE_FROM_WORK_DIR "vendor" "bin/hw/vendor.samsung.hardware.vibrator@2.2-service"
-DELETE_FROM_WORK_DIR "vendor" "etc/init/vendor.samsung.hardware.vibrator@2.2-service.rc"
-DELETE_FROM_WORK_DIR "vendor" "lib64/vendor.samsung.hardware.vibrator@2.0.so"
-DELETE_FROM_WORK_DIR "vendor" "lib64/vendor.samsung.hardware.vibrator@2.1.so"
-DELETE_FROM_WORK_DIR "vendor" "lib64/vendor.samsung.hardware.vibrator@2.2.so"
-LOG "- Patching /vendor/etc/vintf/manifest.xml"
-EVAL "sed -i '/<hal format=\"hidl\">.*/{:a;N;/<\/hal>/!ba;/android.hardware.vibrator/d}' \"$WORK_DIR/vendor/etc/vintf/manifest.xml\""
-EVAL "sed -i '/<hal format=\"hidl\">.*/{:a;N;/<\/hal>/!ba;/vendor.samsung.hardware.vibrator/d}' \"$WORK_DIR/vendor/etc/vintf/manifest.xml\""
-ADD_TO_WORK_DIR "a52qnsxx" "vendor" "bin/hw/vendor.samsung.hardware.vibrator-service" 0 2000 755 "u:object_r:hal_vibrator_default_exec:s0"
-ADD_TO_WORK_DIR "a52qnsxx" "vendor" "etc/init/vendor.samsung.hardware.vibrator-default.rc" 0 0 644 "u:object_r:vendor_configs_file:s0"
-ADD_TO_WORK_DIR "a52qnsxx" "vendor" "etc/vintf/manifest/vendor.samsung.hardware.vibrator-default.xml" 0 0 644 "u:object_r:vendor_configs_file:s0"
-ADD_TO_WORK_DIR "a52qnsxx" "vendor" "lib64/vendor.samsung.hardware.vibrator-V3-ndk_platform.so" 0 0 644 "u:object_r:vendor_configs_file:s0"
-LOG_STEP_OUT
+VIB_FILES=(
+    "bin/hw/vendor.samsung.hardware.vibrator-service"
+    "etc/init/vendor.samsung.hardware.vibrator-default.rc"
+    "etc/vintf/manifest/vendor.samsung.hardware.vibrator-default.xml"
+    "lib64/vendor.samsung.hardware.vibrator-V3-ndk_platform.so"
+)
+VIB_OK=true
+for VIB_FILE in "${VIB_FILES[@]}"; do
+    [ -e "$SRC_DIR/prebuilts/samsung/a52qnsxx/vendor/$VIB_FILE" ] || VIB_OK=false
+done
+if $VIB_OK; then
+    LOG_STEP_IN "- Replacing vibrator blobs with a52qnsxx"
+    DELETE_FROM_WORK_DIR "vendor" "bin/hw/vendor.samsung.hardware.vibrator@2.2-service"
+    DELETE_FROM_WORK_DIR "vendor" "etc/init/vendor.samsung.hardware.vibrator@2.2-service.rc"
+    DELETE_FROM_WORK_DIR "vendor" "lib64/vendor.samsung.hardware.vibrator@2.0.so"
+    DELETE_FROM_WORK_DIR "vendor" "lib64/vendor.samsung.hardware.vibrator@2.1.so"
+    DELETE_FROM_WORK_DIR "vendor" "lib64/vendor.samsung.hardware.vibrator@2.2.so"
 
+    ADD_TO_WORK_DIR "a52qnsxx" "vendor" "bin/hw/vendor.samsung.hardware.vibrator-service" 0 2000 755 "u:object_r:hal_vibrator_default_exec:s0"
+    ADD_TO_WORK_DIR "a52qnsxx" "vendor" "etc/init/vendor.samsung.hardware.vibrator-default.rc" 0 0 644 "u:object_r:vendor_configs_file:s0"
+    ADD_TO_WORK_DIR "a52qnsxx" "vendor" "etc/vintf/manifest/vendor.samsung.hardware.vibrator-default.xml" 0 0 644 "u:object_r:vendor_configs_file:s0"
+    ADD_TO_WORK_DIR "a52qnsxx" "vendor" "lib64/vendor.samsung.hardware.vibrator-V3-ndk_platform.so" 0 0 644 "u:object_r:vendor_configs_file:s0"
+    LOG_STEP_OUT
+else
+    LOGW "a52qnsxx AIDL vibrator blobs are not in prebuilts, keeping the stock vibrator HAL"
+fi
+unset VIB_FILES VIB_OK VIB_FILE
 
 if [[ "$TARGET_CODENAME" == "x1q" || \
       "$TARGET_CODENAME" == "y2q" || \
@@ -35,8 +47,30 @@ if [[ "$TARGET_CODENAME" == "x1q" || \
     LOG_STEP_OUT
 fi
 
+# 32-bit WFD / Smart View stack: see ../wfd_smartview_fix
+echo "Remove DualDAR mount points"
+sed -i "/keydata/d" "$WORK_DIR/vendor/etc/fstab.qcom"
+sed -i "/keyrefuge/d" "$WORK_DIR/vendor/etc/fstab.qcom"
+
+LOG_STEP_IN "- Setting Adaptive HFR flags"
+    SET_PROP "vendor" "debug.sf.show_refresh_rate_overlay_render_rate" "true"
+    SET_PROP "vendor" "ro.surface_flinger.game_default_frame_rate_override" "60"
+    SET_PROP "vendor" "ro.surface_flinger.use_content_detection_for_refresh_rate" "true"
+    SET_PROP "vendor" "ro.surface_flinger.set_idle_timer_ms" "250"
+    SET_PROP "vendor" "ro.surface_flinger.set_touch_timer_ms" "300"
+    SET_PROP "vendor" "ro.surface_flinger.set_display_power_timer_ms" "200"
+    SET_PROP "vendor" "ro.surface_flinger.enable_frame_rate_override" "true"
+LOG_STEP_OUT
+
 LOG_STEP_IN "- Enabling Vulkan"
 SET_PROP "vendor" "ro.hwui.use_vulkan" "true"
+LOG_STEP_OUT
+
+LOG_STEP_IN "- wifi+security Prop"
+SET_PROP "vendor" "wlan.wfd.hdcp" "disabled"
+SET_PROP "vendor" "wifi.interface" "wlan0"
+SET_PROP "vendor" "ro.security.vaultkeeper.native" "0"
+SET_PROP "vendor" "ro.security.vaultkeeper.feature" "0"
 LOG_STEP_OUT
 
 LOG_STEP_IN "- Replacing singletake blobs with dm3qxxx"
@@ -50,14 +84,159 @@ DELETE_FROM_WORK_DIR "vendor" "etc/init/android.hardware.configstore@1.1-service
 DELETE_FROM_WORK_DIR "vendor" "etc/seccomp_policy/configstore@1.1.policy"
 LOG_STEP_OUT
 
+LOG_STEP_IN "- Adding FBE v2 support"
+sed -i '\|/dev/block/bootdevice/by-name/userdata|c\
+/dev/block/bootdevice/by-name/userdata                 /data                  f2fs    noatime,nosuid,nodev,discard,usrquota,grpquota,fsync_mode=nobarrier,reserve_root=32768,resgid=5678,inlinecrypt    latemount,wait,check,fileencryption=aes-256-xts:aes-256-cts:v2+inlinecrypt_optimized,keydirectory=/metadata/vold/metadata_encryption,sysfs_path=/sys/devices/platform/soc/1d84000.ufshc,quota,reservedsize=128M,checkpoint=fs' \
+"$WORK_DIR/vendor/etc/fstab.qcom"
+LOG_STEP_OUT
 
+LOG_STEP_IN "- Remove Samsung Encryption"
+sed -i -E \
+    's/^([^#].*?)fileencryption=[^,]*(.*)$/# &\n\1encryptable\2/' \
+    "$WORK_DIR/vendor/etc/fstab.qcom"
+sed -i -E \
+    's/^([^#].*?)forceencrypt=[^,]*(.*)$/# &\n\1encryptable\2/' \
+    "$WORK_DIR/vendor/etc/fstab.qcom"
+LOG_STEP_OUT
+
+LOG_STEP_IN "- Allowing mremap in vendor Codec2 seccomp policies"
+C2_POLICY_FIRST=""
+C2_POLICY_PATCHED=false
+while IFS= read -r f; do
+    [ -z "$C2_POLICY_FIRST" ] && C2_POLICY_FIRST="$f"
+    if grep -q "^mremap:" "$f"; then
+        sed -i 's/^mremap:.*/mremap: 1/' "$f"
+        C2_POLICY_PATCHED=true
+        LOG "- Relaxed mremap rule in $(basename "$f")"
+    fi
+done < <(find "$WORK_DIR/vendor/etc/seccomp_policy" -type f \( -iname "*c2*" -o -iname "*codec2*" \) 2> /dev/null)
+if ! $C2_POLICY_PATCHED; then
+    if [ -n "$C2_POLICY_FIRST" ]; then
+        [ -n "$(tail -c1 "$C2_POLICY_FIRST")" ] && echo >> "$C2_POLICY_FIRST"
+        echo "mremap: 1" >> "$C2_POLICY_FIRST"
+        LOG "- Added mremap to $(basename "$C2_POLICY_FIRST")"
+    else
+        LOGW "No Codec2 seccomp policy found in vendor/etc/seccomp_policy"
+    fi
+fi
+unset C2_POLICY_FIRST C2_POLICY_PATCHED
+LOG_STEP_OUT
 
 LOG_STEP_IN "- Removing 24-bit deep_buffer output (fixes no media sound on speaker)"
 sed -i '/<mixPort name="deep_buffer"/,/<\/mixPort>/d' "$WORK_DIR/vendor/etc/audio_policy_configuration_base.xml"
 sed -i 's/deep_buffer,//g' "$WORK_DIR/vendor/etc/audio_policy_configuration_base.xml"
 LOG_STEP_OUT
 
+# Multi-resolution SurfaceFlinger builds take the native panel density from
+# ro.sf.init.lcd_density and fall back to 213 (tvdpi) when it is unset.
+# FHD-only targets such as r8q never set it, so they report a 213 dpi
+# (tablet-sized) display. Mirror ro.sf.lcd_density when it is missing.
+LOG_STEP_IN "- Setting ro.sf.init.lcd_density"
+LCD_DENSITY="$(GET_PROP "vendor" "ro.sf.lcd_density")"
+[ "$LCD_DENSITY" ] || LCD_DENSITY="$(GET_PROP "odm" "ro.sf.lcd_density")"
+if [ "$(GET_PROP "vendor" "ro.sf.init.lcd_density")" ] || [ "$(GET_PROP "odm" "ro.sf.init.lcd_density")" ]; then
+    LOG "- ro.sf.init.lcd_density already set, skipping"
+elif [ "$LCD_DENSITY" ]; then
+    SET_PROP "vendor" "ro.sf.init.lcd_density" "$LCD_DENSITY"
+else
+    LOGW "- ro.sf.lcd_density not found, SurfaceFlinger will fall back to 213 dpi"
+fi
+unset LCD_DENSITY
+LOG_STEP_OUT
+
+# Android 17 ueventd only reads /system/etc/ueventd.rc, which imports
+# /vendor/etc/ueventd.rc and /odm/etc/ueventd.rc. The legacy /vendor/ueventd.rc
+# of the Android 11 vendor is no longer parsed, so /dev/qseecom, /dev/ion,
+# adsprpc etc. stay root-only and the TEE HALs (keymaster, gatekeeper) abort.
+for UEV_PART in vendor odm; do
+    UEV_OLD="$WORK_DIR/$UEV_PART/ueventd.rc"
+    UEV_NEW="$WORK_DIR/$UEV_PART/etc/ueventd.rc"
+    [ -f "$UEV_OLD" ] || continue
+    LOG_STEP_IN "- Moving /$UEV_PART/ueventd.rc to /$UEV_PART/etc/ueventd.rc"
+    if [ -f "$UEV_NEW" ]; then
+        { echo; cat "$UEV_OLD"; } >> "$UEV_NEW"
+    else
+        cp -a "$UEV_OLD" "$UEV_NEW"
+    fi
+    SET_METADATA "$UEV_PART" "etc/ueventd.rc" 0 0 644 "u:object_r:vendor_configs_file:s0"
+    LOG_STEP_OUT
+done
+# The Android 11 vendor ueventd.rc has no /dev/ion rule and the One UI 9
+# platform ueventd.rc does not set it either, so it stays root-only. QSEECom and
+# fastrpc still allocate from it.
+UEV_NEW="$WORK_DIR/vendor/etc/ueventd.rc"
+if [ -f "$UEV_NEW" ] && ! grep -q "^/dev/ion[[:space:]]" "$UEV_NEW"; then
+    LOG "- Adding /dev/ion to /vendor/etc/ueventd.rc"
+    printf '\n/dev/ion                  0664   system     system\n' >> "$UEV_NEW"
+fi
+unset UEV_PART UEV_OLD UEV_NEW
+
+# Android 17 dropped ION from the platform policy: /dev/ion is no longer in
+# plat_file_contexts (it falls back to the generic "device" label) and every
+# "allow ... ion_device" rule is gone. The Android 11 vendor still allocates
+# from ION (QSEECom for keymaster/gatekeeper, fastrpc, camera, graphics), so
+# restore the Android 16 label and rules for the domains this policy has.
+PLAT_SE="$WORK_DIR/system/system/etc/selinux"
+if [ -f "$PLAT_SE/plat_sepolicy.cil" ] && grep -q "^(type ion_device)" "$PLAT_SE/plat_sepolicy.cil"; then
+    LOG_STEP_IN "- Restoring ION SELinux label and rules"
+    if ! grep -q "^/dev/ion[[:space:]]" "$PLAT_SE/plat_file_contexts"; then
+        printf '/dev/ion\t\tu:object_r:ion_device:s0\n' >> "$PLAT_SE/plat_file_contexts"
+    fi
+    if ! grep -q "unica_ion_" "$PLAT_SE/plat_sepolicy.cil"; then
+        ION_R=""
+        ION_RW=""
+        for ION_DOM in hal_gatekeeper gatekeeperd hal_keymaster hal_keymint_server hal_authgraph_server \
+                hal_audio hal_fingerprint fingerprintd hal_face hal_neuralnetworks_server \
+                hal_codec2_server hal_codec2_client hal_graphics_allocator hal_graphics_composer \
+                gpuservice surfaceflinger system_server zygote mediaserver dumpstate rs \
+                bufferhubd fwk_bufferhub; do
+            grep -qE "^\((type|typeattribute) $ION_DOM\)" "$PLAT_SE/plat_sepolicy.cil" && ION_R+="$ION_DOM "
+        done
+        for ION_DOM in hal_camera cameraserver hal_drm hal_cas hal_omx_server bootanim adbd shell; do
+            grep -qE "^\((type|typeattribute) $ION_DOM\)" "$PLAT_SE/plat_sepolicy.cil" && ION_RW+="$ION_DOM "
+        done
+        ION_APP=false
+        if grep -q "^(typeattribute appdomain)" "$PLAT_SE/plat_sepolicy.cil" && \
+                grep -q "^(typeattribute isolated_app_all)" "$PLAT_SE/plat_sepolicy.cil"; then
+            ION_APP=true
+        fi
+        ION_CIL=""
+        if [ -n "$ION_R" ]; then
+            ION_CIL+="(typeattribute unica_ion_r)"$'\n'
+            ION_CIL+="(typeattributeset unica_ion_r ($ION_R))"$'\n'
+            ION_CIL+="(allow unica_ion_r ion_device (chr_file (getattr open read ioctl lock map watch watch_reads)))"$'\n'
+        fi
+        if [ -n "$ION_RW" ]; then
+            ION_CIL+="(typeattribute unica_ion_rw)"$'\n'
+            ION_CIL+="(typeattributeset unica_ion_rw ($ION_RW))"$'\n'
+            ION_CIL+="(allow unica_ion_rw ion_device (chr_file (getattr open read write append ioctl lock map watch watch_reads)))"$'\n'
+        fi
+        if $ION_APP; then
+            ION_CIL+="(typeattribute unica_ion_app)"$'\n'
+            ION_CIL+="(typeattributeset unica_ion_app (and (appdomain) (not (isolated_app_all))))"$'\n'
+            ION_CIL+="(allow unica_ion_app ion_device (chr_file (getattr open read ioctl lock map watch watch_reads)))"$'\n'
+        fi
+        printf '%s' "$ION_CIL" >> "$PLAT_SE/plat_sepolicy.cil"
+        LOG "- ION read: $ION_R"
+        LOG "- ION read/write: $ION_RW"
+    fi
+    LOG_STEP_OUT
+else
+    LOGW "ion_device is not declared in plat_sepolicy.cil, skipping ION policy restore"
+fi
+unset PLAT_SE ION_R ION_RW ION_DOM ION_APP ION_CIL
+
+
+
 LOG "- Patching /vendor/etc/vintf/manifest.xml"
+
+EVAL "sed -i '/<hal format=\"hidl\">.*/{:a;N;/<\/hal>/!ba;/android.hardware.vibrator/d}' \"$WORK_DIR/vendor/etc/vintf/manifest.xml\""
+
+EVAL "sed -i '/<hal format=\"hidl\">.*/{:a;N;/<\/hal>/!ba;/vendor.samsung.hardware.vibrator/d}' \"$WORK_DIR/vendor/etc/vintf/manifest.xml\""
+
 EVAL "sed -i \"s/type=\\\"device\\\" target-level=\\\"4\\\">/type=\\\"device\\\" target-level=\\\"5\\\">/\" \"$WORK_DIR/vendor/etc/vintf/manifest.xml\""
+
 EVAL "sed -i '/<hal format=\"hidl\">.*/{:a;N;/<\/hal>/!ba;/android.hardware.configstore/d}' \"$WORK_DIR/vendor/etc/vintf/manifest.xml\""
+
 EVAL "sed -i \"/^<\/manifest>\\\$/i\\\\    <kernel target-level=\\\"5\\\"\/>\" \"$WORK_DIR/vendor/etc/vintf/manifest.xml\""
+
