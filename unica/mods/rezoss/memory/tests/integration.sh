@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
+# shellcheck disable=SC2034,SC2016
 set -euo pipefail
 [[ $# == 3 ]] || { echo "Usage: $0 ORIGINAL_LAUNCHER.apk VALIDATED_SIGNED_LAUNCHER.apk CLEAN_SERVICES_DECODE" >&2; exit 2; }
 MEMORY_TEST_ORIGINAL=$(realpath "$1")

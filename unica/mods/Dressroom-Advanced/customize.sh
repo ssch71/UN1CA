@@ -2,6 +2,7 @@
 # Native port of BlueOutside / Dressroom-Advanced.
 # Integration copyright (c) 2026 Rezoss
 # SPDX-License-Identifier: GPL-3.0-or-later
+# shellcheck disable=SC2034
 SKIPUNZIP=1
 
 # The mod runner sorts this directory before rezoss. Apply the native stages from
