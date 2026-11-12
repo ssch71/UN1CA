@@ -9,7 +9,7 @@ DRESSROOM_ADVANCED_APPLY_STAGE()
     local PORT_DIR="$SRC_DIR/unica/mods/Dressroom-Advanced"
     local PARTITION="system" APK_FILE DECODED PREPARED PATCH_FILE
     [[ ! -f "$PORT_DIR/disable" ]] || return 0
-    [[ "$TARGET_CODENAME" == "dm3q" && "$TARGET_PLATFORM_SDK_VERSION" == "37" ]] || return 0
+    [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|x1q|y2q|z3q|c1q|c2q|r8q)$ && "$SOURCE_PLATFORM_SDK_VERSION" == "37" ]] || return 0
     case "$STAGE" in
         dressroom) APK_FILE="system/priv-app/DressRoom/DressRoom.apk" ;;
         aod) APK_FILE="system/priv-app/AODService_v80/AODService_v80.apk" ;;

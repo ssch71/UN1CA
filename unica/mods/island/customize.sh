@@ -13,5 +13,7 @@ if [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|b5q|q5q|x1q|y2q|z3q|c1q|c2q|r8q)$ ]
         "$MODPATH/patches/0001-Add-native-Dynamic-Island-renderer.patch" || return 1
     APPLY_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
         "$MODPATH/patches/0002-Connect-native-Dynamic-Island-to-SystemUI.patch" || return 1
+    APPLY_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
+        "$MODPATH/patches/0003-Restart-SystemUI-on-density-change.patch" || return 1
     SET_PROP "system" "ro.unica.dynamic_island" "true"
 fi

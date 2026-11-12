@@ -928,7 +928,7 @@ unset REZOSS_DRESSROOM_PATCH
 
 # The full native port owns editor controls and AOD normalization on dm3q/SDK37.
 REZOSS_DRESSROOM_NATIVE_FULL=false
-if [[ "$TARGET_CODENAME" == "dm3q" && "$TARGET_PLATFORM_SDK_VERSION" == "37" &&
+if [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|x1q|y2q|z3q|c1q|c2q|r8q)$ && "$SOURCE_PLATFORM_SDK_VERSION" == "37" &&
         ! -f "$SRC_DIR/unica/mods/Dressroom-Advanced/disable" ]]; then
     REZOSS_DRESSROOM_NATIVE_FULL=true
 fi

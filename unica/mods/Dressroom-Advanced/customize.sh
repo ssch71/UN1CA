@@ -7,7 +7,7 @@ SKIPUNZIP=1
 
 # The mod runner sorts this directory before rezoss. Apply the native stages from
 # that mod after its native font/clock dependencies, without changing global order.
-if [[ "$TARGET_CODENAME" == "dm3q" && "$TARGET_PLATFORM_SDK_VERSION" == "37" ]]; then
+if [[ "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|x1q|y2q|z3q|c1q|c2q|r8q)$ && "$SOURCE_PLATFORM_SDK_VERSION" == "37" ]]; then
     LOG "- Dressroom-Advanced by @BlueOutside: native stages follow the UN1CA clock/font patches"
     LOG "- https://github.com/BlueOutside/Dressroom-Advanced"
 fi
