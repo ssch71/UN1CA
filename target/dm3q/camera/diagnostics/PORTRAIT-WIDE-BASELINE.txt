@@ -1,6 +1,22 @@
 dm3q continuous wide-pair Portrait1..2x baseline - 2026-11-07
 
+Cancelled by user - 2026-11-08
+  The framing trial failed. SUPPORT_PORTRAIT_SEAMLESS_ZOOM is now false and
+  patch0007 has been renamed .patch.disabled, alongside failed patch0006.
+  The next normal ROM build restores fixed-lens Photo Portrait routing. No
+  device APK or configuration was changed during cancellation. The remaining
+  sections describe the historical experiment, not current enabled behavior.
+  S26U-to-S23U10x reference work continues separately; see PORTRAIT-10X-PORT.txt.
+
 Build status and scope
+  Runtime follow-up2026-11-08: user reports the slider does not change framing.
+  Current logs confirm live app requests up to zoom2.0 and the matching center
+  crop on camera23; they do not establish the downstream applied crop. REA of
+  stock realtimebokeh GetZoomRatio shows intermediate values>1 other than2
+  become1.0. GetCropRegion has a separate exact2.0 vendor-crop path. Treat this
+  baseline as FAILED framing acceptance, not working continuous1..2x. Do not
+  extend its maximum or promote it based on the UI/request logs.
+  Evidence: out/archived/portrait-zoom-followup-20261108/REPORT.txt.
   This is the first controlled1..2x baseline for the existing camera23 pair.
   It is not yet a runtime-validated feature. The failed1..3x patch0006 is now
   .patch.disabled and must remain disabled. Source patch0007 replaces its
@@ -80,3 +96,47 @@ Host validation and backups
   patch hashes, patch application checks, registers and temporary APK build.
   The temporary APK is unsigned and is not a direct user-installable update.
   A successful host build is not phone preview/capture/depth validation.
+
+Wide-only1..3x investigation update -- 2026-11-08
+  The user's target is now continuous framing on wide56+58 only. Neither10x
+  static depth nor a telephoto handoff is required for this narrower design.
+  That does not make the failed UI/provider crop implementation usable.
+
+  Confirmed native barriers, all static rather than new runtime results:
+  - RTB GetZoomRatio normalizes intermediate>1 values except exact2 to1.
+  - RTB crop helper feeds face/focus ROI transforms. Changing it alone is not
+    established output framing. Zoom travels through EXTRA_BUFFER_INFO0x0c.
+  - Stock LiveFocusPreview DiamondParam::is_zoom_level_changed returns0.
+    Preview Process has a virtual-call-controlled reinitialization path; a
+    zoom clamp patch alone cannot establish coherent changing geometry.
+  - New app v1_1 JNI crop commands0x2a/0x2b are rejected by stock capture plugin
+    set_plugin's maximum0x29 check. Prior Java setCropRegionInfo availability
+    was insufficient evidence for working native crop support. Donor0x2a/2b
+    carry different meanings, so donor index handlers cannot be copied blindly.
+  - ARC_DCIR_CropResizeImg exists in stock depth engine, ELF0x1c4c57c. It
+    creates a plane-offset crop view and invokes resize. It does not by itself
+    establish cropping the proprietary disparity payload or Gallery metadata.
+
+  Smallest credible implementation route:
+  1. Keep camera23 physical56+58 at its validated base1x request/input geometry.
+     Separate requested output zoom from provider lens-selection zoom. No3x
+     request may reach the previously failing state transition path merely
+     because the application slider is allowed to reach3x.
+  2. Implement an exact-version compatible output adapter after calibrated
+     processing: same visible image/preview frame, registered depth coordinate
+     domain, face/focus/metering ROI transforms and saved refocus payload.
+     Existing full-array inputs must not be center-cropped independently.
+  3. Trace native crop normalization/resize limits and exact render/depth export
+     representation before using CropResizeImg. Do not treat NV21 scaling as
+     an implementation for a proprietary disparity blob. Respect chroma edges,
+     output buffer lifetimes, orientation and any padding/valid-region limits.
+  4. Add a diagnostic output-only zoom sweep1,1.25,1.5,2,2.5,3 and back while
+     recording base provider requests. Require stable two-state/master/history,
+     preview-versus-saved framing, real blur boundaries and Gallery refocus.
+     Reopen at every value and confirm normal Photo/Video behavior afterward.
+
+  No new working in-Camera crop adapter or usable1..3x Portrait is claimed.
+  Keep0006/0007 and SUPPORT_PORTRAIT_SEAMLESS_ZOOM disabled. Native wrappers,
+  preview renderer and saved Portrait payload must agree before ROM trial.
+  Evidence: out/archived/portrait-wide-output-crop-20261108-194600/REPORT.txt;
+  associated preview/still contract archives retain complete REA results.

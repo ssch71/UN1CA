@@ -1,5 +1,10 @@
 In-app Portrait pair diagnostic for the next ROM build
 
+Complete YUV/native-depth temporary APK trial (2026-11-08): see
+YUV-DEPTH-TRIAL.txt. New controlled-yuv opt-in captures real chroma and additional
+processing metadata. Companion isolated helpers perform map/alignment checks and
+conditionally attempt native depth. Build does not enable any Portrait feature.
+
 Source integration:
   unica/mods/rezoss/smali/system/priv-app/SamsungCamera/SamsungCamera.apk/
     0004-Add-opt-in-in-app-portrait-pair-diagnostic.patch
@@ -163,3 +168,139 @@ Camera, then unmounts and verifies the original hash. No persistent module,
 reboot, data clearing or system-image write. Preserve rollback before mounting.
 The experimental package preserves installed Camera DEX1..4, optimized resources,
 manifest and native libraries; only diagnostic classes5.dex and signatures change.
+
+Cross-frame geometry audit (2026-11-08)
+  validate-pair-geometry.py ARCHIVE --output NEW_REPORT.json
+
+Uses the same host numpy/OpenCV environment as analyze-controls.py. Fits an
+empirical fundamental matrix on each complete pair and evaluates it on the
+OTHER saved pairs with identical recorded crop/output size. Held-out descriptor
+matches are not filtered with the matrix being evaluated. Reports all matches,
+image/report hashes, symmetric residuals and competing planar-homography support.
+The output must be a new file. This reads existing captures; no Camera APK
+rebuild, phone access or calibration changes are involved.
+
+Cross-frame agreement is an additional diagnostic only: repeated scene points,
+planarity, false matches, focus changes and motion can confound it. A fitted
+matrix never substitutes for the factory T1-T2 transform. The saved v3c run has
+much weaker cross-phase agreement than its individual RANSAC fits suggest;
+factory alignment, rectification and depth remain unvalidated.
+
+Native calibration/crop audit (2026-11-08)
+  python3 audit-calibration-crops.py ARCHIVE --calibration REAL_T1T2_FILE \
+    --native-log ISOLATED_MODE4_LOGCAT --output NEW_REPORT.json
+
+Requires only host Python. Uses the original physical-result crop and each
+saved frame's intrinsic metadata. The real760-byte candidate has supplementary
+camera values at0x114/0x11c, Tilt at0x124 and Shift at0x130. The isolated stock
+InitEx(1,4) decode was cross-checked against24 native logged values. This is
+the tested stock engine/hash/profile, not a universal760-byte format decoder.
+This decoder audit retains Tilt as reported; it does not implement rotation.
+The subsequent native-consumer trace below recovers that operator.
+KL/KR contain packed size fields and cannot be passed directly as OpenCV
+distortion coefficients. Missing YUV distortion/rotation metadata remains
+unknown. Direct crop-to-output matrices are explicit assumptions, not a native
+rectification implementation. Output refuses to overwrite prior evidence.
+See out/archived/portrait-native-geometry-20261108/REPORT.txt for native traces,
+the exact calibration-only helper run, quantitative differences and limitations.
+
+Native geometry consumer audit (2026-11-08)
+  python3 validate-native-transform.py ARCHIVE --calibration REAL_T1T2_FILE \
+    --correspondences EXISTING_TELE_PAIR_HELDOUT.json --output NEW_REPORT.json
+
+Requires numpy/OpenCV. Reads only existing captures; checks report/image hashes,
+uses the exact real per-unit calibration hash and refuses output overwrite.
+Reproduces recovered centered crop, Rodrigues radians and six-term odd/even
+radial math with float64 host arithmetic. Self-checks cover zero/known rotation,
+signed crop rounding, polynomial expansion and forward/inverse radial closure.
+No native ABI or complete rectification pipeline is implemented.
+
+The normal native map sets main rotation identity and aux Rodrigues(-Tilt).
+It does not baseline-align from Shift. The host epipolar check explicitly
+assumes Shift is t in X_aux=Rodrigues(Tilt)*X_main+t; this remains unvalidated.
+Report all descriptor matches and a separately labelled scene-derived subset.
+Never fit/select factory parameters from those points. Compare both assumed
+input domains without selecting a winner. Both fail on the saved captures.
+Alternate11-sample distortion tables, dynamic focus/OIS geometry and native
+runtime branch selection remain unresolved. No ROM/APK/device changes occur.
+Evidence: out/archived/portrait-geometry-consumer-20261108/REPORT.txt.
+
+Isolated native map runtime probe (2026-11-08)
+  python3 run-native-map-probe.py --serial R5CW72R7SDF \
+    --calibration out/archived/portrait-controls-v3-20261107/TripleZTCalibration_t1t2.bin \
+    --clang /home/rezoss79/android-ndk-r27/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android30-clang
+
+Builds native-map-probe.c, verifies exact device/per-unit calibration and loaded
+engine hashes, stages only two files in a unique /data/local/tmp directory,
+executes as shell, then removes those files and directory. Each invocation
+retains a new host archive. No APK install, camera access or disparity call.
+Internal function offsets are exact-engine-specific and must not be reused
+with a different binary. A mismatch can crash only this short-lived helper;
+alarm/core-dump guards and readable-address checks bound the diagnostic.
+
+Captures before/after native wrapper/core flags, selected tables, raw/normalized
+calibration, crop scales, Euler corrections, extended layout and27 map samples.
+Successful run: out/archived/portrait-native-map-20261108-164612-168566.
+InitEx(1,4) defaults selected no distortion table, zero correction angles and
+extended maps; auxiliary padding384,384 and dimensions1792x1536 were observed.
+The helper's capture mode remained0 and distortion_available=0: this records the
+isolated initialization profile, NOT production Portrait plugin configuration.
+It does not establish the live Camera's branch or correct optical alignment.
+
+  python3 compare-native-map.py RUNTIME.jsonl --output NEW_COMPARISON.json
+
+Requires numpy/OpenCV and the adjacent validate-native-transform.py. Compares
+the27 actual map coordinates with recovered math, retaining nominal and explicit
+pixel-center-adjusted errors. Tables/alternate branches/nonzero Euler corrections
+are rejected rather than silently interpreted as the normal polynomial path.
+The native map dimensions and origin must be respected before comparing image
+points. Image-space calibration/depth remains a separate gate.
+
+v4d diagnostic preparation (2026-11-08)
+  The YUV-only profile requests OIS/video stabilization OFF and rotate/crop NONE
+  only when each request key and mode are advertised. Unsupported distortion
+  correction is not forced. New logical_processing_result records requests and
+  actual logical metadata alongside existing physical results; it never fills
+  unknown physical fields from logical values. No timing guarantee is inferred.
+  v4c's exact timestamp buffer/result queue remains in use. ROM source patch0004
+  stays unchanged unless the generator is explicitly run with --write-patch.
+  Prepared APK and focused-capture audit:
+    out/archived/portrait-geometry-timing-20261108-174223/
+  Native-map-probe now labels wrapper+0x8868 capture_mode, correcting the earlier
+  camera_type label. REA shows donor CaptureMode5 selects Night; its tele lens
+  role5 is a different namespace. Old runtime JSON is kept as historical evidence.
+
+Intermediate tele framing prototype v4f (2026-11-08)
+  Source patch0004 now includes an additional explicit controlled-yuv-3x
+  diagnostic profile: logical20, main52(3x), auxiliary56(wide). Existing default
+ 54+52 behavior remains. Both physical outputs must be advertised. Requests
+  retain logical/physical zoom1 and full active arrays for calibrated inputs.
+  The diagnostic never changes pairs within a session or enables Portrait UI.
+  It is a new stream combination requiring runtime validation, not established
+  stock Portrait routing. No claim that hidden logical20 behaves like Portrait21.
+
+  After installing the matching temporary APK or rebuilding source patch0004:
+    python3 target/dm3q/camera/diagnostics/portrait-pair-probe/arm-inapp.py \
+      --serial R5CW72R7SDF --save-yuv --pair 3x-wide
+  Run Camera -> Settings for32 seconds with both lenses aimed at a detailed,
+  stationary scene. Collection supports both recognized pairs. Older APKs
+  refuse this new profile. No capture was run by this source integration.
+
+  Host output framing (does not access phone):
+    /tmp/portrait-v3-analysis-20261107/bin/python \
+      target/dm3q/camera/diagnostics/portrait-pair-probe/render-tele-framing.py \
+      CAPTURE_DIRECTORY --output NEW_DIRECTORY --zoom 3 4 5 7.5 10
+  Accepts hash-verified real640x480 3x NV21 with exact result association and
+  reported full input crop, from either10x+3x or3x+wide diagnostic. Nominal zoom
+  uses output crop factor zoom/3 with pixel-centre-correct forward/inverse
+  transforms; JSON records both matrices and continuous source crop edges.
+  Output zoom labels are not independently measured optical zoom calibration.
+  At10x this still uses the3x lens; no10x handoff occurs. Enlarging640x480 does
+  not recover detail. It creates image framing examples only, without blur,
+  depth, changed camera requests or fabricated calibration. This renderer must
+  not be presented as working seamless Portrait or paired native depth.
+
+  Actual ROM feature remains blocked on static10x geometry/depth, provider
+  timing/crop ownership, image/depth/ROI coordinate agreement, and valid
+  capture-boundary pair-state switching. Do not activate0006/0007 or the
+  seamless feature flag because this framing example works.

@@ -1,0 +1,151 @@
+S26U changing-pair reference -> S23U10x Portrait - 2026-11-08
+
+Native calibration follow-up2026-11-08
+  Re-used existing54/52 captures and verified real calibration/engine/helper
+  hashes. An isolated calibration-only run opened no camera and wrote no
+  calibration. Recovered stock engine's760-byte decode/transform dispatch;
+  host supplementary-field decoder matches all24 native logged values.
+  Primary-block-only geometry hypotheses are insufficient: stock mode4 selects
+  supplementary camera/Tilt/Shift data, while saved frames also report dynamic
+  intrinsics. This initial decode did not recover the Tilt operator; the
+  consumer follow-up below supersedes that limitation. No disparity was run.
+  See out/archived/portrait-native-geometry-20261108/REPORT.txt and the source
+  portrait-pair-probe/audit-calibration-crops.py. No APK/provider was replaced.
+
+Native geometry consumer follow-up2026-11-08
+  SetCameraImageInfo copies four32-bit values: main/aux before-resize crop
+  width/height. CalcDisparityData later sets independent bufferWidth/cropWidth
+  scales, normalizes calibration, builds maps, then dispatches disparity.
+  Normal centered crops subtract signed integer half-size offsets before scale.
+  Tilt uses Rodrigues axis-angle radians; the normal map caller keeps main
+  rotation identity and uses Rodrigues(-Tilt) for auxiliary. This branch does
+  not align the baseline with Shift. Generic stereoRectify is not equivalent.
+  The normal radial mapper has odd and even radius powers, not OpenCV rational
+  distortion. A separately gated path uses11 distortion samples, percentage
+  interpolation, optional polynomial/table mixing and principal-point overrides.
+  Its actual runtime selection remains unknown for the saved diagnostic frames.
+  Host validate-native-transform.py passes its math checks, but the two auto
+  pairs still have about11..12px median symmetric epipolar error under the
+  stated Shift/delivered-buffer assumptions. Neither input-domain assumption
+  validates factory geometry. No fitted calibration or depth is substituted.
+  Full evidence and reproducible command:
+    out/archived/portrait-geometry-consumer-20261108/REPORT.txt
+  Isolated runtime follow-up now records flags/corrections and native maps:
+    out/archived/portrait-native-map-20261108-164612-168566/REPORT.txt
+  Default InitEx(1,4) has capture-mode0/distortion_available0, table/mixing flags0,
+  zero Euler correction and extended-map flag1. Main map1024x768; aux map
+  1792x1536 with384,384 padding. Normalized native F30 confirms all six radial
+  coefficients. Host comparison closely reproduces27 native coordinate samples.
+  This does not observe production Camera plugin state or validate image depth.
+  Next record matched per-frame distortion/rotation/OIS state and the actual
+  plugin's native configuration. Respect extended-map origin before comparing
+  image correspondences or retrying Portrait/seamless feature enablement.
+
+Active ROM status
+  Crop/sync follow-up2026-11-08:
+  v4d runtime completed314 paired results and six complete YUV pairs. Physical
+  OIS/video stabilization/rotate-crop all report0; distortion correction remains
+  null. Median sensor-start difference17.044687ms. Both readout skews14.733441ms;
+  under reported first-row timing semantics,311/314 frame pairs retain at least
+  2.311ms midpoint separation even over arbitrary rows. Optical sync unverified.
+  No causal OIS timing improvement is established across separate sessions.
+  Isolated native device readers confirm4112/submodel3. Static factory selects
+  Diamond and its getter selects project49. Updated helpers accept explicit
+  project49 and match the stock image-info-before-calibration order. Both48
+  and49 produce bit-identical maps on the existing inputs, so this reference
+  configuration correction does not resolve the optical geometry mismatch.
+  Diamond's uncropped input-info getter handles roles2/3, not role5: a real
+  10x+3x integration must supply a dedicated pair-specific dimension/crop path.
+  Stock plugin crop helper reads per-unit pixel shifts at760-byte calibration
+  offsets0x29e/0x2a0, but clamps them by crop margin. Full-array inputs have no
+  shift margin; directly adding these fields would misapply the calibration.
+  REA provider GetHWSyncMode/IsFrameSyncEnabled use different mask bits for
+  type1 Portrait and type2 zoom. Matching FPS is not equivalent to selecting
+  provider sync. Exact live mask/pipeline selection remains unobserved.
+  v4e temporary APK adds returned vendor crop/sync metadata and pre-correction
+  array inventory. Java/D8, zero-fuzz stack replay, signing/payload checks pass;
+  not installed or runtime-tested. Native runner now rejects mismatched crops
+  before device staging and cross-checks actual native crop configuration.
+  Evidence: out/archived/portrait-crop-sync-20261108-183209/REPORT.txt.
+  Original Camera restored after v4d; no provider/native library/ROM changes.
+
+  Historical focused-capture follow-up (superseded runtime state):
+  Same-frame ISO/brightness association is
+  strongly supported, but23.9ms reported exposure offset persists. Logical20
+  advertises APPROXIMATE synchronization; auxiliary ISO overrides are not
+  independently honored. Dynamic intrinsics alone do not repair geometry.
+  REA corrected wrapper+0x8868: this is CaptureMode (donor1=normal,3=HDR,5=Night),
+  not telephoto role. Older helper JSON camera_type was a field-label error;
+  new output calls it capture_mode. Do not force Night mode to select10x.
+  v4d diagnostic requests supported OIS/video-off and rotate/crop-none and logs
+  logical/physical results separately. Prepared only, no new device operation.
+  out/archived/portrait-geometry-timing-20261108-174223/REPORT.txt has evidence.
+
+  User cancelled the failed wide-pair1..2x trial. camera-feature.xml now sets
+  SUPPORT_PORTRAIT_SEAMLESS_ZOOM=false;0006 and0007 are .patch.disabled. This
+  restores fixed-lens Photo Portrait routing after a normal ROM rebuild. No
+  phone changes were made. Do not enable seamless or second-tele flags merely
+  because the diagnostic can deliver two images.
+
+Candidate adaptation, not an enabled feature
+  Keep S23U provider/physical identities: logical20 diagnostic route,
+  physical54=10x main and52=3x auxiliary. Do not relabel54 as5x. The donor uses
+  physical54 for its5x second tele; shared IDs identify roles, not focal lengths.
+  Its v2 plugin accepts54 as main role4 and52 as sub role2. InitArcLib chooses
+  cameraType5 and calibration slot2 for main role4. This is the candidate to
+  adapt, not a validated10x optical profile. Adding legacy logical24 is not a
+  requirement established by the donor seamless design.
+
+Recovered app -> JNI -> plugin contract
+  Provider capture results supply samsung.android.control.capturePhysicalId
+  and captureSubPhysicalId. v2 forwards main/sub through plugin indices0x24
+  and0x25. Do not derive capture IDs from slider position or nearest zoom label.
+  Characteristics supply W_UW, dualCalibrationT_W and dualCalibrationT2_T1.
+  v2 forwards pointer/length descriptors through0x26,0x27,0x28 respectively.
+  Third-slot native log T2_W is stale: the recovered Java key/dataflow says
+  T2_T1. Do not replace this with an assumed10x-to-wide blob.
+  S23U's real per-device TripleZTCalibration_t1t2.bin is the760-byte candidate;
+  SHA256ee645b3ee69a2a4401370f234473e0adf096cd2de4c1ed41a9d6884ef2364884.
+  Its factory pose/distortion/output-crop convention remains unvalidated.
+
+Concrete geometry adaptation still needed
+  Donor ResetArcLib uses cameraType5 -> ARC_DCIR_InitEx(...,1,4), configures
+  crops/image geometry and passes the selected calibration to SetCaliData.
+  A device-gated cameraType5 branch compares third-slot float+8 with12944 and
+  second-slot float+0x4c with7500, setting an extra flag for a virtual geometry
+  call. Real S23U T1T2 float+8 is12937. The downstream meaning of that flag and
+  the device predicate must be traced. This is NOT an unconditional rejection
+  or authorization to rewrite the header. Header identity does not validate pose.
+  The crop path includes aspect/FOV processing, remosaic coordinate scaling,
+  output rectangles and ARC_DCIR_SetNCenterCropSize. Main/sub capture pixels,
+  depth coordinates, AF/face ROIs and saved metadata must use the same mapping.
+  Do not forward the UI crop by deleting calibrated full-FOV input handling.
+  The donor normal plugin calls SetNCenterCropSize without a null check on the
+  inspected path; stock S23U's depth engine lacks this export. A matched engine
+  or a recovered compatible adapter is required before that plugin can run.
+  Changing only the floating node version or swapping only the plugin is unsafe.
+
+Runtime evidence and remaining gates
+  Earlier controlled diagnostic delivered314 paired results/images from54/52,
+  sharp views and same-frame brightness/ISO association. However independent
+  physical focus requests were not honored as requested; final sensor offset
+  reached22.49ms. Factory-pose hypotheses failed alignment. Cross-frame
+  empirical fitting on2026-11-08 additionally exposed scene/planarity/outlier
+  ambiguity. This establishes delivery, not calibrated or motion-safe depth.
+  Next: resolve runtime distortion branch, pose translation and buffer domain;
+  validate factory-derived correspondences on controlled real pairs. Then
+  integrate matched processing in an isolated diagnostic and require static10x
+  image + aligned depth/Gallery refocus before provider handoff or seamless UI.
+  Provider publication/registration of both physical result tags, all three
+  calibration characteristics and raw-sensor/crop metadata remains necessary.
+
+Evidence and cancellation verification
+  out/archived/s26-5x-to-s23-10x-20261106-230208/REPORT.txt and ref_*.json/pseudo.c
+  preserve the recovered donor path and REA IDs; re-used rather than rerun.
+  out/archived/portrait-controls-v3-20261107/REPORT.txt records real-device tests.
+  out/archived/portrait-zoom-followup-20261108/REPORT.txt records framing failure.
+  out/archived/portrait-10x-port-reference-20261108/ retains backups and audit.
+  Cancellation: exact Camera APK patch replay with fuzz0 passed; diagnostic
+  Java/D8 compilation passed. Validation.json at
+  out/archived/portrait-pair-inapp.tqc7oeru/ identifies the exact temporary decode.
+  No full ROM/APK build, native adapter, flash or new runtime capture is claimed.

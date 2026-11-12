@@ -1,0 +1,1 @@
+package android.view;import android.graphics.Rect;public class WindowMetrics {public WindowInsets insets=new WindowInsets();public Rect bounds=new Rect(0,0,1080,2400);public WindowInsets getWindowInsets(){return insets;}public Rect getBounds(){return bounds;}}

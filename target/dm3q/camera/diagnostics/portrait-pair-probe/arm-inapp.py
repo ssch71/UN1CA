@@ -15,7 +15,13 @@ def main():
     parser.add_argument("--geometry", action="store_true", help="Compare logical zoom10 and zoom1, with full-run physical metadata")
     parser.add_argument("--save-frames", action="store_true", help="Opt in to up to twelve grayscale framing samples (controlled profile) in Camera private storage; requires --geometry")
     parser.add_argument("--controlled", action="store_true", help="32-second per-physical AF/FPS/manual timing and ISO association test")
+    parser.add_argument("--save-yuv", action="store_true", help="Explicit opt-in: bounded complete YUV pairs and metadata; implies controlled/save-frames")
+    parser.add_argument("--pair", choices=("10x-3x", "3x-wide"), default="10x-3x",
+                        help="Diagnostic streams only; 3x-wide requires --save-yuv and v4f")
     args = parser.parse_args()
+    if args.pair == "3x-wide" and not args.save_yuv:
+        parser.error("--pair 3x-wide requires --save-yuv")
+    if args.save_yuv: args.controlled = True; args.save_frames = True
     if args.controlled: args.geometry = True
     if args.save_frames and not args.geometry:
         parser.error("--save-frames requires --geometry")
@@ -30,6 +36,10 @@ def main():
         if "classes5.dex" not in archive.namelist():
             raise SystemExit("Installed Camera has no diagnostic classes5.dex. Build/install the patched ROM first.")
         helper = archive.read("classes5.dex")
+        if args.pair == "3x-wide" and b"portrait-controls-v3-yuv-v4f" not in helper:
+            raise SystemExit("Installed diagnostic does not support the 3x-wide profile; refusing to arm")
+        if args.save_yuv and b"portrait-controls-v3-yuv-v4" not in helper:
+            raise SystemExit("Installed diagnostic does not support complete YUV; refusing to arm")
         descriptor = b"Lcom/rezoss/camera/diagnostics/InAppPortraitPairProbe;"
         if descriptor not in helper or b"portrait-pair-probe.arm" not in helper or descriptor not in archive.read("classes2.dex"):
             raise SystemExit("Installed Camera does not contain both the helper and the Settings reference; refusing to arm")
@@ -38,6 +48,8 @@ def main():
         if args.geometry and b"portrait-geometry-v2" not in helper and b"portrait-controls-v3" not in helper:
             raise SystemExit("Installed Camera has the old probe. Rebuild/install the updated ROM before geometry testing.")
     profile = ("controlled-frames" if args.save_frames else "controlled") if args.controlled else "geometry-frames" if args.save_frames else "geometry" if args.geometry else ""
+    if args.save_yuv: profile = "controlled-yuv"
+    if args.pair == "3x-wide": profile = "controlled-yuv-3x"
     # Only this new marker is created/chowned/relabelled. Existing cache data is untouched.
     script = r'''
 set -eu

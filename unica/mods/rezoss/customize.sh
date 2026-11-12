@@ -44,6 +44,7 @@ fi
 # =============================================================================
 ADD_TO_WORK_DIR "$MODPATH" "system" "." 0 0 755 "u:object_r:system_file:s0"
 ADD_TO_WORK_DIR "$MODPATH" "system_ext" "." 0 0 755 "u:object_r:system_file:s0"
+source "$MODPATH/memory/integrate.sh" || return 1
 LOG "- Adding mountless AOSP zip boot animation support"
 ADD_TO_WORK_DIR "$MODPATH/bootanimation_zip" "system" \
     "system/bin/bootanimation_zip" 0 2000 755 "u:object_r:bootanim_exec:s0"
@@ -925,9 +926,17 @@ fi
 rm -- "$REZOSS_DRESSROOM_PATCH"
 unset REZOSS_DRESSROOM_PATCH
 
+# The full native port owns editor controls and AOD normalization on dm3q/SDK37.
+REZOSS_DRESSROOM_NATIVE_FULL=false
+if [[ "$TARGET_CODENAME" == "dm3q" && "$TARGET_PLATFORM_SDK_VERSION" == "37" &&
+        ! -f "$SRC_DIR/unica/mods/Dressroom-Advanced/disable" ]]; then
+    REZOSS_DRESSROOM_NATIVE_FULL=true
+fi
+if ! "$REZOSS_DRESSROOM_NATIVE_FULL"; then
 LOG "- Add lockscreen clock height and widget size controls"
 APPLY_PATCH "system" "system/priv-app/DressRoom/DressRoom.apk" \
     "$MODPATH/dressroom/DressRoom.apk/0003-Add-clock-height-and-widget-size-controls.patch"
+fi
 LOG "- Remove canceled lockscreen Depth Effect integration"
 DELETE_FROM_WORK_DIR "system" "system/lib64/libunica_depth_effect.so"
 DELETE_FROM_WORK_DIR "system" "system/etc/unica-depth-effect/pidnet_s.tflite"
@@ -941,6 +950,10 @@ if grep -q -F 'DepthEffectToggle;->bind' "$REZOSS_DEPTH_DRESSROOM_DIR/$REZOSS_DE
         "$MODPATH/dressroom/DressRoom.apk/0004-Remove-Depth-Effect-toggle.patch"
 fi
 unset REZOSS_DEPTH_DRESSROOM_DIR REZOSS_DEPTH_DRESSROOM_HOOK REZOSS_DEPTH_DRESSROOM_LAYOUT
+
+# Full menu replaces old editor controls; font-bank and Ambient Weather remain.
+source "$SRC_DIR/unica/mods/Dressroom-Advanced/integrate.sh" dressroom || return 1
+
 REZOSS_DEPTH_SYSTEMUI_DIR="$APKTOOL_DIR/system_ext/priv-app/SystemUI/SystemUI.apk"
 REZOSS_DEPTH_SYSTEMUI_HOOK="smali_classes2/com/android/systemui/keyguard/ui/binder/KeyguardClockViewBinder.smali"
 DECODE_APK "system_ext" "priv-app/SystemUI/SystemUI.apk" || return 1
@@ -964,9 +977,13 @@ if [[ -d "$REZOSS_AOD_DECODE" ]]; then
     mv "$REZOSS_AOD_DECODE" "$REZOSS_AOD_TEMP/previous-decode" || return 1
 fi
 DECODE_APK "system" "system/priv-app/AODService_v80/AODService_v80.apk" || return 1
-LOG "- Resolve AOD hooks and preflight all nine patches with zero fuzz"
+LOG "- Resolve AOD font integration and preflight the selected patch stack"
+REZOSS_AOD_PROFILE_ARGS=()
+if "$REZOSS_DRESSROOM_NATIVE_FULL"; then
+    REZOSS_AOD_PROFILE_ARGS+=(--native-full)
+fi
 python3 "$MODPATH/aodservice/prepare_patches.py" "$REZOSS_AOD_DECODE" \
-    "$MODPATH/aodservice/AODService_v80.apk" "$REZOSS_AOD_PATCH_DIR" || return 1
+    "$MODPATH/aodservice/AODService_v80.apk" "$REZOSS_AOD_PATCH_DIR" "${REZOSS_AOD_PROFILE_ARGS[@]}" || return 1
 
 LOG "- Patch AODService UN1CA clock font list integration"
 APPLY_PATCH "system" "system/priv-app/AODService_v80/AODService_v80.apk" \
@@ -980,6 +997,7 @@ LOG "- Patch AODService stretch clock font type startup backfill"
 APPLY_PATCH "system" "system/priv-app/AODService_v80/AODService_v80.apk" \
     "$REZOSS_AOD_PATCH_DIR/0003-Backfill-AOD-stretch-font-type-on-startup.patch" || return 1
 
+if ! "$REZOSS_DRESSROOM_NATIVE_FULL"; then
 LOG "- Patch AODService stretch clock font render normalization"
 APPLY_PATCH "system" "system/priv-app/AODService_v80/AODService_v80.apk" \
     "$REZOSS_AOD_PATCH_DIR/0004-Normalize-stretch-font-data-before-AOD-render.patch" || return 1
@@ -992,10 +1010,12 @@ LOG "- Patch AODService AOD stretch renderer gate"
 APPLY_PATCH "system" "system/priv-app/AODService_v80/AODService_v80.apk" \
     "$REZOSS_AOD_PATCH_DIR/0006-Allow-AOD-stretch-render-when-font-heights-exist.patch" || return 1
 
+fi
 LOG "- Patch AODService to use lockscreen clock style for AOD rendering"
 APPLY_PATCH "system" "system/priv-app/AODService_v80/AODService_v80.apk" \
     "$REZOSS_AOD_PATCH_DIR/0007-Use-lockscreen-clock-style-for-AOD-render.patch" || return 1
 
+if ! "$REZOSS_DRESSROOM_NATIVE_FULL"; then
 LOG "- Expand lockscreen widget grid and preserve widget proportions when resizing"
 APPLY_PATCH "system" "system/priv-app/AODService_v80/AODService_v80.apk" \
     "$REZOSS_AOD_PATCH_DIR/0008-Expand-and-resize-lockscreen-widget-container.patch" || return 1
@@ -1004,6 +1024,7 @@ LOG "- Patch AODService SDK clock item stretch font data"
 APPLY_PATCH "system" "system/priv-app/AODService_v80/AODService_v80.apk" \
     "$REZOSS_AOD_PATCH_DIR/0009-Normalize-AOD-SDK-clock-item-stretch-font-data.patch" || return 1
 
+fi
 # The cover screen "Now brief and favorite apps" card requires
 # ro.product.first_api_level >= 34 on top of the AI version and LARGESCREEN
 # subdisplay checks. Flip5 launched with API 33, so drop only that check.
@@ -1030,7 +1051,12 @@ print("Patched " + str(hits[0][0].relative_to(sys.argv[1])))
 PY
 fi
 
-unset REZOSS_AOD_TEMP REZOSS_AOD_DECODE REZOSS_AOD_PATCH_DIR
+# The port replaces old normalization and widget overrides with one native owner.
+source "$SRC_DIR/unica/mods/Dressroom-Advanced/integrate.sh" aod || return 1
+source "$SRC_DIR/unica/mods/Dressroom-Advanced/integrate.sh" systemui || return 1
+source "$SRC_DIR/unica/mods/Dressroom-Advanced/integrate.sh" wallpaper || return 1
+
+unset REZOSS_AOD_TEMP REZOSS_AOD_DECODE REZOSS_AOD_PATCH_DIR REZOSS_AOD_PROFILE_ARGS REZOSS_DRESSROOM_NATIVE_FULL
 
 LOG "- Patch VisualCloudCore Galaxy Store model check"
 APPLY_PATCH "system" "system/app/VisualCloudCore/VisualCloudCore.apk" \

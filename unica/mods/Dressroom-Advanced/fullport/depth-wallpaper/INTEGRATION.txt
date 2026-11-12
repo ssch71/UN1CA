@@ -1,0 +1,68 @@
+Dressroom-Advanced native depth + live wallpaper slice
+Author upstream: @BlueOutside (https://github.com/BlueOutside)
+Upstream: https://github.com/BlueOutside/Dressroom-Advanced
+Reference revision: 5bb6652 (v1.1.5)
+
+This source adapts upstream Object Capture, source masks, contours, crop transforms,
+clock/widget occlusion, blur clipping, profile source identity, and live Samsung
+layered-image wallpaper motion. No LSPosed or global View/Canvas interception exists.
+
+Java closures:
+ - DressRoom + AOD runtime: all Java here plus the parent editor/font/widget common
+   sources. DepthEffects and DepthAuto retain upstream APIs used by NativeClockPanel.
+ - SpriteWallpaper: NativeWallpaper, WallpaperMotionPacket, WallpaperMotionChannel
+   only. This keeps clock/editor/provider classes out of the wallpaper renderer.
+
+Patch generator (writes unified patches, never changes decoded input):
+ python3 generate.py --kind dressroom --decoded CLEAN_DRESSROOM --output NEW.patch
+ python3 generate.py --kind aod --decoded CLEAN_AOD --output NEW.patch
+ python3 generate.py --kind wallpaper --decoded CLEAN_SPRITE --output NEW.patch
+ Validate each using patch --batch --dry-run --fuzz=0 -p1 -d DECODED -i PATCH.
+ Existing output patches are refused, preserving backups and reviewable artifacts.
+
+Exact currently mapped packages:
+ DressRoom 3.0.10.38: CropImageView.onDraw, WeatherSurfaceView surface callbacks,
+ FrameLayout editor clock/widget XML roots, ArcSoft/Srib Object Capture lifecycle.
+ AODService 8.9.66.1: AbsClockView.draw, aod.tx0 combined blur path/clear, aod.e70
+ final blur submission and complication container/manager blur callsites.
+ SpriteWallpaper 2.8.78.0 (com.samsung.android.wallpaper.live): f3.a.b engine draw,
+ i3.c.a bitmap drawable draw, SwitchableWallpaperService.DelegatorEngine.onCommand.
+ Current Sprite APK SHA256:
+ fef5685160f4b7bd6619423412767076ae0008e3ae24fb7332acfd3723dda813
+ REA static package Evidence: ev_d5dd48dd1a68c07a0593a6713936a0df344852f16023b4f25ddabd6d2981e41c
+ This is package identity and static analysis, not observed runtime compatibility.
+
+Existing register counts and original SDK method bodies are retained. One new
+AbsClockView.draw method has .locals 2 for save count and exceptional exit.
+At tx0's final e70 path submit v1 has ended iterator liveness and is overwritten
+unconditionally at its next use; it temporarily carries p0 for the fixed callback.
+SDK methods delegate through fixed explicit NativeObjectCapture wrappers while
+original implementations remain nativeDepthOriginalInit/Release/Capture. The
+upstream class lock, per-instance ArcSoft handle and shared Srib ownership behavior
+are retained so a scanner cannot release another SDK client's native engine.
+
+Known scope/limitations, inherited from upstream:
+ - Static wallpaper and Samsung layered bitmap/live-photo/weather source images
+   can use depth; arbitrary video/procedural live wallpaper lacks a stable still
+   subject map. Such types must be rejected via DepthSourcePolicy.image().
+ - Live motion accepts only finite, bounded axis-aligned transforms for the exact
+   saved wallpaper ID and matching display aspect ratio. Other transforms retain
+   the saved mapping as upstream does; there is no invented motion estimate.
+ - AOD hides clipping when the wallpaper itself is hidden. Motion samples use the
+   upstream shared-memory protocol and settle without a permanent frame loop.
+ - Masks stay provider-owned in DressRoom private /data; readers get references,
+   avoiding large Binder payloads. Parent commits only after successful Apply.
+ - Keep Ambient Weather patches. Existing canceled DepthEffectToggle/Controller
+   removal in Rezoss is for the old pidnet compositor and does not match NativeDepth.
+ - Parent must apply upstream profile identity/source policy in runtime callbacks
+   and load helper classes in the AOD plugin classloader used inside SystemUI.
+ - Do not enable the upstream LSPosed module alongside this native implementation.
+
+Validation performed for this slice:
+ - All three generated patches: clean exact decode, zero-fuzz dry-run passed.
+ - NativeWallpaper Java closure: javac source/target17 with Android37 passed.
+ - Upstream JVM tests against delivered classes: wallpaper protocol22 checks,
+   per-instance capture lifecycle13 checks, depth source policy33 checks passed.
+ - Full source closure/rebuild belongs to parent integration.
+ - No device installation, UI, Object Capture inference, SELinux, wake/AOD or
+   wallpaper-renderer runtime validation is claimed.

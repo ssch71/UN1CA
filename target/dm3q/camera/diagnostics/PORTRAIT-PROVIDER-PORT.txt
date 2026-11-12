@@ -1,5 +1,9 @@
 dm3q Portrait provider state and crop investigation - 2026-11-07
 
+Update2026-11-08: user cancelled the nonworking1..2x baseline. Both0006 and
+0007 are .patch.disabled and SUPPORT_PORTRAIT_SEAMLESS_ZOOM=false. Historical
+status below is superseded. See PORTRAIT-10X-PORT.txt for the separate10x work.
+
 Current status
   The app-only1..3x trial failed during preview. Seamless Portrait is now
   disabled by renaming patch0006 to .patch.disabled. A separate0007 source

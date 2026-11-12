@@ -1,5 +1,8 @@
 dm3q wide-pair Portrait1..3x source trial
 
+CURRENT STATUS2026-11-08: both0006 and0007 are .patch.disabled. The Photo
+seamless flag is false. The following describes historical trials only.
+
 Status 2026-11-07: failed on device and disabled in source. Patch0006 now has
 the .patch.disabled suffix and is not applied. A separate0007 baseline enables
 only1..2x and starts sessions at1x; see PORTRAIT-WIDE-BASELINE.txt. The shared

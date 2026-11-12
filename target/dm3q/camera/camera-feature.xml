@@ -155,8 +155,8 @@
     <local name="SUPPORT_LENS_DIRTY_DETECTION" value="true" />
     
     <!-- Live focus & bokeh -->
-    <!-- Baseline0007 only: rear wide-pair1..2x, starting at1x. Failed3x trial0006 stays disabled. -->
-    <local name="SUPPORT_PORTRAIT_SEAMLESS_ZOOM" value="true"/>
+    <!-- Photo Portrait seamless trials0006/0007 cancelled; retain fixed-lens routing. -->
+    <local name="SUPPORT_PORTRAIT_SEAMLESS_ZOOM" value="false"/>
     <local name="SUPPORT_LIVE_FOCUS_TORCH_FLASH" value="true"/>    
     <local name="SUPPORT_LIVE_FOCUS_HDR_CAPTURE" value="true"/>
     <local name="SUPPORT_LIVE_FOCUS_LENS_TYPE_CHANGE" value="true"/>
