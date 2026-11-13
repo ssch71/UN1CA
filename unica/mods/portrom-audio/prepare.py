@@ -58,7 +58,7 @@ def prepare(work, stage):
     try:
         speaker.prepare(work, stage)
         speaker_applied = True
-    except speaker.BaselineError:
+    except (speaker.BaselineError, FileNotFoundError):
         speaker_applied = False
         fallback_rc = stage / 'system/system/etc/init/unica_portrom_audio.rc'
         fallback_rc.parent.mkdir(parents=True, exist_ok=True)
