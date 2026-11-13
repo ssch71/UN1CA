@@ -67,19 +67,8 @@ final class ApiSettingsStore {
                 prefs.getString("model", ""), "");
     }
 
-    /** Offline model used by the ROM default route: "gemma" (LiteRT) or "qwen". */
-    static String localModel(Context context) {
-        String value = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("local_model", "");
-        if ("gemma".equals(value) || "qwen".equals(value)) return value;
-        return Hardware.gemmaDefault() ? "gemma" : "qwen";
-    }
-
-    static void setLocalModel(Context context, String model) {
-        if (!"gemma".equals(model) && !"qwen".equals(model)) throw new IllegalArgumentException("Invalid local model");
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("local_model", model).apply();
-        if ("qwen".equals(model) && !Hardware.v73()) LocalEngine.get(context).prepareAsync();
-        else LocalEngine.get(context).stop();
-    }
+    /** Offline model used by the ROM default route. Gemma 4 E2B (LiteRT) is the only one. */
+    static String localModel(Context context) { return "gemma"; }
 
     /** LiteRT accelerator for Gemma: "gpu" or "cpu". */
     static String gemmaBackend(Context context) {

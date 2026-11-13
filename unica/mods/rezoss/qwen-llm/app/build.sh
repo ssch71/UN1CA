@@ -1,20 +1,15 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Build the settings/API app. The full user APK also carries the V73 Qwen assets
-# (SM8550 runner) and the llama.cpp engine used for Qwen3 on other SoCs.
+# Build the settings/API app. It carries no model assets; Gemma 4 E2B runs in AIOS.
 set -euo pipefail
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 : "${SRC_DIR:?Source buildenv.sh <target> first}"
-OUTPUT=${1:-$SRC_DIR/out/archived/QWEN_LLM/QWEN_LLM_rezoss_v9.apk}
-MODE=${2:-full}
-[[ "$MODE" == full || "$MODE" == --stub ]] || { echo "Usage: build.sh [OUTPUT_APK] [--stub]" >&2; exit 1; }
+OUTPUT=${1:?Usage: build.sh OUTPUT_APK --stub}
+MODE=${2:-}
+[[ "$MODE" == --stub ]] || { echo "Usage: build.sh OUTPUT_APK --stub" >&2; exit 1; }
 SDK=${ANDROID_HOME:-$HOME/Android/Sdk}; TOOLS=$SDK/build-tools/37.0.0
 WORK=$(mktemp -d /tmp/rezoss-api-app.XXXXXX)
 trap 'rm -rf "$WORK"' EXIT
-PAYLOAD=$ROOT/../../aioskernel/native-now-nudge/payload
-if [[ "$MODE" == full ]]; then
-    python3 "$ROOT/../../aioskernel/native-now-nudge/verify_payload.py" "$PAYLOAD"
-fi
 mkdir -p "$WORK/classes" "$WORK/dex"
 javac -source 8 -target 8 -Xlint:-options -classpath "$SDK/platforms/android-37.0/android.jar" \
     -d "$WORK/classes" "$ROOT"/java/io/mesalabs/rezoss/qwen/*.java
@@ -29,15 +24,10 @@ ET.register_namespace('android', 'http://schemas.android.com/apk/res/android')
 tree = ET.parse(source)
 if mode == '--stub':
     root = tree.getroot()
-    root.set('{http://schemas.android.com/apk/res/android}versionCode', '1')
-    root.set('{http://schemas.android.com/apk/res/android}versionName', '3.2-stub')
-    if backend in ('gemma-gpu', 'hybrid') and native == 'true':
-        root.set('{http://schemas.android.com/apk/res/android}versionCode', '10')
-        root.set('{http://schemas.android.com/apk/res/android}versionName', '3.3-gemma-api')
-    app = root.find('application')
-    for provider in list(app.findall('provider')):
-        if provider.get('{http://schemas.android.com/apk/res/android}name') == '.ModelProvider':
-            app.remove(provider)
+    # Above every earlier Qwen APK (up to 12) so the system copy wins over a
+    # leftover data update.
+    root.set('{http://schemas.android.com/apk/res/android}versionCode', '13')
+    root.set('{http://schemas.android.com/apk/res/android}versionName', '4.0-gemma')
 tree.write(output, encoding='utf-8', xml_declaration=True)
 MANIFEST_PY
 "$TOOLS/aapt2" compile --dir "$ROOT/res" -o "$WORK/res.zip"
@@ -48,33 +38,6 @@ cp "$WORK/dex/classes.dex" "$WORK/"
     cd "$WORK"
     zip -q -0 base.apk classes.dex
 )
-if [[ "$MODE" == full ]]; then
-    # Qwen3 on SoCs without the V73 runner: the same llama.cpp server the
-    # ROM's summary service ships, launched by LocalEngine.
-    mkdir -p "$WORK/lib/arm64-v8a"
-    cp "$ROOT/../../local-summary-service/system/bin/unica-summary-llama-server" "$WORK/lib/arm64-v8a/librezoss_llama.so"
-    (cd "$WORK" && zip -q -0 base.apk lib/arm64-v8a/librezoss_llama.so)
-fi
-if [[ "$MODE" == full ]]; then
-python3 - "$WORK" "$PAYLOAD" <<'PY'
-from pathlib import Path
-import json, shutil, sys, zipfile
-work, payload = map(Path, sys.argv[1:])
-contents = json.loads((payload/'CONTENTS.json').read_text())
-prefix = 'system/etc/unica/now-nudge-v73/'
-info = {'contract':'qwen3-0.6b-sm8550-v73-1024-v1'}
-with zipfile.ZipFile(work/'base.apk', 'a', compression=zipfile.ZIP_STORED, allowZip64=True) as z:
-    for filename, key in [('hybrid_llama_qnn.pte','model'), ('tokenizer.json','tokenizer')]:
-        source = payload/prefix/filename
-        parts = [source] if source.is_file() else sorted(source.parent.glob(filename+'.[0-9][0-9]'))
-        with z.open('assets/v73/'+filename, 'w') as dst:
-            for part in parts:
-                with part.open('rb') as src: shutil.copyfileobj(src, dst, 1024*1024)
-        info[key+'_size'] = contents[prefix+filename]['size']
-        info[key+'_sha256'] = contents[prefix+filename]['sha256']
-    z.writestr('assets/v73/model-info.json', json.dumps(info, sort_keys=True))
-PY
-fi
 "$TOOLS/zipalign" -P 16 -f 4 "$WORK/base.apk" "$WORK/aligned.apk"
 CERT=aosp
 if ${ROM_IS_OFFICIAL:-false}; then CERT=unica; fi
@@ -110,14 +73,10 @@ VERSION_PY
     printf "apk=%s\n" "$OUTPUT"
     printf "sizeBytes=%s\n" "$APK_SIZE"
     printf "sha256=%s\n" "$APK_SHA256"
-    printf "backend=local-gemma-or-qwen(v73|llama.cpp)-or-explicit-api\n"
+    printf "backend=local-gemma-or-explicit-api\n"
     printf "packaging=%s\n" "${MODE#--}"
-    printf "model=Qwen3-0.6B (SM8550 V73 runner, llama.cpp elsewhere); Gemma 4 E2B via AIOS\n"
-    if [[ "$MODE" == full ]]; then
-        printf "modelAssets=included\n"
-    else
-        printf "modelAssets=separate-install-required\n"
-    fi
+    printf "model=Gemma 4 E2B via AIOS\n"
+    printf "modelAssets=separate-import-required\n"
     printf "credentialStorage=android-keystore-aes-gcm\n"
     printf "builtAtUtc=%s\n" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     [[ -n "$GIT_COMMIT" ]] && printf "sourceCommit=%s\n" "$GIT_COMMIT"

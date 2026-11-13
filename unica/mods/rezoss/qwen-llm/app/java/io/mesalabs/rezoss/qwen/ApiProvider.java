@@ -36,7 +36,7 @@ public final class ApiProvider extends ContentProvider {
             result.putString("screening_backend",ApiSettingsStore.backend(getContext(),true));
             result.putString("local_model",ApiSettingsStore.localModel(getContext()));
             result.putString("gemma_backend",ApiSettingsStore.gemmaBackend(getContext()));
-            result.putBoolean("local_qwen_ready",LocalEngine.get(getContext()).usable());
+            result.putBoolean("local_qwen_ready",false);
             ApiSettingsStore.Settings display=ApiSettingsStore.display(getContext());
             result.putInt("diagnostic_protocol",1);
             result.putString("endpoint",display.endpoint);result.putString("model",display.model);return result;
@@ -62,12 +62,6 @@ public final class ApiProvider extends ContentProvider {
         int maxTokens = extras.getInt("max_tokens", 96);
         try {
             String backend=extras.getString("backend","default");
-            if("local-qwen".equals(backend)){
-                // ROM default on SoCs without the V73 runner: Qwen3 via the bundled llama.cpp engine.
-                if(!"qwen".equals(ApiSettingsStore.localModel(getContext())))throw new ApiClient.ApiException("backend_changed");
-                result.putString("content",LocalEngine.get(getContext()).complete(null,prompt,maxTokens,false,deadline,requestId));
-                result.putString("status","generated");return result;
-            }
             if("default".equals(backend)||(!backend.equals(ApiSettingsStore.backend(getContext(),false))&&!backend.equals(ApiSettingsStore.backend(getContext(),true))))
                 throw new ApiClient.ApiException("backend_changed");
             if(!ApiSettingsStore.matchesEndpoint(backend,ApiSettingsStore.display(getContext()).endpoint))throw new ApiClient.ApiException("provider_mismatch");

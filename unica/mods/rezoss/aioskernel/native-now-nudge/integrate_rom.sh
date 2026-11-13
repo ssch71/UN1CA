@@ -28,13 +28,7 @@ ADD_TO_WORK_DIR "pa2qxxx" "system" "system/etc/sysconfig/aioskernelservice.xml" 
 LOG "- Native Now Nudge requires the later OfflineLanguageModel 4.0.01.24 update"
 # Remove the previous bundled weights when rebuilding an existing work tree.
 DELETE_FROM_WORK_DIR "system" "system/etc/unica/now-nudge-v73" || return 1
-if [[ "${UNICA_LOCAL_LLM_BACKEND:-hybrid}" == "hybrid" ]]; then
-    LOG "- Choose Gemma 4 E2B or Qwen3 in AI backend settings > Offline model"
-elif [[ "${UNICA_LOCAL_LLM_BACKEND:-hybrid}" == "gemma-gpu" ]]; then
-    LOG "- Import the separate Gemma 4 E2B model in AI backend settings > Local model setup"
-else
-    LOG "- Separate QWEN model APK supplies verified local assets for the rollback backend"
-fi
+LOG "- Import the separate Gemma 4 E2B model in AI backend settings > Gemma model setup"
 SET_PROP "system" "ro.unica.local_llm" "${UNICA_LOCAL_LLM_BACKEND:-hybrid}" || return 1
 SET_PROP "system" "ro.unica.now_nudge_v73" "1" || return 1
 SET_PROP "system" "persist.sys.unica.enable_aioskernelservice" "1" || return 1

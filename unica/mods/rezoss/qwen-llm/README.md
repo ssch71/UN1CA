@@ -1,10 +1,10 @@
 # Rezoss AI API app
 
-This module builds `QWEN_LLM_rezoss.apk`, a small settings app and trusted API bridge for the existing ROM text-generation flow.
+This module builds the ROM's small settings app and trusted API bridge for the existing ROM text-generation flow.
 
 ## Setup
 
-1. Install the ROM's `QWEN_LLM_rezoss.apk` and open **Rezoss AI**.
+1. Open **AI backend settings** from UN1CA Extra Settings.
 2. Choose OpenAI, Gemini, OpenRouter, or a custom endpoint; enter the provider's model name and API key.
 3. Save the settings. The API key is encrypted with Android Keystore and is not included in the ROM build.
 
@@ -18,15 +18,7 @@ Custom endpoints must accept a Bearer API key and OpenAI-style `chat/completions
 
 ## On-device mode
 
-**AI backend settings > Offline model** selects the engine used by the ROM default route. Nothing is sent to a provider in this mode.
-
-| Model | Engine | Setup |
-|---|---|---|
-| Gemma 4 E2B | LiteRT in AIOS, **Gemma accelerator** GPU or CPU | Import `gemma-4-E2B-it.litertlm` with **Gemma model setup** |
-| Qwen3 0.6B on SM8550 | QNN runner on the Hexagon V73 NPU (AIOS) | Install the full `QWEN_LLM_rezoss.apk` (V73 assets) |
-| Qwen3 0.6B elsewhere (SM8250) | llama.cpp in this app (Q4_0, thinking off) | Install `QWEN_LLM_rezoss_model.apk` (about 470 MB), then tap **Qwen3 model** |
-
-SM8550 starts on Gemma, other SoCs on Qwen3. The llama.cpp engine runs on loopback with a per-launch random key, stops after two idle minutes or when the device gets hot, and trims the oldest input to fit a 4096-token context.
+**ROM default (offline)** runs Gemma 4 E2B through LiteRT inside AIOS. Nothing is sent to a provider in this mode. Import `gemma-4-E2B-it.litertlm` once with **Gemma model setup**, then pick the **Gemma accelerator** (GPU or CPU). Qwen3 and its model APKs have been removed; the `io.mesalabs.rezoss.qwen` package name is kept only for API/bridge compatibility.
 
 ## Data flow
 
@@ -36,4 +28,4 @@ Because generation uses a remote API, extracted screen text is sent to the endpo
 
 ## Build
 
-Run `build.sh` after sourcing the UN1CA `buildenv.sh`. The app is signed with the ROM platform certificate and written to the existing archived APK output path. It does not embed model weights; `model/build.sh` builds the optional on-device model pack separately.
+The ROM build runs `system-stub/build.sh` after sourcing the UN1CA `buildenv.sh`. The app is signed with the ROM platform certificate and embeds no model weights.

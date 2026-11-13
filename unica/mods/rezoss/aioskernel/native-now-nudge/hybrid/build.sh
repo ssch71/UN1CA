@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Build the ROM AIOS backend whose offline engine is chosen at runtime in the
-# Rezoss AI settings: Gemma 4 E2B (LiteRT GPU/CPU) or Qwen3 (QNN V73 runner on
-# SM8550, the Rezoss AI llama.cpp engine elsewhere). Model weights stay separate.
+# Build the ROM AIOS backend running Gemma 4 E2B through LiteRT; the GPU or CPU
+# accelerator is chosen at runtime in the Rezoss AI settings. The model stays
+# separate. The settings app always reports Gemma as the local model.
 set -euo pipefail
 : "${SRC_DIR:?Source buildenv.sh <target> first}"
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
@@ -44,8 +44,8 @@ import sys,xml.etree.ElementTree as ET
 path=sys.argv[1];ns='{http://schemas.android.com/apk/res/android}'
 ET.register_namespace('android',ns[1:-1]);tree=ET.parse(path);root=tree.getroot()
 root.set(ns+'versionCode','142801212');root.set(ns+'versionName','1.4.29')
-app=root.find('application');app.set(ns+'label','AIOS Gemma/Qwen')
-ET.SubElement(app,'meta-data',{ns+'name':'unica.local_model_name',ns+'value':'Gemma 4 E2B / Qwen3'})
+app=root.find('application');app.set(ns+'label','AIOS Gemma')
+ET.SubElement(app,'meta-data',{ns+'name':'unica.local_model_name',ns+'value':'Gemma 4 E2B'})
 for lib in ['libOpenCL.so','libvndksupport.so']:
     ET.SubElement(app,'uses-native-library',{ns+'name':lib,ns+'required':'false'})
 activity=ET.SubElement(app,'activity',{ns+'name':'io.mesalabs.rezoss.nudge.GemmaSetupActivity',ns+'exported':'true',ns+'configChanges':'orientation|screenSize|uiMode'})
@@ -58,7 +58,7 @@ jar cf "$STAGE/backend.jar" -C "$STAGE/classes" .
 "$TOOLS/d8" --min-api 30 --lib "$SDK/platforms/android-37.0/android.jar" --output "$STAGE/dex" "$STAGE/backend.jar" "$WORK/deps/"*.jar
 "$TOOLS/aapt2" link --manifest "$STAGE/backend/AndroidManifest.xml" -I "$SDK/platforms/android-37.0/android.jar" -o "$STAGE/manifest.apk"
 # The GPU packaging carries every LiteRT accelerator, so CPU and GPU are both
-# selectable at runtime; the base V73 runner libraries are kept for Qwen.
+# selectable at runtime. The base APK's runner libraries are kept unchanged.
 python3 "$GEMMA/package.py" "$BASE" "$STAGE" "$WORK/deps" gpu
 "$TOOLS/zipalign" -P 16 -f 4 "$STAGE/unsigned.apk" "$STAGE/aligned.apk"
 CERT=aosp

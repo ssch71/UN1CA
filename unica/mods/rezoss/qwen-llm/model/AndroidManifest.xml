@@ -1,6 +1,0 @@
-<!-- Data-only model pack for the Rezoss AI on-device backend (no code, no components). -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="io.mesalabs.rezoss.qwen.model" android:versionCode="2" android:versionName="qwen3-0.6b-q4_0">
-    <uses-sdk android:minSdkVersion="30" android:targetSdkVersion="36" />
-    <application android:label="Rezoss AI model" android:hasCode="false" android:allowBackup="false" />
-</manifest>

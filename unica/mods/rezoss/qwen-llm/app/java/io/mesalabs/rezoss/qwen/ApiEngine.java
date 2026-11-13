@@ -17,10 +17,9 @@ final class ApiEngine {
 
     String generate(String input, boolean summary, long deadline, String requestId) throws Exception {
         String backend=ApiSettingsStore.backend(context,false);
-        // ROM default without the V73 AIOS runner: run Qwen3 here through llama.cpp.
-        boolean local="default".equals(backend)&&!Hardware.v73()&&"qwen".equals(ApiSettingsStore.localModel(context));
-        if("default".equals(backend)&&!local)throw new ApiClient.ApiException("local_requires_aios_v73");
-        if(!local&&!ApiSettingsStore.matchesEndpoint(backend,ApiSettingsStore.display(context).endpoint))throw new ApiClient.ApiException("provider_mismatch");
+        // ROM default runs Gemma inside AIOS; this app only serves explicit API backends.
+        if("default".equals(backend))throw new ApiClient.ApiException("local_requires_aios_v73");
+        if(!ApiSettingsStore.matchesEndpoint(backend,ApiSettingsStore.display(context).endpoint))throw new ApiClient.ApiException("provider_mismatch");
         if (input == null || input.isEmpty() || input.length() > 12000)
             throw new ApiClient.ApiException("invalid_input");
         String system;
@@ -47,9 +46,7 @@ final class ApiEngine {
             user = messages.toString().replace("<|", "< |").replace("|>", "| >");
             maxTokens = REPLY_OUTPUT_TOKENS;
         }
-        String raw = (local
-                ? LocalEngine.get(context).complete(system, user, maxTokens, !summary, deadline, requestId)
-                : ApiClient.complete(context, system, user, maxTokens, deadline, requestId, backend)).trim();
+        String raw = ApiClient.complete(context, system, user, maxTokens, deadline, requestId, backend).trim();
         if (raw.contains("<|") || raw.contains("<think>")) throw new ApiClient.ApiException("invalid_output");
         if (summary) {
             String result = raw.replaceAll("\\s+", " ");
@@ -75,6 +72,6 @@ final class ApiEngine {
     }
 
     void cancel(String requestId) { ApiClient.cancel(context, requestId); }
-    void cancel() { LocalEngine.get(context).cancelAll(); ApiClient.cancelAll(); }
-    void close() { LocalEngine.get(context).cancelAll(); ApiClient.cancelAll(); }
+    void cancel() { ApiClient.cancelAll(); }
+    void close() { ApiClient.cancelAll(); }
 }

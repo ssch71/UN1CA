@@ -50,11 +50,9 @@ bash unica/mods/rezoss/aioskernel/native-now-nudge/tests/run_gemma_rom_integrati
 JSON_JAR=/path/to/json.jar bash unica/mods/rezoss/aioskernel/native-now-nudge/tests/run_callscreen_contract_test.sh
 bash unica/mods/rezoss/aioskernel/native-now-nudge/tests/run_screening_deadline_test.sh
 
-Qwen source/assets and build_qwen_backend.sh are retained as a build-time
-rollback. Export UNICA_LOCAL_LLM_BACKEND=qwen for a matching Qwen ROM build.
-This is not an in-app engine selector. Returning a phone to Qwen also requires
-a compatible full Qwen model APK/version; do not assume the lower-code v9 APK
-can upgrade the new version-10 settings stub or a data update.
+Qwen3 (V73 QNN runner, llama.cpp engine, model APKs and payload) has been
+removed. Gemma 4 E2B is the only offline model; the io.mesalabs.rezoss.qwen
+package name and permissions are kept only for API/bridge compatibility.
 
 Validation boundary: source, APK and isolated ROM-staging checks. This change
 does not itself perform a full ROM build, flash, reboot or install an update.
