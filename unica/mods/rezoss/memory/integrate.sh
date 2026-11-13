@@ -70,15 +70,22 @@ fi
 # Reuse Samsung's existing Volume Up + Power rule; configured accessibility
 # targets and regional shutdown retain priority. Standard services.jar patching
 # keeps this composable with the other framework mods in the shared decode.
-LOG "- Adding Memory Volume Up + Side voice capture (accessibility has priority)"
 DECODE_APK "system" "system/framework/services.jar" || return 1
-python3 "$REZOSS_MEMORY_ROOT/sidekey/check-target.py" \
-    "$APKTOOL_DIR/system/framework/services.jar" || return 1
-LC_ALL=C patch --dry-run --fuzz=0 -p1 -N --forward \
-    -d "$APKTOOL_DIR/system/framework/services.jar" \
-    < "$REZOSS_MEMORY_ROOT/sidekey/0001-Add-Memory-volume-up-side-key.patch" || return 1
-APPLY_PATCH "system" "system/framework/services.jar" \
-    "$REZOSS_MEMORY_ROOT/sidekey/0001-Add-Memory-volume-up-side-key.patch" || return 1
+if python3 "$REZOSS_MEMORY_ROOT/sidekey/check-target.py" \
+        "$APKTOOL_DIR/system/framework/services.jar"; then
+    LOG "- Adding Memory Volume Up + Side voice capture (accessibility has priority)"
+    LC_ALL=C patch --dry-run --fuzz=0 -p1 -N --forward \
+        -d "$APKTOOL_DIR/system/framework/services.jar" \
+        < "$REZOSS_MEMORY_ROOT/sidekey/0001-Add-Memory-volume-up-side-key.patch" || return 1
+    APPLY_PATCH "system" "system/framework/services.jar" \
+        "$REZOSS_MEMORY_ROOT/sidekey/0001-Add-Memory-volume-up-side-key.patch" || return 1
+elif [[ "$TARGET_CODENAME" == "dm3q" ]]; then
+    return 1
+else
+    # The chord detector differs from the validated dm3q firmware. Keep Memory
+    # and its launcher gestures, but leave the native key policy untouched.
+    LOGW "Samsung Memory: unvalidated key chord policy on $TARGET_CODENAME, skipping the Volume Up + Side shortcut"
+fi
 
 SET_METADATA "system" "system/priv-app/Memory" 0 0 755 "u:object_r:system_file:s0" || return 1
 ADD_TO_WORK_DIR "$REZOSS_MEMORY_ROOT" "system" "system/priv-app/Memory/Memory.apk" 0 0 644 "u:object_r:system_file:s0" || return 1
