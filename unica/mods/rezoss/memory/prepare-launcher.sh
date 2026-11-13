@@ -7,7 +7,7 @@ MEMORY_PORT_SOURCE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 MEMORY_PORT_INPUT=$(realpath "$1")
 MEMORY_PORT_OUTPUT=$(realpath -m "$2")
 [[ ! -e "$MEMORY_PORT_OUTPUT" ]] || { echo "Refusing to overwrite $MEMORY_PORT_OUTPUT" >&2; exit 1; }
-[[ "$(sha256sum "$MEMORY_PORT_INPUT" | cut -d ' ' -f 1)" == \
+[[ "${REZOSS_MEMORY_ALLOW_UNVALIDATED:-false}" == "true" ]] || [[ "$(sha256sum "$MEMORY_PORT_INPUT" | cut -d ' ' -f 1)" == \
     4630968289288d355aa3f8884ef45679ced56c0b3c0925d96a9a77ca6fcf47cf ]] || {
     echo "Unexpected One UI Home; revalidate Memory gesture patch" >&2; exit 1;
 }

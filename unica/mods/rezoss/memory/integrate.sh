@@ -12,10 +12,17 @@ fi
 
 REZOSS_MEMORY_ROOT="$MODPATH/memory"
 REZOSS_MEMORY_LAUNCHER="system/priv-app/TouchWizHome_2017/TouchWizHome_2017.apk"
+REZOSS_MEMORY_UNVALIDATED=false
 if [[ "$(sha256sum "$WORK_DIR/system/$REZOSS_MEMORY_LAUNCHER" | cut -d ' ' -f 1)" != \
         "4630968289288d355aa3f8884ef45679ced56c0b3c0925d96a9a77ca6fcf47cf" ]]; then
-    LOGE "Memory gestures require the validated One UI Home 18.0.07.53; revalidate the patch for this launcher"
-    return 1
+    if [[ "$TARGET_CODENAME" == "dm3q" ]]; then
+        LOGE "Memory gestures require the validated One UI Home 18.0.07.53; revalidate the patch for this launcher"
+        return 1
+    fi
+    # Other targets ship a different build of the same One UI Home. Let the
+    # fuzz=0 dry run in prepare-launcher.sh decide, and skip Memory if it fails.
+    LOGW "Samsung Memory: unvalidated One UI Home on $TARGET_CODENAME, trying the gesture patch with fuzz=0"
+    REZOSS_MEMORY_UNVALIDATED=true
 fi
 
 # The required Java shared library must be registered as well as present.
@@ -45,6 +52,21 @@ if [[ -d "$APKTOOL_DIR/system/${REZOSS_MEMORY_LAUNCHER//system\//}" ]]; then
     LOGE "Launcher is already decoded by another mod; review patch order before Memory integration"
     return 1
 fi
+# Prepare the launcher first so an unvalidated launcher can be skipped before
+# services.jar or the work dir are changed.
+REZOSS_MEMORY_STAGE=$(mktemp -d /tmp/rezoss-memory-stage.XXXXXX) || return 1
+mkdir -p "$REZOSS_MEMORY_STAGE/system/system/priv-app/TouchWizHome_2017" || return 1
+if ! REZOSS_MEMORY_ALLOW_UNVALIDATED="$REZOSS_MEMORY_UNVALIDATED" \
+        bash "$REZOSS_MEMORY_ROOT/prepare-launcher.sh" "$WORK_DIR/system/$REZOSS_MEMORY_LAUNCHER" \
+        "$REZOSS_MEMORY_STAGE/system/$REZOSS_MEMORY_LAUNCHER"; then
+    if $REZOSS_MEMORY_UNVALIDATED; then
+        LOGW "Samsung Memory: gesture patch does not apply to this One UI Home, skipping"
+        unset MEMORY_SHA256 REZOSS_MEMORY_ROOT REZOSS_MEMORY_LAUNCHER REZOSS_MEMORY_STAGE REZOSS_MEMORY_PRELOAD_CONFIG REZOSS_MEMORY_UNVALIDATED
+        return 0
+    fi
+    return 1
+fi
+
 # Reuse Samsung's existing Volume Up + Power rule; configured accessibility
 # targets and regional shutdown retain priority. Standard services.jar patching
 # keeps this composable with the other framework mods in the shared decode.
@@ -57,10 +79,6 @@ LC_ALL=C patch --dry-run --fuzz=0 -p1 -N --forward \
     < "$REZOSS_MEMORY_ROOT/sidekey/0001-Add-Memory-volume-up-side-key.patch" || return 1
 APPLY_PATCH "system" "system/framework/services.jar" \
     "$REZOSS_MEMORY_ROOT/sidekey/0001-Add-Memory-volume-up-side-key.patch" || return 1
-REZOSS_MEMORY_STAGE=$(mktemp -d /tmp/rezoss-memory-stage.XXXXXX) || return 1
-mkdir -p "$REZOSS_MEMORY_STAGE/system/system/priv-app/TouchWizHome_2017" || return 1
-bash "$REZOSS_MEMORY_ROOT/prepare-launcher.sh" "$WORK_DIR/system/$REZOSS_MEMORY_LAUNCHER" \
-    "$REZOSS_MEMORY_STAGE/system/$REZOSS_MEMORY_LAUNCHER" || return 1
 
 SET_METADATA "system" "system/priv-app/Memory" 0 0 755 "u:object_r:system_file:s0" || return 1
 ADD_TO_WORK_DIR "$REZOSS_MEMORY_ROOT" "system" "system/priv-app/Memory/Memory.apk" 0 0 644 "u:object_r:system_file:s0" || return 1
@@ -83,4 +101,4 @@ for REZOSS_MEMORY_PROFILE in "$REZOSS_MEMORY_LAUNCHER.prof" "$REZOSS_MEMORY_LAUN
     fi
 done
 
-unset MEMORY_SHA256 REZOSS_MEMORY_ROOT REZOSS_MEMORY_LAUNCHER REZOSS_MEMORY_STAGE REZOSS_MEMORY_PROFILE REZOSS_MEMORY_PRELOAD_CONFIG
+unset MEMORY_SHA256 REZOSS_MEMORY_ROOT REZOSS_MEMORY_LAUNCHER REZOSS_MEMORY_STAGE REZOSS_MEMORY_PROFILE REZOSS_MEMORY_PRELOAD_CONFIG REZOSS_MEMORY_UNVALIDATED
