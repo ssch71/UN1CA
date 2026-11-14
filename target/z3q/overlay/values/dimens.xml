@@ -14,8 +14,8 @@
     <dimen name="physical_power_button_center_screen_location_y">990.0px</dimen>
     <dimen name="rounded_corner_radius_bottom">52.0dip</dimen>
     <dimen name="rounded_corner_radius_top">52.0dip</dimen>
-    <dimen name="status_bar_camera_side_padding">1.7749939mm</dimen>
-    <dimen name="status_bar_camera_top_margin">1.0349731mm</dimen>
-    <dimen name="status_bar_height_portrait">4.8480835mm</dimen>
-    <dimen name="status_bar_indicator_corner_padding">4.732971mm</dimen>
+    <dimen name="status_bar_camera_side_padding">10.29dip</dimen>
+    <dimen name="status_bar_camera_top_margin">6.0dip</dimen>
+    <dimen name="status_bar_height_portrait">28.09dip</dimen>
+    <dimen name="status_bar_indicator_corner_padding">27.43dip</dimen>
 </resources>
