@@ -5,7 +5,7 @@ if [[ -f "$MODPATH/memory/disable" ]]; then
     LOG "- Samsung Memory integration is disabled"
     return 0
 fi
-if [[ ! "$TARGET_CODENAME" =~ ^(dm1q|dm2q|dm3q|x1q|y2q|z3q|c1q|c2q|r8q)$ ]]; then
+if [[ ! "$TARGET_CODENAME" =~ ^(b5q|dm1q|dm2q|dm3q|x1q|y2q|z3q|c1q|c2q|r8q)$ ]]; then
     LOG "- Samsung Memory: skipping unsupported target $TARGET_CODENAME"
     return 0
 fi
