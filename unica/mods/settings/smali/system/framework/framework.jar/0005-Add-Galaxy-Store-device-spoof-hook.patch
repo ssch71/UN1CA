@@ -134,7 +134,7 @@ diff --git a/smali_classes6/io/mesalabs/unica/SamsungPropsHooks.smali b/smali_cl
      goto :goto_3
 
      :cond_4
-@@ -333,6 +410,160 @@
+@@ -333,6 +410,168 @@
      return-void
  .end method
 
@@ -236,6 +236,14 @@ diff --git a/smali_classes6/io/mesalabs/unica/SamsungPropsHooks.smali b/smali_cl
 +
 +    move-result v0
 +
++    if-nez v0, :cond_spoof_apps
++
++    const-string v0, "com.samsung.android.goodlock"
++
++    invoke-virtual {v0, v1}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
++
++    move-result v0
++
 +    if-eqz v0, :cond_0
 +
 +    :cond_spoof_apps
@@ -295,7 +303,7 @@ diff --git a/smali_classes6/io/mesalabs/unica/SamsungPropsHooks.smali b/smali_cl
  .method public static blacklist onSystemPropertiesGet(Ljava/lang/String;)Ljava/lang/String;
      .locals 3
 
-@@ -355,6 +586,314 @@
+@@ -355,6 +594,314 @@
      return-object v0
 
      :cond_scpm_region_done
