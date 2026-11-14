@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: ssch71 <s01093450498@gmail.com>
+Date: Sat, 14 Nov 2026 23:20:00 +0900
+Subject: [PATCH] SemAsyncVideoFrameDecoder: Force the SW codec on SM8250
+
+The ported frame extractor converts the Venus UBWC output of the HW HEVC
+decoder with an SM8550 converter, which produces broken frames on SM8250.
+Best Face found no faces in the motion photo frames because of this.
+Always request the SW codec.
+
+---
+ .../com/samsung/android/media/SemAsyncVideoFrameDecoder.smali | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/smali_classes6/com/samsung/android/media/SemAsyncVideoFrameDecoder.smali b/smali_classes6/com/samsung/android/media/SemAsyncVideoFrameDecoder.smali
+--- a/smali_classes6/com/samsung/android/media/SemAsyncVideoFrameDecoder.smali
++++ b/smali_classes6/com/samsung/android/media/SemAsyncVideoFrameDecoder.smali
+@@ -870,6 +870,8 @@
+ 
+     :cond_1
+     :goto_0
++    const/4 p1, 0x2
++
+     invoke-direct {p0, p1}, Lcom/samsung/android/media/SemAsyncVideoFrameDecoder;->_setPreferredCodec(I)V
+ 
+     return-void
