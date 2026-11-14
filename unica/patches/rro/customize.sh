@@ -1,4 +1,8 @@
-SOURCE_PRODUCT_NAME="$(GET_PROP "system" "ro.product.system.name")"
+# Read the name from the source firmware: platform patches (e.g. sm8250
+# edge_lighting) may already have set ro.product.system.name to the target
+# name, which made this patch skip the target overlay entirely.
+SOURCE_PRODUCT_NAME="$(GET_PROP "$FW_DIR/$SOURCE_FIRMWARE_PATH/system/system/build.prop" "ro.product.system.name")"
+[ "$SOURCE_PRODUCT_NAME" ] || SOURCE_PRODUCT_NAME="$(GET_PROP "system" "ro.product.system.name")"
 TARGET_PRODUCT_NAME="$(GET_PROP "vendor" "ro.product.vendor.name")"
 
 if [[ "$SOURCE_PRODUCT_NAME" == "$TARGET_PRODUCT_NAME" ]]; then
