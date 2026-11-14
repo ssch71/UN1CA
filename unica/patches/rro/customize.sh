@@ -1,9 +1,12 @@
-# Read the name from the source firmware: platform patches (e.g. sm8250
-# edge_lighting) may already have set ro.product.system.name to the target
-# name, which made this patch skip the target overlay entirely.
-SOURCE_PRODUCT_NAME="$(GET_PROP "$FW_DIR/$SOURCE_FIRMWARE_PATH/system/system/build.prop" "ro.product.system.name")"
+# Take the source name from the framework RRO file itself: platform patches
+# (e.g. sm8250 edge_lighting) may already have set ro.product.system.name to
+# the target name, which made this patch skip the target overlay entirely.
+SOURCE_PRODUCT_NAME="$(find "$WORK_DIR/product/overlay" -maxdepth 1 -type f \
+    -name "framework-res__*__auto_generated_rro_product.apk" 2> /dev/null | head -n 1 | \
+    sed -E "s|.*/framework-res__(.+)__auto_generated_rro_product\.apk|\1|")"
 [ "$SOURCE_PRODUCT_NAME" ] || SOURCE_PRODUCT_NAME="$(GET_PROP "system" "ro.product.system.name")"
 TARGET_PRODUCT_NAME="$(GET_PROP "vendor" "ro.product.vendor.name")"
+LOG "- Product RRO name: $SOURCE_PRODUCT_NAME -> $TARGET_PRODUCT_NAME"
 
 if [[ "$SOURCE_PRODUCT_NAME" == "$TARGET_PRODUCT_NAME" ]]; then
     LOG "\033[0;33m! Nothing to do\033[0m"
