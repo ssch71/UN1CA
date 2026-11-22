@@ -159,6 +159,19 @@
       "incremental": 0
     },
     {
+      "datetime": 1795351837,
+      "device": "z3q",
+      "filename": "UN1CA_OneUI9.0_3.2.1_UnOfficial_by_ssch71-e212c89_221126-133824_z3q-sign_GZIF.zip",
+      "id": "e7985524ebc0d6e6f3eea6c505455ef58feabeddebf044e397e88d9da6ba6b4a",
+      "patch": "2026-10-05",
+      "size": 7902029653,
+      "urls": [
+        "https://huggingface.co/datasets/ssch11/ssch71rom/resolve/main/z3q/UN1CA_OneUI9.0_3.2.1_UnOfficial_by_ssch71-e212c89_221126-133824_z3q-sign_GZIF.zip"
+      ],
+      "version": "OneUI9.0_3.2.1_UnOfficial_by_ssch71-e212c89",
+      "incremental": 0
+    },
+    {
       "datetime": 1795315811,
       "device": "z3q",
       "filename": "UN1CA_OneUI9.0_3.2.1_UnOfficial_by_ssch71-2e6befc_221126-034838_z3q-sign_GZIF.zip",
