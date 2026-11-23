@@ -185,6 +185,32 @@
       "incremental": 0
     },
     {
+      "datetime": 1795449233,
+      "device": "y2q",
+      "filename": "UN1CA_OneUI9.0_3.2.1_UnOfficial_by_ssch71-c05710e_231126-165950_y2q-sign_GZIF.zip",
+      "id": "cbc40c863e95912131034daa7fcdaf0d637359cdf8a55661f8caade30aea3d00",
+      "patch": "2026-10-05",
+      "size": 7891737847,
+      "urls": [
+        "https://huggingface.co/datasets/ssch11/ssch71rom/resolve/main/y2q/UN1CA_OneUI9.0_3.2.1_UnOfficial_by_ssch71-c05710e_231126-165950_y2q-sign_GZIF.zip"
+      ],
+      "version": "OneUI9.0_3.2.1_UnOfficial_by_ssch71-c05710e",
+      "incremental": 0
+    },
+    {
+      "datetime": 1795449233,
+      "device": "y2q",
+      "filename": "UN1CA_OneUI9.0_3.2.1_UnOfficial_by_ssch71-c05710e_231126-165950_y2q-sign_GZIF-INCREMENTAL_1795351848.zip",
+      "id": "79d2f7871a2f21251ed5a8fa306f69e0ecdfb5b97e2fb4c22f4f35b6c1c7e793",
+      "patch": "2026-10-05",
+      "size": 489101373,
+      "urls": [
+        "https://github.com/ssch71/UN1CA/releases/download/ota-y2q-1795449233/UN1CA_OneUI9.0_3.2.1_UnOfficial_by_ssch71-c05710e_231126-165950_y2q-sign_GZIF-INCREMENTAL_1795351848.zip"
+      ],
+      "version": "OneUI9.0_3.2.1_UnOfficial_by_ssch71-c05710e",
+      "incremental": 1795351848
+    },
+    {
       "datetime": 1795351848,
       "device": "y2q",
       "filename": "UN1CA_OneUI9.0_3.2.1_UnOfficial_by_ssch71-e212c89_221126-141734_y2q-sign_GZIF.zip",
