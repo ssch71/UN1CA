@@ -6,8 +6,8 @@
 # This lives in unica/mods (sorted last) rather than target/z3q/patches because the mods replace
 # both system libraries afterwards: paradigm installs the S26U libaplayer and rezoss the S26U
 # libmppclient. Patching the donor copies earlier left the shipped ROM with unpatched libraries.
-if [[ "$TARGET_CODENAME" != "z3q" ]]; then
-    LOG "- Skipping Instant Slow-mo: z3q only"
+if [[ "$TARGET_PLATFORM" != "sm8250" ]]; then
+    LOG "- Skipping Instant Slow-mo: sm8250 only"
     return 0
 fi
 
